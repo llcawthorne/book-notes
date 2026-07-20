@@ -1,0 +1,10 @@
+#
+$ lein repl
+nREPL server started on port 54569 on host 127.0.0.1 - nrepl://127.0.0.1:54569
+...
+#
+
+#
+blottsbooks.core=> (require '[korma.db :as db])
+nil
+#

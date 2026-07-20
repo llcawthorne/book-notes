@@ -1,0 +1,37 @@
+-- To shorten prompt
+:set prompt "ghci> "
+
+-- To see type information
+:set +t
+-- 'it' is a ghci variable that stores the result
+-- of the last expression we evaluated
+
+-- read 'x :: y' as "x has the type y"
+
+:cd /dir/path   -- to change working directory
+:ed filename.hs -- launch file in vim!
+:ed             -- or just :e.  open file you are currently using (in vim)
+
+-- To import a module
+:module + Data.Ratio
+:m +Data.Ratio   - works the same
+
+-- To find out more aboot something
+:info something
+
+-- pi is defined in Prelude as 'pi'
+-- e is not.  we can fix that easily:
+let e = exp 1
+
+-- :show bindings
+-- lets us know what variables are set with let
+
+-- remember (++) concatenates lists
+-- (:) cons adds an item to the head of a list
+
+-- After importing Data.Ratio
+-- the (%) operator constructs a rational number
+-- like 5 % 3 is Fraction(5,3) [basically]
+
+-- to mod things, use mod or `mod` like mod 5 3
+-- Integer division is div or `div` like div 5 3

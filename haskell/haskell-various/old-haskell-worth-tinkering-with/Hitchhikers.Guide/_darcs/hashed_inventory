@@ -1,0 +1,11 @@
+pristine:0000000092-a519aca62e06dbe7e81bb331afeb34806794c6fc6eb8e3a752a900d4d2a00bf0
+[Skeleton of cd-fit.hs
+llcawthorne@archlinux.us**20100115180556
+ Ignore-this: 36d904cdd80d9052990f350b0cb5e04
+ 
+ My first time using darcs with a simple version of cd-fit.hs
+ that reads input from stdin (assuming piped from du -sh or something)
+ and prints it back out.
+ 
+] 
+hash: 0000000703-6c7ceb473682cab06d102de44b94485377422b947570c1014a19cac00f80c50d

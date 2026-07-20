@@ -1,0 +1,70 @@
+-- it is good practice to give functions type declarations
+-- the following tell us that removeNonUppercase maps
+-- from a String (list of Char) to a String (list of Char)
+-- removeNonUppercase :: [Char] -> [Char]    equivalen to:
+removeNonUppercase :: String -> String
+removeNonUppercase st = [ c | c <- st, c `elem` ['A'..'Z']]
+-- the return type is always listed last
+-- this function takes three ints and adds them together
+addThree :: Int -> Int -> Int -> Int
+addThree x y z = x + y + z
+-- from ghci or hugs, :t whatever will give you the type of whatever
+-- ie.  :t True return True :: Bool and :t 'a' returns 'a' :: Char
+factorial :: Integer -> Integer
+factorial n = product [1..n]
+-- Types have capitals letters, as do type classes.  If the compiler
+-- refers to something without an initial cap, it is not a Type/Typeclass.
+--
+-- Int is an efficient representation of integers from -2billion to 2billion
+-- Integer is also an integer type, but is unbounded
+-- Float is a single precision floating point  (25.132742)
+-- Double is a double precision floating point (25.132741228718345)
+-- Bool is True or False
+-- Char is a character such as 'a'
+-- A String is simply a list of Char's.  ['h','e','l','l','o']
+-- you can run :t on functions also.  :t fst returns fst :: (a,b) -> a
+-- :t (+) returns (+) :: (Num a) => a -> a -> a
+-- showing that it takes two numbers and returns a number
+-- everything before the => is called a class constraint
+-- :t (==) returns (==) :: (Eq a) => a -> a -> Bool
+-- This means (==) takes two variables of the same type, and returns a Bool
+-- Eq is a typeclass, meaning that values are comparable
+-- Think of it like the comparable interface in Java, only better!
+-- All standard Haskell types except for IO are part of the Eq typeclass
+-- :t elem returns elem :: (Eq a) => a -> [a] -> Bool
+--
+-- Some basic typeclasses
+-- Eq   - is used for types that support equality testing
+--        (==) and (/=) are implemented
+-- Ord  - is for types that have an ordering
+--        (>), (<), (>=), (<=) are implemented.
+--        to be of typeclass Ord, one must already be of typeclass Eq
+-- Show - members of Show can be presented as strings.  show 3 returns "3"
+-- Read - members of of Read are returnable by the read function
+--        read "8.2" + 3.8 returns 12.0.  read "5" - 2 returns 3
+--        read "4" returns a big error!  You must use the read somehow
+--        so the compiler can infer what you want, or read "5" :: Int
+-- Enum - members are sequentially ordered types and can be enumerated.
+--        Lets us know what we can use in ranges and with succ/pred funcs
+--        Members: (), Bool, Char, Ordering, Int, Integer, Float, and Double
+--        ie.   ['a'..'e']    [3 .. 5]    succ 'B' returns 'C'
+-- Bounded - members have an upper and lower bound, (minBound,maxBound)
+--        Int, Char, Bool are bounded
+--        minBound :: Int returns -2147483648
+--        maxBound :: Bool returns True
+-- Num  - the numeric typeclass. (Int,Integer,Float,Double)
+--        :t (*) returns (*) :: (Num a) => a -> a-> a
+--        tells us that it works with any type of Num typeclass
+--        all Num are also in Show and Eq
+-- Integral - Only integral (whole) numbers.  Int and Integer
+-- Floating - Only floating point numbers.    Float and Double
+--
+-- Note: fromIntegral function takes an Int or Integer and returns a 
+--       more general Num.  ie.  fromIntegral 5 + 3.2 returns 8.2
+--       This isn't so useful when the compiler infers type, but is really
+--       handy for functions that have a hardcoded Int return type.
+--    Ex: 
+--       :t fromIntegral is fromIntegral :: (Integral a, Num b) => a -> b
+--       :t length is length :: [a] -> Int
+--       length [1,2,3,4] + 3.2 would break
+--       fromIntegral(length [1,2,3,4]) + 3.2 returns 7.2

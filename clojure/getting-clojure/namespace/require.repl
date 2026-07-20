@@ -1,0 +1,20 @@
+
+;
+(user=> (def literature ["Emma" "Oliver Twist" "Possession"])
+#'user/literature
+user=> (def horror ["It" "Carry" "Possession"])
+#'user/horror
+;
+
+;
+user=> (clojure.data/diff literature horror)
+ClassNotFoundException clojure.data
+  java.net.URLClassLoader.findClass (URLClassLoader.java:381)
+;
+
+;
+user=> (require 'clojure.data)
+
+user=> (clojure.data/diff literature horror)
+[["Emma" "Oliver Twist"] ["It" "Carrie"] [nil nil "Possession"]]
+;

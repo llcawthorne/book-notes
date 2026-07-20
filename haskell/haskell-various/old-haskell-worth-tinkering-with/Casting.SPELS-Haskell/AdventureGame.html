@@ -1,0 +1,2415 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!--Rendered using the Haskell Html Library v0.2-->
+<HTML
+><HEAD
+><META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8"
+><TITLE
+>AdventureGame</TITLE
+><LINK HREF="haddock.css" REL="stylesheet" TYPE="text/css"
+><SCRIPT SRC="haddock.js" TYPE="text/javascript"
+></SCRIPT
+></HEAD
+><BODY
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="topbar"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD
+><IMG SRC="haskell_icon.gif" WIDTH="16" HEIGHT="16" ALT=" "
+></TD
+><TD CLASS="title"
+></TD
+><TD CLASS="topbut"
+><A HREF="index.html"
+>Contents</A
+></TD
+><TD CLASS="topbut"
+><A HREF="doc-index.html"
+>Index</A
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="modulebar"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD
+><FONT SIZE="6"
+>AdventureGame</FONT
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="section4"
+><B
+>Contents</B
+></TD
+></TR
+><TR
+><TD
+><DL
+><DT
+><A HREF="#1"
+>Types
+</A
+></DT
+><DT
+><A HREF="#2"
+>Data
+</A
+></DT
+><DT
+><A HREF="#3"
+>Functions
+</A
+></DT
+></DL
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="section1"
+>Description</TD
+></TR
+><TR
+><TD CLASS="doc"
+>A little text-based adventure in haskell
+ This code has been written by JP Moresmau (jp_at_moresmau_dot_fr)
+ This is no copyright at all on it, feel free to reuse
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="section1"
+>Synopsis</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A HREF="#t%3ADirectionInfo"
+>DirectionInfo</A
+>  = <A HREF="#v%3ADirectionInfo"
+>DirectionInfo</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AdescDir"
+>descDir</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AlocationCode"
+>locationCode</A
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A HREF="#t%3ALocationInfo"
+>LocationInfo</A
+>  = <A HREF="#v%3ALocationInfo"
+>LocationInfo</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AdescLoc"
+>descLoc</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3Adirections"
+>directions</A
+> :: <A HREF="AdventureGame.html#t%3ADirectionMap"
+>DirectionMap</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3Alookable"
+>lookable</A
+> :: <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3Atakeable"
+>takeable</A
+> :: <A HREF="AdventureGame.html#t%3ATakeableMap"
+>TakeableMap</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A HREF="#t%3AItemInfo"
+>ItemInfo</A
+>  = <A HREF="#v%3AItemInfo"
+>ItemInfo</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AitemCode"
+>itemCode</A
+> :: <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AitemDescription"
+>itemDescription</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A HREF="#t%3AGameState"
+>GameState</A
+>  = <A HREF="#v%3AGameState"
+>GameState</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3Alocation"
+>location</A
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3Aitems"
+>items</A
+> :: <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AchangedLookableMap"
+>changedLookableMap</A
+> :: <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A HREF="#t%3ATakeAction"
+>TakeAction</A
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>= <A HREF="#v%3ATakeActionOK"
+>TakeActionOK</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AtakeDescription"
+>takeDescription</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AchangedLookable"
+>changedLookable</A
+> :: <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+><TR
+><TD CLASS="decl"
+>| <A HREF="#v%3ATakeActionFail"
+>TakeActionFail</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AtakeDescription"
+>takeDescription</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+><TR
+><TD CLASS="decl"
+>| <A HREF="#v%3ATakeActionNeedItem"
+>TakeActionNeedItem</A
+> {<TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AneededItem"
+>neededItem</A
+> :: <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AfailDescription"
+>failDescription</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AokDescription"
+>okDescription</A
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="recfield"
+><A HREF="#v%3AchangedLookable"
+>changedLookable</A
+> :: <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+></TD
+></TR
+></TABLE
+>}</TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ALocationMap"
+>LocationMap</A
+> = Map <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> <A HREF="AdventureGame.html#t%3ALocationInfo"
+>LocationInfo</A
+></TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ADirectionMap"
+>DirectionMap</A
+> = Map <A HREF="AdventureGame.html#t%3ADirectionCode"
+>DirectionCode</A
+> <A HREF="AdventureGame.html#t%3ADirectionInfo"
+>DirectionInfo</A
+></TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ALookableMap"
+>LookableMap</A
+> = Map <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>newtype</SPAN
+> <A HREF="#t%3AItemMap"
+>ItemMap</A
+>  = <A HREF="#v%3AItemMap"
+>ItemMap</A
+> (Map <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+>)</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>newtype</SPAN
+> <A HREF="#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+>  = <A HREF="#v%3AChangedLookableMap"
+>ChangedLookableMap</A
+> (Map <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+>)</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ATakeableMap"
+>TakeableMap</A
+> = Map <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> <A HREF="AdventureGame.html#t%3ATakeAction"
+>TakeAction</A
+></TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ALocationCode"
+>LocationCode</A
+> = String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3AItemCode"
+>ItemCode</A
+> = String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ADescription"
+>Description</A
+> = String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A HREF="#t%3ADirectionCode"
+>DirectionCode</A
+> = String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Aactions"
+>actions</A
+> :: Map String (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [String] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String]))</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Aioactions"
+>ioactions</A
+> :: Map String (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [FilePath] -&gt; IO (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, String))</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Astart"
+>start</A
+> :: IO ()</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AgetCommand"
+>getCommand</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; IO ()</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AlocationDescription"
+>locationDescription</A
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> -&gt; String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AlocationDirections"
+>locationDirections</A
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> -&gt; [String]</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Amove"
+>move</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3ADirectionCode"
+>DirectionCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AprocessMove"
+>processMove</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3ADirectionCode"
+>DirectionCode</A
+>] -&gt; [String] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Ahelp"
+>help</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [String] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Alook"
+>look</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AlookOne"
+>lookOne</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; [String]</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AlookInState"
+>lookInState</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> -&gt; String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AlookDefault"
+>lookDefault</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> -&gt; String</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Acarry"
+>carry</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AtakeItem"
+>takeItem</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AprocessTakeAction"
+>processTakeAction</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> -&gt; <A HREF="AdventureGame.html#t%3ATakeAction"
+>TakeAction</A
+> -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Atrade"
+>trade</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AgameOver"
+>gameOver</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; Bool</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Asave"
+>save</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [FilePath] -&gt; IO (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, String)</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3Aload"
+>load</A
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [FilePath] -&gt; IO (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, String)</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AshowItemMap"
+>showItemMap</A
+> :: <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+> -&gt; ShowS</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AreadItemMap"
+>readItemMap</A
+> :: ReadS <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+></TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AshowChangedLookableMap"
+>showChangedLookableMap</A
+> :: <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+> -&gt; ShowS</TD
+></TR
+><TR
+><TD CLASS="s8"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A HREF="#v%3AreadChangedLookableMap"
+>readChangedLookableMap</A
+> :: ReadS <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="section1"
+><A NAME="1"
+>Types
+</A
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A NAME="t%3ADirectionInfo"
+></A
+><B
+>DirectionInfo</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>information about an exit way from a location
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="5" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3ADirectionInfo"
+></A
+><B
+>DirectionInfo</B
+></TD
+><TD CLASS="rdoc"
+></TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AdescDir"
+></A
+><B
+>descDir</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>the description of the exit
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AlocationCode"
+></A
+><B
+>locationCode</B
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+></TD
+><TD CLASS="rdoc"
+>the code for the location where the exit goes to
+</TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:DirectionInfo')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:DirectionInfo" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3ADirectionInfo"
+>DirectionInfo</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A NAME="t%3ALocationInfo"
+></A
+><B
+>LocationInfo</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>information about a specific location in the game world
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="5" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3ALocationInfo"
+></A
+><B
+>LocationInfo</B
+></TD
+><TD CLASS="rdoc"
+></TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AdescLoc"
+></A
+><B
+>descLoc</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>the description of the location
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3Adirections"
+></A
+><B
+>directions</B
+> :: <A HREF="AdventureGame.html#t%3ADirectionMap"
+>DirectionMap</A
+></TD
+><TD CLASS="rdoc"
+>the available exits 
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3Alookable"
+></A
+><B
+>lookable</B
+> :: <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+></TD
+><TD CLASS="rdoc"
+>the different items one can look at 
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3Atakeable"
+></A
+><B
+>takeable</B
+> :: <A HREF="AdventureGame.html#t%3ATakeableMap"
+>TakeableMap</A
+></TD
+><TD CLASS="rdoc"
+>the different items one can take
+</TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:LocationInfo')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:LocationInfo" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3ALocationInfo"
+>LocationInfo</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A NAME="t%3AItemInfo"
+></A
+><B
+>ItemInfo</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>information about an item
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="5" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AItemInfo"
+></A
+><B
+>ItemInfo</B
+></TD
+><TD CLASS="rdoc"
+></TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AitemCode"
+></A
+><B
+>itemCode</B
+> :: <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+></TD
+><TD CLASS="rdoc"
+>the code for the item
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AitemDescription"
+></A
+><B
+>itemDescription</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>a description
+</TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:ItemInfo')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:ItemInfo" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3AItemInfo"
+>ItemInfo</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A NAME="t%3AGameState"
+></A
+><B
+>GameState</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>the current game state. This is the only mutable object (of course, it is not mutable, but a different instance will be built every time the state change 
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="5" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AGameState"
+></A
+><B
+>GameState</B
+></TD
+><TD CLASS="rdoc"
+></TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3Alocation"
+></A
+><B
+>location</B
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+></TD
+><TD CLASS="rdoc"
+>where the player is
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3Aitems"
+></A
+><B
+>items</B
+> :: <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+></TD
+><TD CLASS="rdoc"
+>the items the player is carrying
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AchangedLookableMap"
+></A
+><B
+>changedLookableMap</B
+> :: <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+></TD
+><TD CLASS="rdoc"
+>the changes in what can be looked at in the world (items taken are not present any more...)
+</TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:GameState')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:GameState" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Read <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>data</SPAN
+> <A NAME="t%3ATakeAction"
+></A
+><B
+>TakeAction</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>action of taking an item
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="5" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3ATakeActionOK"
+></A
+><B
+>TakeActionOK</B
+></TD
+><TD CLASS="rdoc"
+>action succeeds
+</TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AtakeDescription"
+></A
+><B
+>takeDescription</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>the description of the item
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AchangedLookable"
+></A
+><B
+>changedLookable</B
+> :: <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+></TD
+><TD CLASS="rdoc"
+>the changes to the lookable map
+</TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3ATakeActionFail"
+></A
+><B
+>TakeActionFail</B
+></TD
+><TD CLASS="rdoc"
+>action fails
+</TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AtakeDescription"
+></A
+><B
+>takeDescription</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>the description of the failure
+</TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3ATakeActionNeedItem"
+></A
+><B
+>TakeActionNeedItem</B
+></TD
+><TD CLASS="rdoc"
+>you need another item to get the object
+</TD
+></TR
+><TR
+><TD CLASS="body" COLSPAN="2"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AneededItem"
+></A
+><B
+>neededItem</B
+> :: <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+></TD
+><TD CLASS="rdoc"
+>the other item needed to get this item
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AfailDescription"
+></A
+><B
+>failDescription</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>description of failure
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AokDescription"
+></A
+><B
+>okDescription</B
+> :: <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+><TD CLASS="rdoc"
+>description of success
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AchangedLookable"
+></A
+><B
+>changedLookable</B
+> :: <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+></TD
+><TD CLASS="rdoc"
+>the changes to the lookable map
+</TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:TakeAction')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:TakeAction" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3ATakeAction"
+>TakeAction</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ALocationMap"
+></A
+><B
+>LocationMap</B
+> = Map <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> <A HREF="AdventureGame.html#t%3ALocationInfo"
+>LocationInfo</A
+></TD
+></TR
+><TR
+><TD CLASS="doc"
+>map of locations by code
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ADirectionMap"
+></A
+><B
+>DirectionMap</B
+> = Map <A HREF="AdventureGame.html#t%3ADirectionCode"
+>DirectionCode</A
+> <A HREF="AdventureGame.html#t%3ADirectionInfo"
+>DirectionInfo</A
+></TD
+></TR
+><TR
+><TD CLASS="doc"
+>map of directions by code
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ALookableMap"
+></A
+><B
+>LookableMap</B
+> = Map <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+></TD
+></TR
+><TR
+><TD CLASS="doc"
+>map of lookable items by code
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>newtype</SPAN
+> <A NAME="t%3AItemMap"
+></A
+><B
+>ItemMap</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>map of items by code. Note the newtype because we need it to be Show and Read
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AItemMap"
+></A
+><B
+>ItemMap</B
+> (Map <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> <A HREF="AdventureGame.html#t%3ADescription"
+>Description</A
+>)</TD
+><TD CLASS="rdoc"
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:ItemMap')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:ItemMap" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Read <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>newtype</SPAN
+> <A NAME="t%3AChangedLookableMap"
+></A
+><B
+>ChangedLookableMap</B
+> </TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="ndoc"
+>the map of changes in what the player can look at 
+</TD
+></TR
+><TR
+><TD CLASS="section4"
+>Constructors</TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+><A NAME="v%3AChangedLookableMap"
+></A
+><B
+>ChangedLookableMap</B
+> (Map <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> <A HREF="AdventureGame.html#t%3ALookableMap"
+>LookableMap</A
+>)</TD
+><TD CLASS="rdoc"
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="section4"
+><IMG SRC="minus.gif" CLASS="coll" ONCLICK="toggle(this,'i:ChangedLookableMap')" ALT="show/hide"
+> Instances</TD
+></TR
+><TR
+><TD CLASS="body"
+><DIV ID="i:ChangedLookableMap" STYLE="display:block;"
+><TABLE CLASS="vanilla" CELLSPACING="1" CELLPADDING="0"
+><TR
+><TD CLASS="decl"
+>Read <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+>Show <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+></TD
+></TR
+></TABLE
+></DIV
+></TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ATakeableMap"
+></A
+><B
+>TakeableMap</B
+> = Map <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> <A HREF="AdventureGame.html#t%3ATakeAction"
+>TakeAction</A
+></TD
+></TR
+><TR
+><TD CLASS="doc"
+>map of items the player can take, by code
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ALocationCode"
+></A
+><B
+>LocationCode</B
+> = String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>code for location
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3AItemCode"
+></A
+><B
+>ItemCode</B
+> = String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>code for item
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ADescription"
+></A
+><B
+>Description</B
+> = String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>description of something
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><SPAN CLASS="keyword"
+>type</SPAN
+> <A NAME="t%3ADirectionCode"
+></A
+><B
+>DirectionCode</B
+> = String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>code for direction 
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="section1"
+><A NAME="2"
+>Data
+</A
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Aactions"
+></A
+><B
+>actions</B
+> :: Map String (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [String] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String]))</TD
+></TR
+><TR
+><TD CLASS="doc"
+>all actions possible to the player
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Aioactions"
+></A
+><B
+>ioactions</B
+> :: Map String (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [FilePath] -&gt; IO (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, String))</TD
+></TR
+><TR
+><TD CLASS="doc"
+>all IO actions
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="section1"
+><A NAME="3"
+>Functions
+</A
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Astart"
+></A
+><B
+>start</B
+> :: IO ()</TD
+></TR
+><TR
+><TD CLASS="doc"
+>start the game
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AgetCommand"
+></A
+><B
+>getCommand</B
+></TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+>:: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+></TD
+><TD CLASS="rdoc"
+>the current game state
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+>-&gt; IO ()</TD
+><TD CLASS="rdoc"
+>resulting IO
+</TD
+></TR
+><TR
+><TD CLASS="ndoc" COLSPAN="2"
+>command loop: shows the current state, asks for a command, executes it, and loops
+ | till exit is typed or till the game over state is reached
+</TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AlocationDescription"
+></A
+><B
+>locationDescription</B
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> -&gt; String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>the description of a given location
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AlocationDirections"
+></A
+><B
+>locationDirections</B
+> :: <A HREF="AdventureGame.html#t%3ALocationCode"
+>LocationCode</A
+> -&gt; [String]</TD
+></TR
+><TR
+><TD CLASS="doc"
+>the directions possible from a location
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Amove"
+></A
+><B
+>move</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3ADirectionCode"
+>DirectionCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>move one or several steps 
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AprocessMove"
+></A
+><B
+>processMove</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3ADirectionCode"
+>DirectionCode</A
+>] -&gt; [String] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>process the move
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Ahelp"
+></A
+><B
+>help</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [String] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>shows all possible commands
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Alook"
+></A
+><B
+>look</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>look at an item or a location (or several)
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AlookOne"
+></A
+><B
+>lookOne</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; [String]</TD
+></TR
+><TR
+><TD CLASS="doc"
+>look at one item recursively
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AlookInState"
+></A
+><B
+>lookInState</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> -&gt; String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>look at one item in the game state
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AlookDefault"
+></A
+><B
+>lookDefault</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> -&gt; String</TD
+></TR
+><TR
+><TD CLASS="doc"
+>look at one item in the game world
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Acarry"
+></A
+><B
+>carry</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>show what the player is carrying
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AtakeItem"
+></A
+><B
+>takeItem</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>take an item
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AprocessTakeAction"
+></A
+><B
+>processTakeAction</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; <A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+> -&gt; <A HREF="AdventureGame.html#t%3ATakeAction"
+>TakeAction</A
+> -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>process the actual take action
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Atrade"
+></A
+><B
+>trade</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; [<A HREF="AdventureGame.html#t%3AItemCode"
+>ItemCode</A
+>] -&gt; (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, [String])</TD
+></TR
+><TR
+><TD CLASS="doc"
+>trade an item in. Here, you don't get to choose what you get in exchange!
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AgameOver"
+></A
+><B
+>gameOver</B
+> :: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+> -&gt; Bool</TD
+></TR
+><TR
+><TD CLASS="doc"
+>are the exit conditions filled?
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Asave"
+></A
+><B
+>save</B
+></TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+>:: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+></TD
+><TD CLASS="rdoc"
+>the current game state 
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+>-&gt; [FilePath]</TD
+><TD CLASS="rdoc"
+>the file paths (we use only the first one)
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+>-&gt; IO (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, String)</TD
+><TD CLASS="rdoc"
+>the io operations
+</TD
+></TR
+><TR
+><TD CLASS="ndoc" COLSPAN="2"
+>save the current game
+</TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3Aload"
+></A
+><B
+>load</B
+></TD
+></TR
+><TR
+><TD CLASS="body"
+><TABLE CLASS="vanilla" CELLSPACING="0" CELLPADDING="0"
+><TR
+><TD CLASS="arg"
+>:: <A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+></TD
+><TD CLASS="rdoc"
+>the current game state 
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+>-&gt; [FilePath]</TD
+><TD CLASS="rdoc"
+>the file paths (we use only the first one)
+</TD
+></TR
+><TR
+><TD CLASS="arg"
+>-&gt; IO (<A HREF="AdventureGame.html#t%3AGameState"
+>GameState</A
+>, String)</TD
+><TD CLASS="rdoc"
+>the io operations
+</TD
+></TR
+><TR
+><TD CLASS="ndoc" COLSPAN="2"
+>load a saved game
+</TD
+></TR
+></TABLE
+></TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AshowItemMap"
+></A
+><B
+>showItemMap</B
+> :: <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+> -&gt; ShowS</TD
+></TR
+><TR
+><TD CLASS="doc"
+>implementation of show for an item map: transform the map in list						
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AreadItemMap"
+></A
+><B
+>readItemMap</B
+> :: ReadS <A HREF="AdventureGame.html#t%3AItemMap"
+>ItemMap</A
+></TD
+></TR
+><TR
+><TD CLASS="doc"
+>implementation of read for ItemMap: from list to map
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AshowChangedLookableMap"
+></A
+><B
+>showChangedLookableMap</B
+> :: <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+> -&gt; ShowS</TD
+></TR
+><TR
+><TD CLASS="doc"
+>implementation of show for a changedLookableMap: transform the map of map into a list of lists
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="decl"
+><A NAME="v%3AreadChangedLookableMap"
+></A
+><B
+>readChangedLookableMap</B
+> :: ReadS <A HREF="AdventureGame.html#t%3AChangedLookableMap"
+>ChangedLookableMap</A
+></TD
+></TR
+><TR
+><TD CLASS="doc"
+>implementation of read for a changedLookableMap: from a list of lists to a map of maps
+</TD
+></TR
+><TR
+><TD CLASS="s15"
+></TD
+></TR
+><TR
+><TD CLASS="botbar"
+>Produced by <A HREF="http://www.haskell.org/haddock/"
+>Haddock</A
+> version 0.7</TD
+></TR
+></TABLE
+></BODY
+></HTML
+>

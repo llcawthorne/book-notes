@@ -1,0 +1,6 @@
+
+Given an object S
+    dir(S) will return attributes of the object
+    help(S.method) will return help for an attribute of the object
+
+Also http://www.python.org/doc/ is your friendly source of lots of info!

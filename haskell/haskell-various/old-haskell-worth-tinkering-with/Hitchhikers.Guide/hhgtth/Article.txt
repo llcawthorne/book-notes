@@ -1,0 +1,1675 @@
+== Preface: DON'T PANIC! ==
+[[Category:Tutorials]]
+Recent experiences from a few of my fellow C++/Java programmers
+indicate that they read various Haskell tutorials with "exponential
+speedup" (think about how TCP/IP session starts up). They start slow
+and cautious, but when they see that the first 3-5 pages do not
+contain "anything interesting" in terms of code and examples, they
+begin skipping paragraphs, then chapters, then whole pages, only to
+slow down - often to a complete halt - somewhere on page 50, finding
+themselves in the thick of concepts like "type classes", "type
+constructors", "monadic IO", at which point they usually panic, think
+of a perfectly rational excuse not to read further anymore, and
+happily forget this sad and scary encounter with Haskell (as human
+beings usually tend to forget sad and scary things).
+
+This text intends to introduce the reader to the practical aspects of Haskell
+from the very beginning (plans for the first chapters include: I/O, darcs,
+Parsec, QuickCheck, profiling and debugging, to mention a few). The reader
+is expected to know (where to find) at least the basics of Haskell: how to run
+"hugs" or "ghci", '''that layout is 2-dimensional''', etc. Other than that, we do
+not plan to take radical leaps, and will go one step at a time in order not to
+lose the reader along the way. So DON'T PANIC, take your towel with you and
+read along.
+
+'''In case you've skipped over the previous paragraph''', I would like
+to stress out once again that Haskell is sensitive to indentation and
+spacing, so pay attention to that during cut-n-pastes or manual
+alignment of code in the text editor with proportional fonts.
+
+Oh, almost forgot: author is very interested in ANY feedback. Drop him a line
+or a word (see [[User:Adept|Adept]] for contact info) or submit
+patches to the tutorial via darcs (
+[http://adept.linux.kiev.ua:8080/repos/hhgtth/ repository is here]) or directly to this
+Wiki. 
+
+== Chapter 1: Ubiquitous "Hello world!" and other ways to do IO in Haskell ==
+
+Each chapter will be dedicated to one small real-life task which we will
+complete from the ground up.
+
+So here is the task for this chapter: in order to free up space on
+your hard drive for all the Haskell code you are going to write in the
+nearest future, you are going to archive some of the old and dusty
+information on CDs and DVDs. While CD (or DVD) burning itself is easy
+these days, it usually takes some (or quite a lot of) time to decide
+how to put several GB of digital photos on CD-Rs, when directories
+with images range from 10 to 300 Mb's in size, and you don't want to
+burn half-full (or half-empty) CD-Rs.
+
+So, the task is to write a program which will help us put a given
+collection of directories on the minimum possible amount of media,
+while packing the media as tightly as possible. Let's name this program
+"cd-fit".
+
+Oh. Wait. Let's do the usual "hello world" thing, before we forget about it,
+and then move on to more interesting things:
+
+<haskell>
+-- Taken from 'hello.hs'
+-- From now on, a comment at the beginning of the code snippet
+-- will specify the file which contain the full program from
+-- which the snippet is taken. You can get the code from the darcs
+-- repository "http://adept.linux.kiev.ua:8080/repos/hhgtth" by issuing
+-- command "darcs get http://adept.linux.kiev.ua:8080/repos/hhgtth"
+module Main where
+main = putStrLn "Hello world!"
+</haskell>
+
+Run it:
+
+  $ runhaskell ./hello.hs
+  Hello world!
+
+OK, we've done it. Move along now, nothing interesting here :)
+
+Any serious development must be done with the help of a version control
+system, and we will not make an exception. We will use the modern
+distributed version control system "darcs". "Modern" means that it is
+written in Haskell, "distributed" means that each working copy is
+a repository in itself.
+
+First, let's create an empty directory for all our code, and invoke
+"darcs init" there, which will create subdirectory "_darcs" to store
+all version-control-related stuff there.
+
+Fire up your favorite editor and create a new file called "cd-fit.hs"
+in our working directory. Now let's think for a moment about how our
+program will operate and express it in pseudocode:
+
+<haskell>
+main = read list of directories and their sizes
+       decide how to fit them on CD-Rs
+       print solution
+</haskell>
+
+Sounds reasonable? I thought so.
+
+Let's simplify our life a little and assume for now that we will
+compute directory sizes somewhere outside our program (for example,
+with "du -sb *") and read this information from stdin.
+Now let me convert all this to Haskell:
+
+<haskell>
+-- Taken from 'cd-fit-1-1.hs'
+module Main where
+
+main = do input <- getContents
+          putStrLn ("DEBUG: got input " ++ input)
+          -- compute solution and print it
+</haskell>
+
+Not really working, but pretty close to plain English, eh? Let's stop
+for a moment and look more closely at what's written here line-by-line
+
+Let's begin from the top:
+
+<haskell>
+-- Taken from 'cd-fit-1-1.hs'
+input <- getContents
+</haskell>
+
+This is an example of the Haskell syntax for doing IO (namely, input). This
+line is an instruction to read all the information available from the stdin,
+return it as a single string, and bind it to the symbol "input", so we can
+process this string any way we want.
+
+How did I know that? Did I memorize all the functions by heart? Of course not!
+Each function has a type, which, along with function's name, usually tells a
+lot about what a function will do.
+
+Let's fire up an interactive Haskell environment and examine this function
+up close:
+
+  $ ghci
+     ___         ___ _
+    / _ \ /\  /\/ __(_)
+   / /_\// /_/ / /  | |      GHC Interactive, version 6.4.1, for Haskell 98.
+  / /_\\/ __  / /___| |      http://www.haskell.org/ghc/
+  \____/\/ /_/\____/|_|      Type :? for help.
+  
+  Loading package base-1.0 ... linking ... done.
+  Prelude> :type getContents
+  getContents :: IO String
+  Prelude> 
+  
+We see that "getContents" is a function without arguments, that will return
+"IO String". Prefix "IO" meant that this is an IO action. It will return
+String, when evaluated. Action will be evaluated as soon as we use "<-" to
+bind its result to some symbol.
+
+Note that "<-" is not a fancy way to assign value to variable. It is a way to
+evaluate (execute) IO actions, in other words - to actually do some I/O and
+return its result (if any). 
+
+We can choose not to evaluate the action obtained from "getContents", but rather carry it around a bit and evaluate later:
+
+<haskell>
+let x = getContents
+-- 300 lines of code here
+input <- x
+</haskell>
+
+So, as you see, IO actions can act like an ordinary values. Suppose that we
+have built a list of IO actions and have found a way to execute them one by one.
+This would be a way to simulate imperative programming with its notion of
+"order of execution".
+
+Haskell allows you to do better than that. 
+
+The standard language library (named "Prelude", by the way) provides
+us with lots of functions that return useful primitive IO actions. In
+order to combine them to produce an even more complex actions, we use a "do":
+
+<haskell>
+c = do a <- someAction
+       b <- someOtherAction
+       print (bar b)
+       print (foo a)
+       putStrLn "done"
+</haskell>
+
+Here we '''bind''' "c" to an action with the following "scenario":
+* '''evaluate''' action "someAction" and '''bind''' its result to "a"
+* then, '''evaluate''' "someOtherAction" and '''bind''' its result to "b"
+* then, process "b" with function "bar" and print result
+* then, process "a" with function "foo" and print result
+* then, print the word "done"
+
+When will all this actually be executed? Answer: as soon as we evaluate "c"
+using the "<-" (if it returns result, as "getContents" does) or just
+by using it as a function name (if it does not return a result, as "print"
+does):
+
+<haskell>
+process = do putStrLn "Will do some processing"
+             c
+             putStrLn "Done"
+</haskell>
+
+Notice that we took a bunch of functions ("someAction", "someOtherAction",
+"print", "putStrLn") and using "do" created from them a new function, which we
+bound to symbol "c". Now we could use "c" as a building block to produce an even
+more complex function, "process", and we could carry this on and on.
+Eventually, some of the functions will be mentioned in the code of function
+"main", to which the ultimate topmost IO action any Haskell program is bound.
+
+When will the "main" be executed/evaluated/forced? As soon as we run the
+program. Read this twice and try to comprehend: 
+
+''The execution of a Haskell program is an evaluation of the symbol "main" to
+which we have bound an IO action. Via evaluation we obtain the result of that
+action''. 
+
+Readers familiar with advanced C++ or Java programming and that arcane body of
+knowledge named "OOP Design Patterns" might note that "build actions from
+actions" and "evaluate actions to get result" is essentially a "Command
+pattern" and "Composition pattern" combined. Good news: in Haskell you get them
+for all your IO, and get them '''for free''' :)
+
+----
+'''Exercise:'''
+Consider the following code:
+
+<haskell>
+-- Taken from 'exercise-1-1.hs'
+module Main where
+c = putStrLn "C!"
+
+combine before after =
+  do before
+     putStrLn "In the middle"
+     after
+
+main = do combine c c
+          let b = combine (putStrLn "Hello!") (putStrLn "Bye!")
+          let d = combine (b) (combine c c)
+          putStrLn "So long!"
+</haskell>
+
+Notice how we carefully indent lines so that source looks neat?
+Actually, Haskell code has to be aligned this way, or it will not
+compile. If you use tabulation to indent your sources, take into
+account that Haskell compilers assume that tabstop is 8 characters
+wide.
+
+Often people complain that it is very difficult to write Haskell
+because it requires them to align code. Actually, this is not true. If
+you align your code, compiler will guess the beginnings and endings of
+syntactic blocks. However, if you don't want to indent your code, you
+could explicitly specify end of each and every expression and use
+arbitrary layout as in this example: 
+<haskell>
+-- Taken from 'exercise-1-2.hs'
+combine before after = 
+ do { before; 
+  putStrLn "In the middle"; 
+        after; };
+
+main = 
+  do { combine c c; let { b = combine (putStrLn "Hello!") (putStrLn "Bye!")};
+         let {d = combine (b) (combine c c)}; 
+   putStrLn "So long!" };
+</haskell>
+
+Back to the exercise - see how we construct code out of thin air? Try
+to imagine what this code will do, then run it and check yourself.
+
+Do you understand why "Hello!" and "Bye!" are not printed?
+----
+
+Let's examine our "main" function closer:
+
+  Prelude> :load cd-fit.hs
+  Compiling Main             ( ./cd-fit.hs, interpreted )
+  Ok, modules loaded: Main.
+  *Main> :type main
+  main :: IO ()
+  *Main> 
+
+We see that "main" is indeed an IO action which will return nothing
+when evaluated. When combining actions with "do", the type of the
+result will be the type of the last action, and "putStrLn something" has type
+"IO ()": 
+
+  *Main> :type putStrLn "Hello world!"
+  putStrLn "Hello world!" :: IO ()
+  *Main> 
+
+Oh, by the way: have you noticed that we actually compiled our first
+Haskell program in order to examine "main"? :)
+
+let's celebrate that by putting it under version control: execute
+"darcs add cd-fit.hs" and "darcs record", answer "y" to all questions
+and provide a commit comment "Skeleton of cd-fit.hs"
+
+Let's try to run it:
+
+  $ echo "foo" | runhaskell cd-fit.hs
+  DEBUG: got input foo
+
+----
+'''Exercises''':
+
+* Try to write a program that takes your name from the stdin and greets you (keywords: getLine, putStrLn);
+
+* Try to write a program that asks for you name, reads it, greets you, asks for your favorite color, and prints it back (keywords: getLine, putStrLn).
+
+== Chapter 2: Parsing the input ==
+
+OK, now that we have proper understanding of the powers of Haskell IO
+(and are awed by them, I hope), let's forget about IO and actually do
+some useful work. 
+
+As you remember, we set forth to pack some CD-Rs as tightly as
+possible with data scattered in several input directories. We assume
+that "du -sb" will compute the sizes of input directories and output
+something like:
+
+  65572 /home/adept/photos/raw-to-burn/dir1
+  68268 /home/adept/photos/raw-to-burn/dir2
+  53372 /home/adept/photos/raw-to-burn/dir3
+  713124  /home/adept/photos/raw-to-burn/dir4
+  437952  /home/adept/photos/raw-to-burn/dir5
+
+Our next task is to parse that input into some suitable internal
+representation.
+
+For that we will use powerful library of '''parsing combinators''' named
+"[[Parsec]]" which ships with most Haskell implementations.
+
+Much like the IO facilities we have seen in the first chapter, this
+library provides a set of basic parsers and means to combine into more
+complex parsing constructs.
+
+Unlike other tools in this area (lex/yacc or JavaCC to name a few),
+[[Parsec]] parsers do not require a separate preprocessing stage. Since in
+Haskell we can return function as a result of function and thus
+construct functions "from the thin air", there is no need for a separate
+syntax for parser description. But enough advertisements, let's actually
+do some parsing:
+
+<haskell>
+-- Taken from 'cd-fit-2-1.hs'
+import Text.ParserCombinators.Parsec
+
+-- parseInput parses output of "du -sb", which consists of many lines,
+-- each of which describes single directory
+parseInput = 
+  do dirs <- many dirAndSize
+     eof
+     return dirs
+
+-- Datatype Dir holds information about single directory - its size and name
+data Dir = Dir Int String deriving Show
+
+-- `dirAndSize` parses information about single directory, which is:
+-- a size in bytes (number), some spaces, then directory name, which extends till newline
+dirAndSize = 
+  do size <- many1 digit
+     spaces
+     dir_name <- anyChar `manyTill` newline
+     return (Dir (read size) dir_name)
+</haskell>
+
+Just add those lines to the top of "cd-fit.hs". Here we see quite a lot of new
+things, and several those that we know already. 
+
+First of all, note the familiar "do" construct, which, as we know, is
+used to combine IO actions to produce new IO actions. Here we use it
+to combine "parsing" actions into new "parsing" actions. Does this
+mean that "parsing" implies "doing IO"? Not at all. Thing is, I must
+admit that I lied to you - "do" is used not only to combine IO
+actions. "Do" is used to combine any kind of so-called ''monadic
+actions'' or ''monadic values'' together.
+
+Think about [[monad]] as a "[[:Category:Idioms|design pattern]]" in the functional world.
+[[Monad]] is a way to hide from the user (programmer) all the machinery
+required for complex functionality to operate.
+
+As you might have heard, Haskell has no notion of "assignment",
+"mutable state", "variables", and is a "pure functional language",
+which means that every function called with the same input parameters
+will return exactly the same result. Meanwhile "doing IO" requires
+hauling around file handles and their states and dealing with IO
+errors. "Parsing" requires to track position in the input and dealing
+with parsing errors.
+
+In both cases Wise Men Who Wrote Libraries cared for our needs and
+hide all underlying complexities from us, exposing the [http://en.wikipedia.org/wiki/Application_programming_interface API] of their
+libraries (IO and parsing) in the form of "monadic action" which we
+are free to combine as we see fit. 
+
+Think of programming with monads as of doing the remodelling with the
+help of professional remodelling crew. You describe sequence of
+actions on the piece of paper (that's us writing in "do" notation),
+and then, when required, that sequence will be evaluated by the
+remodelling crew ("in the monad") which will provide you with end
+result, hiding all the underlying complexity (how to prepare the
+paint, which nails to choose, etc) from you.
+
+let's use the interactive Haskell environment to decipher all the
+instructions we've written for the parsing library. As usually, we'll
+go top-down:
+
+  *Main> :reload
+  Ok, modules loaded: Main.
+  *Main> :t parseInput
+  parseInput :: GenParser Char st [Dir]
+  *Main> :t dirAndSize
+  dirAndSize :: GenParser Char st Dir
+  *Main> 
+
+Assuming (well, take my word for it) that "GenParser Char st" is our
+parsing monad, we could see that "parseInput", when evaluated, will
+produce a list of "Dir", and "dirAndSize", when evaluated, will
+produce "Dir". Assuming that "Dir" somehow represents information
+about single directory, that is pretty much what we wanted, isn't it?
+
+Let's see what a "Dir" means. We defined ''data[[type]]'' Dir as a record,
+which holds an Int and a String:
+
+<haskell>
+-- Taken from 'cd-fit-2-1.hs'
+data Dir = Dir Int String deriving Show
+</haskell>
+
+In order to construct such records, we must use ''data [[constructor]]''
+Dir:
+
+  *Main> :t Dir 1 "foo"
+  Dir 1 "foo" :: Dir
+
+In order to reduce confusion for newbies, we could have written:
+<haskell>
+data Dir = D Int String deriving Show
+</haskell>
+
+, which would define ''data[[type]]'' "Dir" with ''data [[constructor]]'' "D".
+However, traditionally name of the data[[type]] and its [[constructor]] are
+chosen to be the same.
+
+Clause "[[deriving]] Show" instructs the compiler to make enough code "behind
+the curtains" to make this ''datatype'' conform to the interface of
+the ''type [[class]]'' Show. We will explain ''type [[class]]es'' later, for
+now let's just say that this will allow us to "print" instances of
+"Dir".
+
+'''Exercises:''' 
+* examine types of "digit", "anyChar", "many", "many1" and "manyTill" to see how they are used to build more complex parsers from single ones.
+
+* compare types of "manyTill", "manyTill anyChar" and "manyTill anyChar newline". Note that "anyChar `manyTill` newline" is just another syntax sugar. Note that when function is supplied with less arguments that it actually needs, we get not a value, but a new function, which is called ''partial application''.
+
+
+OK. So, we combined a lot of primitive parsing actions to get ourselves a
+parser for output of "du -sb". How can we actually parse something? the [[Parsec]] library supplies us with function "parse":
+
+  *Main> :t parse
+  parse :: GenParser tok () a
+  	 -> SourceName
+  	 -> [tok]
+  	 -> Either ParseError a
+  *Main> :t parse parseInput
+  parse parseInput :: SourceName -> [Char] -> Either ParseError [Dir]
+  *Main> 
+
+At first the [[type]] might be a bit cryptic, but once we supply "parse" with the parser we made, the compiler gets more information and presents us with a more concise [[type]].
+
+Stop and consider this for a moment. The compiler figured out type of the function without a single type annotation supplied by us! Imagine if a Java compiler deduced types for you, and you wouldn't have to specify types of arguments and return values of methods, ever.
+
+OK, back to the code. We can observe that the "parser" is a function, which,
+given a parser, a name of the source file or channel (f.e. "stdin"), and
+source data (String, which is a list of "Char"s, which is written "[Char]"),
+will either produce parse error, or parse us a list of "Dir".
+
+Datatype "Either" is an example of datatype whose constructor has name, different
+from the name of the datatype. In fact, "Either" has two constructors:
+
+<haskell>
+data Either a b = Left a | Right b
+</haskell>
+
+In order to understand better what does this mean consider the following
+example:
+
+  *Main> :t Left 'a'
+  Left 'a' :: Either Char b
+  *Main> :t Right "aaa"
+  Right "aaa" :: Either a [Char]
+  *Main> 
+
+You see that "Either" is a ''union'' (much like the C/C++ "union") which could
+hold value of one of the two distinct types. However, unlike C/C++ "union",
+when presented with value of type "Either Int Char" we could immediately see
+whether its an Int or a Char - by looking at the constructor which was used to
+produce the value. Such datatypes are called "tagged unions", and they are
+another [[:Category:Idioms|power tool]] in the Haskell toolset.
+
+Did you also notice that we provide "parse" with parser, which is a monadic
+value, but receive not a new monadic value, but a parsing result? That is
+because "parse" is an evaluator for "Parser" monad, much like the [[GHC]] or [[Hugs]] runtime is an evaluator for the IO monad. The function "parser" implements all monadic machinery: it tracks errors and positions in input, implements backtracking and lookahead, etc.
+
+let's extend our "main" function to use "parse" and actually parse the input
+and show us the parsed data structures:
+
+<haskell>
+-- Taken from 'cd-fit-2-1.hs'
+main = do input <- getContents
+          putStrLn ("DEBUG: got input " ++ input)
+          let dirs = case parse parseInput "stdin" input of
+                          Left err -> error $ "Input:\n" ++ show input ++ 
+                                              "\nError:\n" ++ show err
+                          Right result -> result
+          putStrLn "DEBUG: parsed:"; print dirs
+</haskell>
+
+'''Exercise:'''
+
+* In order to understand this snippet of code better, examine (with ghci or hugs) the difference between 'drop 1 ( drop 1 ( drop 1 ( drop 1 ( drop 1 "foobar" ))))' and 'drop 1 $ drop 1 $ drop 1 $ drop 1 $ drop 1 "foobar"'. Examine type of ($).
+* Try putStrLn "aaa" and print "aaa" and see the difference, examine their types.
+* Try print (Dir 1 "foo") and putStrLn (Dir 1 "foo"). Examine types of print and putStrLn to understand the behavior in both cases.
+
+Let's try to run what we have so far:
+
+  $ du -sb * | runhaskell ./cd-fit.hs
+  
+  DEBUG: got input 22325  Article.txt
+  18928   Article.txt~
+  1706    cd-fit.hs
+  964     cd-fit.hs~
+  61609   _darcs
+  
+  DEBUG: parsed:
+  [Dir 22325 "Article.txt",Dir 18928 "Article.txt~",Dir 1706 "cd-fit.hs",Dir 964 "cd-fit.hs~",Dir 61609 "_darcs"]
+
+Seems to be doing exactly as planned. Now let's try some erroneous
+input:
+
+  $ echo "foo" | runhaskell cd-fit.hs
+  DEBUG: got input foo
+  
+  DEBUG: parsed:
+  *** Exception: Input:
+  "foo\n"
+  Error:
+  "stdin" (line 1, column 1):
+  unexpected "f"
+  expecting digit or end of input
+
+Seems to be doing fine. 
+
+If you followed advice to put your code under version control, you
+could now use "darcs whatsnew" or "darcs diff -u" to examine your
+changes to the previous version. Use "darcs record" to commit them. As
+an exercise, first record the changes "outside" of function "main" and
+then record the changes in "main". Do "darcs changes" to examine a
+list of changes you've recorded so far.
+
+== Chapter 3: Packing the knapsack and testing it with class, too (and don't forget your towel!) ==
+
+Enough preliminaries already. let's go pack some CDs.
+
+As you might already have recognized, our problem is a classical one. It is
+called a "knapsack problem" ([http://www.google.com/search?q=knapsack+problem google it up], if you don't know already what it
+is. There are more than 100000 links).
+
+let's start from the greedy solution, but first let's slightly modify our "Dir"
+datatype to allow easy extraction of its components:
+
+<haskell>
+-- Taken from 'cd-fit-3-1.hs'
+data Dir = Dir {dir_size::Int, dir_name::String} deriving Show
+</haskell>
+
+----
+'''Exercise:''' examine types of "Dir", "dir_size" and "dir_name"
+----
+
+From now on, we could use "dir_size d" to get a size of directory, and
+"dir_name d" to get its name, provided that "d" is of type "Dir".
+
+The Greedy algorithm sorts directories from the biggest down, and tries to put
+them on CD one by one, until there is no room for more. We will need to track
+which directories we added to CD, so let's add another datatype, and code this
+simple packing algorithm:
+
+<haskell>
+-- Taken from 'cd-fit-3-1.hs'
+import Data.List (sortBy)
+
+-- DirPack holds a set of directories which are to be stored on single CD.
+-- 'pack_size' could be calculated, but we will store it separately to reduce
+-- amount of calculation
+data DirPack = DirPack {pack_size::Int, dirs::[Dir]} deriving Show
+
+-- For simplicity, let's assume that we deal with standard 700 Mb CDs for now
+media_size = 700*1024*1024
+
+-- Greedy packer tries to add directories one by one to initially empty 'DirPack'
+greedy_pack dirs = foldl maybe_add_dir (DirPack 0 []) $ sortBy cmpSize dirs
+  where
+  cmpSize d1 d2 = compare (dir_size d1) (dir_size d2)
+
+-- Helper function, which only adds directory "d" to the pack "p" when new
+-- total size does not exceed media_size
+maybe_add_dir p d =
+  let new_size = pack_size p + dir_size d
+      new_dirs = d:(dirs p)
+      in if new_size > media_size then p else DirPack new_size new_dirs
+</haskell>
+
+----
+I'll highlight the areas which you could explore on your own (using other nice
+tutorials out there, of which I especially recommend "Yet Another Haskell
+Tutorial" by Hal Daume):
+* We choose to import a single function "sortBy" from a module [[Data.List]], not the whole thing.
+* Instead of coding case-by-case recursive definition of "greedy_pack", we go with higher-order approach, choosing "foldl" as a vehicle for list traversal. Examine its type. Other useful function from the same category are "map", "foldr", "scanl" and "scanr". Look them up!
+* To sort list of "Dir" by size only, we use custom sort function and parametrized sort - "sortBy". This sort of setup where the user may provide a custom "modifier" for a generic library function is quite common: look up "deleteBy", "deleteFirstsBy", "groupBy", "insertBy", "intersectBy", "maximumBy", "minimumBy", "sortBy", "unionBy".
+* To code the quite complex function "maybe_add_dir", we introduced several '''local definitions''' in the "let" clause, which we can reuse within the function body. We used a "where" clause in the "greedy_pack" function to achieve the same effect. Read about "let" and "where" clauses and the differences between them.
+* Note that in order to construct a new value of type "DirPack" (in function "maybe_add_dir") we haven't used the helper accessor functions "pack_size" and "dirs"
+----
+
+In order to actually use our greedy packer we must call it from our "main"
+function, so let's add a lines:
+
+<haskell>
+-- Taken from 'cd-fit-3-1.hs'
+main = do ...
+          -- compute solution and print it
+          putStrLn "Solution:" ; print (greedy_pack dirs)
+</haskell>
+
+Verify integrity of our definitions by (re)loading our code in ghci. Compiles?
+Thought so :) Now, do "darcs record" and add some sensible commit message.
+
+Now it is time to test our creation. We could do it by actually running it in
+the wild like this:
+
+  $ du -sb ~/DOWNLOADS/* | runhaskell ./cd-fit.hs
+
+This will prove that our code seems to be working. At least, this once. How
+about establishing with reasonable degree of certainty that our code, parts
+and the whole, works properly, and doing so in re-usable manner? In other
+words, how about writing some test?
+
+Java programmers used to JUnit probably thought about screens of boiler-plate
+code and hand-coded method invocations. Never fear, we will not do anything as
+silly :)
+
+Enter '''[[QuickCheck]]'''.
+
+[[QuickCheck]] is a tool to do automated testing of your functions using
+(semi)random input data. In the spirit of "100b of code examples is worth 1kb of
+praise" let's show the code for testing the following ''property'': An attempt to pack directories returned by "greedy_pack" should return "DirPack" of exactly the same pack:
+
+<haskell>
+-- Taken from 'cd-fit-3-2.hs'
+import Test.QuickCheck
+import Control.Monad (liftM2)
+
+-- We must teach QuickCheck how to generate arbitrary "Dir"s
+instance Arbitrary Dir where
+  -- Let's just skip "coarbitrary" for now, ok? 
+  -- I promise, we will get back to it later :)
+  coarbitrary = undefined
+  -- We generate arbitrary "Dir" by generating random size and random name
+  -- and stuffing them inside "Dir"
+  arbitrary = liftM2 Dir gen_size gen_name
+          -- Generate random size between 10 and 1400 Mb
+    where gen_size = do s <- choose (10,1400)
+                        return (s*1024*1024)
+          -- Generate random name 1 to 300 chars long, consisting of symbols "fubar/" 
+          gen_name = do n <- choose (1,300)
+                        sequence $ take n $ repeat (elements "fubar/")
+
+-- For convenience and by tradition, all QuickCheck tests begin with prefix "prop_".
+-- Assume that "ds" will be a random list of "Dir"s and code your test.
+prop_greedy_pack_is_fixpoint ds =
+  let pack = greedy_pack ds 
+      in pack_size pack == pack_size (greedy_pack (dirs pack))
+</haskell>
+
+let's run the test, after which I'll explain how it all works:
+
+  Prelude> :r
+  Compiling Main             ( ./cd-fit.hs, interpreted )
+  Ok, modules loaded: Main.
+  *Main> quickCheck prop_greedy_pack_is_fixpoint
+  [numbers spinning]
+  OK, passed 100 tests.
+  *Main> 
+
+We've just seen our "greedy_pack" run on a 100 completely (well, almost
+completely) random lists of "Dir"s, and it seems that property indeed holds.
+
+let's dissect the code. The most intriguing part is "instance Arbitrary Dir
+where", which declares that "Dir" is an '''[[instance]]''' of '''type[[class]]''' "Arbitrary". Whoa, that's a whole lot of unknown words! :) Let's slow down a
+bit. 
+
+What is a '''type[[class]]'''? A typeclass is a Haskell way of dealing with the
+following situation: suppose that you are writing a library of useful
+functions and you don't know in advance how exactly they will be used, so you
+want to make them generic. Now, on one hand you don't want to restrict your
+users to certain type (e.g. String). On the other hand, you want to enforce
+the convention that arguments for your function must satisfy a certain set of
+constraints. That is where '''typeclass''' comes in handy. 
+
+Think of typeclass as a '''contract''' (or "interface", in Java terms) that
+your type must fulfill in order to be admitted as an argument to certain
+functions. 
+
+Let's examine the typeclass "Arbitrary":
+
+  *Main> :i Arbitrary
+  class Arbitrary a where
+    arbitrary :: Gen a
+    coarbitrary :: a -> Gen b -> Gen b
+    	-- Imported from Test.QuickCheck
+  instance Arbitrary Dir
+    	-- Defined at ./cd-fit.hs:61:0
+  instance Arbitrary Bool 	-- Imported from Test.QuickCheck
+  instance Arbitrary Double 	-- Imported from Test.QuickCheck
+  instance Arbitrary Float 	-- Imported from Test.QuickCheck
+  instance Arbitrary Int 	-- Imported from Test.QuickCheck
+  instance Arbitrary Integer 	-- Imported from Test.QuickCheck
+  -- rest skipped --
+
+It could be read this way: "Any [[type]] (let's name it 'a') could be a member of the [[class]] Arbitrary as soon as we define two functions for it: "arbitrary" and "coarbitrary", with signatures shown. For types Dir, Bool, Double, Float, Int and Integer such definitions were provided, so all those types are instance of class Arbitrary".
+
+Now, if you write a function which operates on its arguments solely by means
+of "arbitrary" and "coarbitrary", you can be sure that this function will work
+on any type which is an instance of "Arbitrary"!
+
+let's say it again. Someone (maybe even you) writes the code (API or library),
+which requires that input values implement certain ''interfaces'', which is
+described in terms of functions. Once you show how your type implements this
+''interface'' you are free to use API or library.
+
+Consider the function "sort" from standard library:
+
+  *Main> :t Data.List.sort
+  Data.List.sort :: (Ord a) => [a] -> [a]
+
+We see that it sorts lists of any values which are instance of typeclass
+"Ord". Let's examine that class:
+
+  *Main> :i Ord
+  class Eq a => Ord a where
+    compare :: a -> a -> Ordering
+    (<) :: a -> a -> Bool
+    (>=) :: a -> a -> Bool
+    (>) :: a -> a -> Bool
+    (<=) :: a -> a -> Bool
+    max :: a -> a -> a
+    min :: a -> a -> a
+  -- skip
+  instance Ord Double 	-- Imported from GHC.Float
+  instance Ord Float 	-- Imported from GHC.Float
+  instance Ord Bool 	-- Imported from GHC.Base
+  instance Ord Char 	-- Imported from GHC.Base
+  instance Ord Integer 	-- Imported from GHC.Num
+  instance Ord Int 	-- Imported from GHC.Base
+  -- skip
+  *Main> 
+
+We see a couple of interesting things: first, there is an additional
+requirement listed: in order to be an instance of "Ord", type must first be an
+instance of typeclass "Eq". Then, we see that there is an awful lot of
+functions to define in order to be an instance of "Ord". Wait a second, isn't
+it silly to define both (<) and (>) when one could be expressed via another? 
+
+Right you are! Usually, typeclass contains several "default" implementation
+for its functions, when it is possible to express them through each other (as
+it is with "Ord"). In this case it is possible to supply only a minimal
+definition (which in case of "Ord" consists of any single function) and others
+will be automatically derived. If you supplied fewer functions than are required
+for minimal implementation, the compiler/interpreter will say so and
+explain which functions you still have to define.
+
+Once again, we see that a lot of [[type]]s are already instances of typeclass Ord, and thus we are able to sort them.
+
+Now, let's take a look back to the definition of "Dir":
+
+<haskell>
+-- Taken from 'cd-fit-3-2.hs'
+data Dir = Dir {dir_size::Int, dir_name::String} deriving Show
+</haskell>
+
+See that "[[deriving]]" clause? It instructs the compiler to automatically derive code to make "Dir" an instance of typeclass Show. The compiler knows about a bunch of standard typeclasses (Eq, Ord, Show, Enum, Bound, Typeable to name a few) and knows how to make a type into a "suitably good" instance of any of them. If you want to derive instances of more than one typeclass, say it this way: "deriving (Eq,Ord,Show)". Voila! Now we can compare, sort and print data of
+that type!
+
+Side note for Java programmers: just imagine java compiler which derives code
+for "implements Storable" for you...
+
+Side note for C++ programmers: just imagine that deep copy constructors are
+being written for you by compiler....
+
+----
+'''Exercises:'''
+* Examine typeclasses Eq and Show
+* Examine types of (==) and "print"
+* Try to make "Dir" instance of "Eq"
+----
+
+OK, back to our tests. So, what we have had to do in order to make "Dir" an
+instance of "Arbitrary"? Minimal definition consists of "arbitrary". Let's
+examine it up close:
+
+  *Main> :t arbitrary
+  arbitrary :: (Arbitrary a) => Gen a
+
+See that "Gen a"? Reminds you of something? Right! Think of "IO a" and "Parser
+a" which we've seen already. This is yet another example of action-returning
+function, which could be used inside "do"-notation. (You might ask yourself,
+wouldn't it be useful to generalize that convenient concept of actions and
+"do"? Of course! It is already done, the concept is called "[[Monad]]" and we will talk about it in Chapter 400 :) )
+
+Since 'a' here is a [[type variable]] which is an instance of "Arbitrary", we could substitute "Dir" here. So, how we can make and return an action of type "Gen Dir"?
+
+Let's look at the code:
+
+<haskell>
+-- Taken from 'cd-fit-3-2.hs'
+arbitrary = liftM2 Dir gen_size gen_name
+        -- Generate random size between 10 and 1400 Mb
+  where gen_size = do s <- choose (10,1400)
+                      return (s*1024*1024)
+        -- Generate random name 1 to 300 chars long, consisting of symbols "fubar/" 
+        gen_name = do n <- choose (1,300)
+                      sequence $ take n $ repeat (elements "fubar/")
+</haskell>
+
+We have used the library-provided functions "choose" and "elements" to build up
+"gen_size :: Gen Int" and "gen_name :: Gen String" (exercise: don't take my
+word on that. Find a way to check types of "gen_name" and "gen_size"). Since
+"Int" and "String" are components of "Dir", we sure must be able to use "Gen
+Int" and "Gen String" to build "Gen Dir". But where is the "do" block for
+that? There is none, and there is only single call to "liftM2". 
+
+Let's examine it:
+
+  *Main> :t liftM2
+  liftM2 :: (Monad m) => (a1 -> a2 -> r) -> m a1 -> m a2 -> m r
+
+Kind of scary, right? Let's provide typechecker with more context:
+
+  *Main> :t liftM2 Dir
+  liftM2 Dir :: (Monad m) => m Int -> m String -> m Dir
+
+Since you already heard that "Gen" is a "Monad", you could substitute "Gen" for "m" here, obtaining "liftM2 Dir :: (Monad Gen) => Gen Int -> Gen String ->
+Gen Dir". Exactly what we wanted!
+
+Consider "liftM2" to be "advanced topic" of this chapter (which we will cover
+later) and just note for now that:
+* "2" is a number of arguments for data constructor "Dir" and we have used "liftM2" to construct "Gen Dir" out of "Dir"
+* There are also "liftM", "liftM3", "liftM4", "liftM5"
+* "liftM2" is defined as "liftM2 f a1 a2 = do x<-a1; y<-a2; return (f x y)"
+
+Hopefully, this will all make sense after you read it for the third
+time ;)
+
+Oh, by the way - don't forget to "darcs record" your changes!
+
+== Chapter 4: REALLY packing the knapsack this time == 
+
+In this chapter we are going to write another not-so-trivial packing
+method, compare packing methods efficiency, and learn something new
+about debugging and profiling of the Haskell programs along the way.
+
+It might not be immediately obvious whether our packing algorithm is
+effective, and if yes - in which particular way? Whether it's runtime,
+memory consumption or result are of sufficient quality, are there any
+alternative algorithms, and how do they compare to each other?
+
+Let's code another solution to the knapsack packing problem, called the "dynamic programming method" and put both variants to the test.
+
+This time, I'll not dissect the listing and explain it bit by bit. Instead, comments are provided in the code:
+
+<haskell>
+-- Taken from 'cd-fit-4-1.hs'
+----------------------------------------------------------------------------------
+-- Dynamic programming solution to the knapsack (or, rather, disk) packing problem
+--
+-- Let the `bestDisk x' be the "most tightly packed" disk of total 
+-- size no more than `x'.
+precomputeDisksFor :: [Dir] -> [DirPack]
+precomputeDisksFor dirs = 
+      -- By calculating `bestDisk' for all possible disk sizes, we could
+      -- obtain a solution for particular case by simple lookup in our list of
+      -- solutions :)
+  let precomp = map bestDisk [0..] 
+
+      -- How to calculate `bestDisk'? Lets opt for a recursive definition:
+      -- Recursion base: best packed disk of size 0 is empty
+      bestDisk 0 = DirPack 0 []
+      -- Recursion step: for size `limit`, bigger than 0, best packed disk is
+      -- computed as follows:
+      bestDisk limit = 
+         -- 1. Take all non-empty dirs that could possibly fit to that disk by itself.
+         --    Consider them one by one. Let the size of particular dir be `dir_size d'.
+         --    Let's add it to the best-packed disk of size <= (limit - dir_size d), thus
+         --    producing the disk of size <= limit. Lets do that for all "candidate" dirs that
+         --    are not yet on our disk:
+         case [ DirPack (dir_size d + s) (d:ds) | d <- filter ( (inRange (1,limit)).dir_size ) dirs
+                                                , dir_size d > 0
+                                                , let (DirPack s ds)=precomp!!(limit - dir_size d)
+                                                , d `notElem` ds
+              ] of
+                -- We either fail to add any dirs (probably, because all of them too big).
+                -- Well, just report that disk must be left empty:
+                [] -> DirPack 0 []
+                -- Or we produce some alternative packings. Let's choose the best of them all:
+                packs -> maximumBy cmpSize packs
+
+      cmpSize a b = compare (pack_size a) (pack_size b)
+
+      in precomp
+
+-- When we precomputed disk of all possible sizes for the given set of dirs, solution to 
+-- particular problem is simple: just take the solution for the required 'media_size' and
+-- that's it!
+dynamic_pack dirs = (precomputeDisksFor dirs)!!media_size
+</haskell>
+
+Notice that it took almost the same amount of text to describe algorithm and to write implementation for it. Nice, eh?
+
+----
+
+'''Exercises:'''
+* Make all necessary amendments to the previously written code to make this example compile. Hints: browse modules Data.List and Data.Ix for functions that are "missing" - maybe you will find them there (use ":browse Module.Name" at ghci prompt). Have you had to define some new instances of some classes? How did you do that?
+* <tt>[ other_function local_binding | x <- some_list, x > 0, let local_binding = some_function x ]</tt> is called a "list comprehension". This is another example of "syntactic sugar", which could lead to nicely readable code, but, when abused, could lead to syntactic caries :) Do you understand what does this sample do: <tt>let solve x = [ y | x <- [0..], y<-[0..], y == x * x ]</tt>? Could write (with help of decent tutorial) write de-sugared version of this? (Yes, I know that finding a square root does not require list traversals, but for the sake of self-education try and do it)
+* Notice that in order to code quite complex implementation of <tt>precomputeDisksFor</tt> we split it up in several smaller pieces and put them as a '''local bindings''' inside '''let''' clause.
+* Notice that we use '''pattern matching''' to both define <tt>bestKnap</tt> on case-by-case basis and to "peer into" ('''de-construct''') <tt>DirPack</tt> in the <tt>let (DirPack s ds)=precomp!!(limit - dir_size d)</tt> line
+* Notice how we use function composition to compose complex condition to filter the list of dirs
+
+---- 
+
+Before we move any further, let's do a small cosmetic change to our
+code. Right now our solution uses 'Int' to store directory size. In
+Haskell, 'Int' is a platform-dependent integer, which imposes certain
+limitations on the values of this type. Attempt to compute the value
+of type 'Int' that exceeds the bounds will result in overflow error.
+Standard Haskell libraries have special typeclass
+<hask>Bounded</hask>, which allows to define and examine such bounds:
+
+  Prelude> :i Bounded     
+  class Bounded a where
+    minBound :: a
+    maxBound :: a
+  -- skip --
+  instance Bounded Int    -- Imported from GHC.Enum
+
+We see that 'Int' is indeed bounded. Let's examine the bounds:
+
+  Prelude> minBound :: Int    
+  -2147483648
+  Prelude> maxBound :: Int
+  2147483647
+  Prelude>  
+  
+Those of you who are C-literate, will spot at once that in this case
+the 'Int' is so-called "signed 32-bit integer", which means that we
+would run into errors trying to operate on directories/directory packs
+which are bigger than 2 GB.
+
+Luckily for us, Haskell has integers of arbitrary precision (limited
+only by the amount of available memory). The appropriate type is
+called 'Integer':
+
+  Prelude> (2^50) :: Int
+  0 -- overflow
+  Prelude> (2^50) :: Integer
+  1125899906842624 -- no overflow
+  Prelude>
+  
+Lets change definitions of 'Dir' and 'DirPack' to allow for bigger
+directory sizes:
+<haskell>
+-- Taken from 'cd-fit-4-2.hs'
+data Dir = Dir {dir_size::Integer, dir_name::String} deriving (Eq,Show)
+data DirPack = DirPack {pack_size::Integer, dirs::[Dir]} deriving Show
+</haskell>
+
+Try to compile the code or load it into ghci. You will get the
+following errors:
+
+  cd-fit-4-2.hs:73:79:
+      Couldn't match `Int' against `Integer'
+        Expected type: Int
+        Inferred type: Integer
+      In the expression: limit - (dir_size d)
+      In the second argument of `(!!)', namely `(limit - (dir_size d))'
+  
+  cd-fit-4-2.hs:89:47:
+      Couldn't match `Int' against `Integer'
+        Expected type: Int
+        Inferred type: Integer
+      In the second argument of `(!!)', namely `media_size'
+      In the definition of `dynamic_pack':
+          dynamic_pack dirs = (precomputeDisksFor dirs) !! media_size
+  
+
+It seems like Haskell have some troubles using 'Integer' with '(!!)'.
+Let's see why:
+
+  Prelude> :t (!!)
+  (!!) :: [a] -> Int -> a
+
+Seems like definition of '(!!)' demands that index will be 'Int', not
+'Integer'. Haskell never converts any type to some other type
+automatically - programmer have to explicitly ask for that.
+
+I will not repeat the section "Standard Haskell Classes" from
+[http://haskell.org/onlinereport/basic.html the Haskell Report] and
+explain, why typeclasses for various numbers organized the way they
+are organized. I will just say that standard typeclass
+<hask>Num</hask> demands that numeric types implement method
+<hask>fromInteger</hask>:
+
+  Prelude> :i Num
+  class (Eq a, Show a) => Num a where
+    (+) :: a -> a -> a
+    (*) :: a -> a -> a
+    (-) :: a -> a -> a
+    negate :: a -> a
+    abs :: a -> a
+    signum :: a -> a
+    fromInteger :: Integer -> a
+          -- Imported from GHC.Num
+  instance Num Float      -- Imported from GHC.Float
+  instance Num Double     -- Imported from GHC.Float
+  instance Num Integer    -- Imported from GHC.Num
+  instance Num Int        -- Imported from GHC.Num
+  
+We see that <hask>Integer</hask> is a member of typeclass
+<hask>Num</hask>, thus we could use <hask>fromInteger</hask> to make
+the type errors go away:
+
+<haskell>
+-- Taken from 'cd-fit-4-2.hs'
+-- snip
+         case [ DirPack (dir_size d + s) (d:ds) | d <- filter ( (inRange (1,limit)).dir_size ) dirs
+                                                , dir_size d > 0
+                                                , let (DirPack s ds)=precomp!!(fromInteger (limit - dir_size d))
+                                                , d `notElem` ds
+              ] of
+-- snip
+dynamic_pack dirs = (precomputeDisksFor dirs)!!(fromInteger media_size)
+-- snip
+</haskell>
+
+Type errors went away, but careful reader will spot at once that when
+expression <hask>(limit - dir_size d)</hask> will exceed the bounds
+for <hask>Int</hask>, overflow will occur, and we will not access the
+correct list element. Don't worry, we will deal with this in a short while.
+
+Now, lets code the QuickCheck test for this function along the lines of the test for <tt>greedy_pack</tt>:
+
+<haskell>
+-- Taken from 'cd-fit-4-2.hs'
+prop_dynamic_pack_is_fixpoint ds =
+  let pack = dynamic_pack ds 
+      in pack_size pack == pack_size (dynamic_pack (dirs pack))
+</haskell>
+
+Now, lets try to run (DON'T PANIC and save all you work in other applications first!):
+
+  *Main> quickCheck prop_dynamic_pack_is_fixpoint
+
+Now, you took my advice seriously, don't you? And you did have your '''Ctrl-C''' handy, didn't you? Most probably, the attempt to run the test resulted in all your memory being taken by <tt>ghci</tt> process, which you hopefully interrupted soon enough by pressing '''Ctrl-C'''.
+
+What happened? Who ate all the memory? How to debug this problem? GHC comes with profiling abilities, but we could not use them - they produce report after program terminates, and our doesn't seem to do so without consuming several terabytes of memory first. Still, there is a lot of room for maneuver.
+
+Let's see. Since the have called <tt>dynamic_pack</tt> and it ate all the memory, let's not do this again. Instead, let's see what this function does and tweak it a bit to explore it's behavior.
+
+Since we already know that random lists of "Dir"s generated for our QuickCheck tests are of modest size (after all, <tt>greedy_pack</tt> munches them without significant memory consumption), the size of the input most probably is not the issue. However, <tt>dynamic_pack_is_fixpoint</tt> is building quite a huge list internally (via <tt>precomputeDisksFor</tt>). Could this be a problem?
+
+Let's turn the timing/memory stats on (":set +s" on ghci prompt) and try to peek into various elements of list returned by <tt>precomputeDisksFor</tt>:
+
+  Prelude> :l cd-fit.hs
+  Compiling Main             ( cd-fit.hs, interpreted )
+  Ok, modules loaded: Main.
+  *Main> :set +s
+  *Main> (precomputeDisksFor [Dir 1 "aaa"]) !! 0
+  DirPack {pack_size = 0, dirs = []}
+  (0.06 secs, 1277972 bytes)
+  *Main> (precomputeDisksFor [Dir 1 "aaa"]) !! 10
+  DirPack {pack_size = 0, dirs = []}
+  (0.00 secs, 0 bytes)
+  *Main> (precomputeDisksFor [Dir 1 "aaa"]) !! 100
+  DirPack {pack_size = 0, dirs = []}
+  (0.01 secs, 1519064 bytes)
+  *Main> (precomputeDisksFor [Dir 1 "aaa"]) !! 1000
+  DirPack {pack_size = 0, dirs = []}
+  (0.03 secs, 1081808 bytes)
+  *Main> (precomputeDisksFor [Dir 1 "aaa"]) !! 10000
+  DirPack {pack_size = 0, dirs = []}
+  (1.39 secs, 12714088 bytes)
+  *Main> (precomputeDisksFor [Dir 1 "aaa"]) !! 100000
+  Interrupted.
+  
+Aha! This seems to be a problem, since computation of 100000 fails to terminate in "reasonable" time, and to think that we have tried to compute <tt>700*1024*1024</tt>th element...
+
+Lets modify our code a bit, to allow disk size to be tweaked:
+
+<haskell>
+-- Taken from 'cd-fit-4-3.hs'
+dynamic_pack limit dirs = (precomputeDisksFor dirs)!!(fromInteger limit)
+
+prop_dynamic_pack_is_fixpoint ds =
+  let pack = dynamic_pack media_size ds 
+      in pack_size pack == pack_size (dynamic_pack media_size (dirs pack))
+
+prop_dynamic_pack_small_disk ds =
+  let pack = dynamic_pack 50000 ds
+      in pack_size pack == pack_size (dynamic_pack 50000 (dirs pack))
+
+-- rename "old" main to "moin"
+main = quickCheck prop_dynamic_pack_small_disk
+</haskell>
+
+Compute a profiling version of you code with <tt>ghc -O --make -prof -auto-all -o cd-fit cd-fit.hs</tt> and run it like this: 
+
+  $ ./cd-fit +RTS -p
+  OK, passed 100 tests.
+
+First thing, note that our code satisfies at least one simple property. Good. Now let's examine profile. Look into file "cd-fit.prof", which was produced in your current directory. 
+
+Most probably, you'll see something like this:
+
+             cd-fit +RTS -p -RTS
+  
+          total time  =        2.18 secs   (109 ticks @ 20 ms)
+          total alloc = 721,433,008 bytes  (excludes profiling overheads)
+  
+  COST CENTRE                    MODULE               %time %alloc
+  
+  precomputeDisksFor             Main                  88.1   99.8
+  dynamic_pack                   Main                  11.0    0.0
+                                                                                                 individual    inherited
+  COST CENTRE              MODULE                                               no.    entries  %time %alloc   %time %alloc
+  
+  MAIN                     MAIN                                                   1           0   0.0    0.0   100.0  100.0
+   CAF                     Main                                                 174          11   0.9    0.2   100.0  100.0
+    prop_dynamic_pack_small_disk Main                                           181         100   0.0    0.0    99.1   99.8
+     dynamic_pack          Main                                                 182         200  11.0    0.0    99.1   99.8
+      precomputeDisksFor   Main                                                 183         200  88.1   99.8    88.1   99.8
+    main                   Main                                                 180           1   0.0    0.0     0.0    0.0
+
+Examine column of "individual %alloc". As we thought, all memory was
+allocated within <tt>precomputeDisksFor</tt>. However, amount of
+memory allocated (more than 700 MB, according to the line "total
+alloc") seems to be a little too much for our simple task. We will dig
+deeper and find where we a wasting it.
+
+Let's examine memory consumption a little closer via so-called "heap
+profiles". Run <tt>./cd-fit +RTS -hb</tt>. This produces "biographical
+heap profile", which tells us how various parts of the memory were
+used during the program run time. Heap profile was saved to
+"cd-fit.hp". It is next to impossible to read and comprehend it as is,
+so use "hp2ps cd-fit.hp" to produce a nice PostScript picture which
+is worth a thousand words. View it with "gv" or "ghostview" or "full
+Adobe Acrobat (not Reader)". (This and subsequent pictures are
+'''not''' attached here).
+
+Notice that most of the graph is taken up by region marked as "VOID". 
+This means that memory allocated was never used. Notice that there is
+'''no''' areas marked as "USE", "LAG" or "DRAG". Seems like our
+program hardly uses '''any''' of the allocated memory at all. Wait a
+minute! How could that be? Surely it must use something when it packs
+to the imaginary disks of 50000 bytes those random-generated
+directories which are 10 to 1400 Mb in size.... Oops. Severe size
+mismatch. We should have spotted it earlier, when we were timing
+<tt>precomputeDisksFor</tt>. Scroll back and observe how each run
+returned the very same result - empty directory set.
+
+Our random directories are too big, but nevertheless code spends time
+and memory trying to "pack" them. Obviously,
+<tt>precomputeDisksFor</tt> (which is responsible for 90% of total
+memory consumption and run time) is flawed in some way.
+
+Let's take a closer look at what takes up so much memory. Run
+<tt>./cd-fit +RTS -h -hbvoid</tt> and produce PostScript picture for
+this memory profile. This will give us detailed breakdown of all
+memory whose "biography" shows that it's been "VOID" (unused). My
+picture (and I presume that yours as well) shows that VOID memory
+comprises of "thunks" labeled "precomputeDisksFor/pre...". We could
+safely assume that second word would be "precomp" (You wonder why?
+Look again at the code and try to find function named "pre.*" which is
+called from inside <tt>precomputeDisksFor</tt>)
+
+This means that memory has been taken by the list generated inside
+"precomp". Rumor has it that memory leaks with Haskell are caused by
+either too little laziness or too much laziness. It seems like we have
+too little laziness here: we evaluate more elements of the list that
+we actually need and keep them from being garbage-collected. 
+
+Note how we look up element from "precomp" in this piece of code:
+
+<haskell>
+case [ DirPack (dir_size d + s) (d:ds) | d <- filter ( (inRange (1,limit)).dir_size ) dirs
+                                       , dir_size d > 0
+                                       , let (DirPack s ds)=precomp!!(fromInteger (limit - dir_size d))
+                                       , d `notElem` ds
+</haskell>
+
+
+Obviously, the whole list generated by "precomp" must be kept in
+memory for such lookups, since we can't be sure that some element
+could be garbage collected and will not be needed again.
+
+Let's rewrite the code to eliminate the list (incidentally, this will also deal with the possible Int overflow while accessing the "precomp" via (!!) operator):
+
+<haskell>
+-- Taken from 'cd-fit-4-4.hs'
+-- Let the `bestDisk x' be the "most tightly packed" disk of total 
+-- size no more than `x'.
+-- How to calculate `bestDisk'? Lets opt for a recursive definition:
+-- Recursion base: best packed disk of size 0 is empty and best-packed
+-- disk for empty list of directories on it is also empty.
+bestDisk 0 _  = DirPack 0 []
+bestDisk _ [] = DirPack 0 []
+-- Recursion step: for size `limit`, bigger than 0, best packed disk is
+-- computed as follows:
+bestDisk limit dirs =
+   -- Take all non-empty dirs that could possibly fit to that disk by itself.
+   -- Consider them one by one. Let the size of particular dir be `dir_size d'.
+   -- Let's add it to the best-packed disk of size <= (limit - dir_size d), thus
+   -- producing the disk of size <= limit. Lets do that for all "candidate" dirs that
+   -- are not yet on our disk:
+   case [ DirPack (dir_size d + s) (d:ds) | d <- filter ( (inRange (1,limit)).dir_size ) dirs
+                                          , dir_size d > 0
+                                          , let (DirPack s ds)= bestDisk (limit - dir_size d) dirs 
+                                          , d `notElem` ds
+        ] of
+          -- We either fail to add any dirs (probably, because all of them too big).
+          -- Well, just report that disk must be left empty:
+          [] -> DirPack 0 []
+          -- Or we produce some alternative packings. Let's choose the best of them all:
+          packs -> maximumBy cmpSize packs
+
+cmpSize a b = compare (pack_size a) (pack_size b)
+
+dynamic_pack limit dirs = bestDisk limit dirs
+</haskell>
+
+
+Compile the profiling version of this code and obtain the overall
+execution profile (with "+RTS -p"). You'll get something like this:
+
+             cd-fit +RTS -p -RTS
+  
+          total time  =        0.00 secs   (0 ticks @ 20 ms)
+          total alloc =   1,129,520 bytes  (excludes profiling overheads)
+  
+  COST CENTRE                    MODULE               %time %alloc
+  
+  CAF                            GHC.Float              0.0    4.4
+  main                           Main                   0.0   93.9
+  
+                                                                                                 individual    inherited
+  COST CENTRE              MODULE                                               no.    entries  %time %alloc   %time %alloc
+  MAIN                     MAIN                                                   1           0   0.0    0.0     0.0  100.0
+   main                    Main                                                 180           1   0.0   93.9     0.0   94.2
+    prop_dynamic_pack_small_disk Main                                                 181         100   0.0    0.0     0.0    0.3
+     dynamic_pack          Main                                                 182         200   0.0    0.2     0.0    0.3
+      bestDisk             Main                                                 183         200   0.0    0.1     0.0    0.1
+
+We achieved the major improvement: memory consumption is reduced by factor
+of 700! Now we could test the code on the "real task" - change the
+code to run the test for packing the full-sized disk:
+
+<haskell>
+main = quickCheck prop_dynamic_pack_is_fixpoint
+</haskell>
+
+Compile with profiling and run (with "+RTS -p"). If you are not lucky
+and a considerably big test set would be randomly generated for your
+runs, you'll have to wait. And wait even more. And more.
+
+Go make some tea. Drink it. Read some Tolstoi (Do you have "War and
+peace" handy?). Chances are that by the time you are done with
+Tolstoi, program will still be running (just take my word on it, don't
+check).
+
+If you are lucky, your program will finish fast enough and leave you
+with profile. According to a profile, program spends 99% of its time
+inside <tt>bestDisk</tt>. Could we speed up <tt>bestDisk</tt> somehow?
+
+Note that <tt>bestDisk</tt> performs several simple calculation for
+which it must call itself. However, it is done rather inefficiently -
+each time we pass to <tt>bestDisk</tt> the exact same set of
+directories as it was called with, even if we have already "packed"
+some of them. Let's amend this:
+
+<haskell>
+-- Taken from 'cd-fit-4-5.hs'
+case [ DirPack (dir_size d + s) (d:ds) | let small_enough = filter ( (inRange (0,limit)).dir_size ) dirs
+                                       , d <- small_enough
+                                       , dir_size d > 0
+                                       , let (DirPack s ds)= bestDisk (limit - dir_size d) (delete d small_enough)
+     ] of
+</haskell>
+
+Recompile and run again. Runtimes could be lengthy, but bearable, and
+number of times <tt>bestDisk</tt> is called (according to the profile)
+should decrease significantly. 
+
+Finally, let's compare both packing algorithms. Intuitively, we feel
+that greedy algorithm should produce worse results, don't we? Lets put
+this feeling to the test:
+
+<haskell>
+-- Taken from 'cd-fit-4-5.hs'
+prop_greedy_pack_is_no_better_than_dynamic_pack ds =
+  pack_size (greedy_pack ds) <= pack_size (dynamic_pack media_size ds)
+</haskell>
+
+Verify that it is indeed so by running <tt>quickCheck</tt> for this
+test several time. I feel that this concludes our knapsacking
+exercises. 
+
+Adventurous readers could continue further by implementing so-called
+"scaling" for <tt>dynamic_pack</tt> where we divide all directory
+sizes and medium size by the size of the smallest directory to proceed
+with smaller numbers (which promises faster runtimes). 
+
+== Chapter 5: (Ab)using monads and destructing constructors for fun and profit ==
+
+We already mentioned monads quite a few times. They are described in
+numerous articles and tutorial (See Chapter 400). It's hard to read a
+daily dose of any Haskell mailing list and not to come across a word
+"monad" a dozen times.
+
+Since we already made quite a progress with Haskell, it's time we
+revisit the monads once again. I will let the other sources teach you
+theory behind the monads, overall usefulness of the concept, etc.
+Instead, I will focus on providing you with examples.
+
+Let's take a part of the real world program which involves XML
+processing. We will work with XML tag attributes, which are
+essentially named values:
+<haskell>
+-- Taken from 'chapter5-1.hs'
+type Attribute = (Name, AttValue)
+</haskell>
+
+'Name' is a plain string, and value could be '''either''' string or
+references (also strings) to another attributes which holds the actual
+value (now, this is not a valid XML thing, but for the sake of
+providing a nice example, let's accept this). Word "either" suggests
+that we use 'Either' datatype:
+<haskell>
+type AttValue = Either Value [Reference]
+type Name = String
+type Value = String
+type Reference = String
+
+-- Sample list of simple attributes:
+simple_attrs = [ ( "xml:lang", Left "en" )
+               , ( "xmlns", Left "jabber:client" )
+               , ( "xmlns:stream", Left "http://etherx.jabber.org/streams" ) ]
+
+-- Sample list of attributes with references:
+complex_attrs = [ ( "xml:lang", Right ["lang"] )
+                , ( "lang", Left "en" )
+                , ( "xmlns", Right ["ns","subns"] )
+                , ( "ns", Left "jabber" )
+                , ( "subns", Left "client" )
+                , ( "xmlns:stream", Left "http://etherx.jabber.org/streams" ) ]
+</haskell>
+
+'''Our task is:''' to write a function that will look up a value of
+attribute by it's name from the given list of attributes. When
+attribute contains reference(s), we resolve them (looking for the
+referenced attribute in the same list) and concatenate their values,
+separated by semicolon. Thus, lookup of attribute "xmlns" form both
+sample sets of attributes should return the same value.
+
+Following the example set by the <hask>Data.List.lookup</hask> from
+the standard libraries, we will call our function
+<hask>lookupAttr</hask> and it will return <hask>Maybe Value</hask>,
+allowing for lookup errors:
+
+<haskell>
+-- Taken from 'chapter5-1.hs'
+lookupAttr :: Name -> [Attribute] -> Maybe Value
+-- Since we dont have code for 'lookupAttr', but want
+-- to compile code already, we use the function 'undefined' to
+-- provide default, "always-fail-with-runtime-error" function body.
+lookupAttr = undefined
+</haskell>
+
+Let's try to code <hask>lookupAttr</hask> using <hask>lookup</hask> in
+a very straightforward way:
+
+<haskell>
+-- Taken from 'chapter5-1.hs'
+import Data.List
+
+lookupAttr :: Name -> [Attribute] -> Maybe Value
+lookupAttr nm attrs = 
+  -- First, we lookup 'Maybe AttValue' by name and
+  -- check whether we are successful:
+  case (lookup nm attrs) of
+       -- Pass the lookup error through.
+       Nothing   -> Nothing 
+       -- If given name exist, see if it is value of reference:
+       Just attv -> case attv of
+                         -- It's a value. Return it!
+                         Left val -> Just val
+                         -- It's a list of references :(
+                         -- We have to look them up, accounting for
+                         -- possible failures.
+                         -- First, we will perform lookup of all references ...
+                         Right refs -> let vals = [ lookupAttr ref attrs | ref <- refs ]
+                                           -- .. then, we will exclude lookup failures
+                                           wo_failures = filter (/=Nothing) vals
+                                           -- ... find a way to remove annoying 'Just' wrapper
+                                           stripJust (Just v) = v
+                                           -- ... use it to extract all lookup results as strings
+                                           strings = map stripJust wo_failures
+                                           in
+                                           -- ... finally, combine them into single String. 
+                                           -- If all lookups failed, we should pass failure to caller.
+                                           case null strings of
+                                             True  -> Nothing
+                                             False -> Just (concat (intersperse ":" strings))
+</haskell>
+
+Testing:
+
+  *Main> lookupAttr "xmlns" complex_attrs
+  Just "jabber:client"
+  *Main> lookupAttr "xmlns" simple_attrs
+  Just "jabber:client"
+  *Main>
+
+It works, but ... It seems strange that such a boatload of code
+required for quite simple task. If you examine the code closely,
+you'll see that the code bloat is caused by:
+
+* the fact that after each step we check whether the error occurred
+
+* unwrapping Strings from <hask>Maybe</hask> and <hask>Either</hask> data constructors and wrapping them back.
+
+At this point C++/Java programmers would say that since we just pass
+errors upstream, all those cases could be replaced by the single "try
+... catch ..." block, and they would be right. Does this mean that
+Haskell programmers are reduced to using "case"s, which were already
+obsolete 10 years ago?
+
+Monads to the rescue! As you can read elsewhere (see section 400),
+monads are used in advanced ways to construct computations from other
+computations. Just what we need - we want to combine several simple
+steps (lookup value, lookup reference, ...) into function
+<hask>lookupAttr</hask> in a way that would take into account possible
+failures.
+
+Lets start from the code and dissect in afterwards:
+<haskell>
+-- Taken from 'chapter5-2.hs'
+import Control.Monad
+
+lookupAttr' nm attrs = do
+  -- First, we lookup 'AttValue' by name
+  attv <- lookup nm attrs
+  -- See if it is value of reference:
+  case attv of
+    -- It's a value. Return it!
+    Left val -> Just val
+    -- It's a list of references :(
+    -- We have to look them up, accounting for
+    -- possible failures.
+    -- First, we will perform lookup of all references ...
+    Right refs -> do vals <- sequence $ map (flip lookupAttr' attrs) refs
+                     -- ... since all failures are already excluded by "monad magic",
+                     -- ... all all 'Just's have been removed likewise,
+                     -- ... we just combine values into single String,
+                     -- ... and return failure if it is empty. 
+                     guard (not (null vals))
+                     return (concat (intersperse ":" vals))
+</haskell>
+
+'''Exercise''': compile the code, test that <hask>lookupAttr</hask>
+and <hask>lookupAttr'</hask> really behave in the same way. Try to
+write a QuickCheck test for that, defining the 
+<hask>instance Arbitrary Name</hask> such that arbitrary names will be taken from
+names available in <hask>simple_attrs</hask>.
+
+Well, back to the story. Noticed the drastic reduction in code size?
+If you drop comments, the code will occupy mere 7 lines instead of 13
+- almost two-fold reduction. How we achieved this?
+
+First, notice that we never ever check whether some computation
+returns <hask>Nothing</hask> anymore. Yet, try to lookup some
+non-existing attribute name, and <hask>lookupAttr'</hask> will return
+<hask>Nothing</hask>. How does this happen? Secret lies in the fact
+that type constructor <hask>Maybe</hask> is a "monad".
+
+We use keyword <hask>do</hask> to indicate that following block of
+code is a sequence of '''monadic actions''', where '''monadic magic'''
+have to happen when we use '<-', 'return' or move from one action to
+another.
+
+Different monads have different '''magic'''. Library code says that
+type constructor <hask>Maybe</hask> is such a monad that we could use
+<hask><-</hask> to "extract" values from wrapper <hask>Just</hask> and
+use <hask>return</hask> to put them back in form of
+<hask>Just some_value</hask>. When we move from one action in the "do" block to
+another a check happens. If the action returned <hask>Nothing</hask>,
+all subsequent computations will be skipped and the whole "do" block
+will return <hask>Nothing</hask>.
+
+Try this to understand it all better:
+<haskell>
+*Main> let foo x = do v <- x; return (v+1) in foo (Just 5)
+Just 6
+*Main> let foo x = do v <- x; return (v+1) in foo Nothing 
+Nothing
+*Main> let foo x = do v <- x; return (Data.Char.ord v) in foo (Just 'a')
+Just 97
+*Main> let foo x = do v <- x; return (Data.Char.ord v) in foo Nothing   
+Nothing
+*Main> 
+</haskell>
+
+Do not mind <hask>sequence</hask> and <hask>guard</hask> just for now
+- we will get to them in the little while.
+
+Since we already removed one reason for code bloat, it is time to deal
+with the other one. Notice that we have to use <hask>case</hask> to
+'''deconstruct''' the value of type <hask>Either Value
+[Reference]</hask>. Surely we are not the first to do this, and such
+use case have to be quite a common one. 
+
+Indeed, there is a simple remedy for our case, and it is called
+<hask>either</hask>:
+
+  *Main> :t either
+  either :: (a -> c) -> (b -> c) -> Either a b -> c
+
+Scary type signature, but here are examples to help you grok it:
+
+  *Main> :t either (+1) (length)              
+  either (+1) (length) :: Either Int [a] -> Int
+  *Main> either (+1) (length) (Left 5)
+  6
+  *Main> either (+1) (length) (Right "foo")
+  3
+  *Main> 
+
+Seems like this is exactly our case. Let's replace the
+<hask>case</hask> with invocation of <hask>either</hask>:
+
+<haskell>
+-- Taken from 'chapter5-3.hs'
+lookupAttr'' nm attrs = do
+  attv <- lookup nm attrs
+  either Just (dereference attrs) attv
+  where
+    dereference attrs refs = do 
+      vals <- sequence $ map (flip lookupAttr'' attrs) refs
+      guard (not (null vals))
+      return (concat (intersperse ":" vals))
+</haskell>
+
+It keeps getting better and better :)
+
+Now, as semi-exercise, try to understand the meaning of "sequence",
+"guard" and "flip" looking at the following ghci sessions:
+
+  *Main> :t sequence
+  sequence :: (Monad m) => [m a] -> m [a]
+  *Main> :t [Just 'a', Just 'b', Nothing, Just 'c']
+  [Just 'a', Just 'b', Nothing, Just 'c'] :: [Maybe Char]
+  *Main> :t sequence [Just 'a', Just 'b', Nothing, Just 'c']
+  sequence [Just 'a', Just 'b', Nothing, Just 'c'] :: Maybe [Char]
+
+  *Main> sequence [Just 'a', Just 'b', Nothing, Just 'c']
+  Nothing
+  *Main> sequence [Just 'a', Just 'b', Nothing]
+  Nothing
+  *Main> sequence [Just 'a', Just 'b']
+  Just "ab"
+
+  *Main> :t [putStrLn "a", putStrLn "b"]
+  [putStrLn "a", putStrLn "b"] :: [IO ()]
+  *Main> :t sequence [putStrLn "a", putStrLn "b"]
+  sequence [putStrLn "a", putStrLn "b"] :: IO [()]
+  *Main> sequence [putStrLn "a", putStrLn "b"]
+  a
+  b
+
+  *Main> :t [putStrLn "a", fail "stop here", putStrLn "b"]
+  [putStrLn "a", fail "stop here", putStrLn "b"] :: [IO ()]
+  *Main> :t sequence [putStrLn "a", fail "stop here", putStrLn "b"]
+  sequence [putStrLn "a", fail "stop here", putStrLn "b"] :: IO [()]
+  *Main> sequence [putStrLn "a", fail "stop here", putStrLn "b"]
+  a
+  *** Exception: user error (stop here)
+
+Notice that for monad <hask>Maybe</hask> sequence continues execution
+until the first <hask>Nothing</hask>. The same behavior could be
+observed for IO monad. Take into account that different behaviors are
+not hardcoded into the definition of <hask>sequence</hask>!
+
+Now, let's examine <hask>guard</hask>:
+
+  *Main> let foo x = do v <- x; guard (v/=5); return (v+1) in map foo [Just 4, Just 5, Just 6] 
+  [Just 5,Nothing,Just 7]
+
+As you can see, it's just a simple way to "stop" execution at some
+condition.
+
+If you have been hooked on monads, I urge you to read "All About
+Monads" right now (link in Chapter 400).
+
+== Chapter 6: Where do you want to go tomorrow? ==
+
+As the name implies, the author is open for proposals - where should
+we go next? I had networking + xml/xmpp in mind, but it might be too
+heavy and too narrow for most of the readers.
+
+What do you think? Drop me a line.
+
+== Chapter 400: Monads up close ==
+
+Read [http://en.wikibooks.org/wiki/Haskell/Understanding_monads this wikibook chapter]. 
+Then, read [http://www.nomaware.com/monads "All about monads"].
+'Nuff said :)
+
+== Chapter 500: IO up close ==
+
+Shows that:
+
+<haskell>
+c = do a <- someAction
+       b <- someOtherAction
+       print (bar b)
+       print (foo a)
+       print "done"
+</haskell>
+
+really is just a syntax sugar for:
+
+<haskell>
+c = someAction >>= \a ->
+    someOtherAction >>= \b ->
+    print (bar b) >>
+    print (foo a) >>
+    print "done"
+</haskell>
+
+and explains about ">>=" and ">>". Oh wait. This was already explained
+in Chapter 400 :)
+
+== Chapter 9999: Installing Haskell Compiler/Interpreter and all necessary software ==
+
+Plenty of material on this on the web and this wiki. Just go get
+yourself installation of [[GHC]] (6.4 or above) or [[Hugs]] (v200311 or
+above) and "[[darcs]]", which we will use for version control.
+
+== Chapter 10000: Thanks! ==
+
+Thanks for comments, proofreading, good advice and kind words go to:
+Helge, alt, dottedmag, Paul Moore, Ben Rudiak-Gould, Jim Wilkinson,
+Andrew Zhdanov (avalez), Martin Percossi, SpellingNazi, Davor
+Cubranic, Brett Giles, Stdrange, Brian Chrisman, Nathan Collins,
+Anastasia Gornostaeva (ermine), Remi, Ptolomy, Zimbatm,
+HenkJanVanTuyl, Miguel, Mforbes, Kartik Agaram, Jake Luck, Ketil
+Malde, Mike Mimic, Jens Kubieziel.
+
+If I should have mentioned YOU and forgot - tell me so.
+
+Without you I would have stopped after Chapter 1 :)

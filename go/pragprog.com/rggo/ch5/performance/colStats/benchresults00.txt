@@ -1,0 +1,7 @@
+goos: darwin
+goarch: amd64
+pkg: pragprog.com/rggo/ch5/performance/colStats
+cpu: Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+BenchmarkRun-8   	      10	 604099869 ns/op
+PASS
+ok  	pragprog.com/rggo/ch5/performance/colStats	7.162s

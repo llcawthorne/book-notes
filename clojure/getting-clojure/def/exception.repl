@@ -1,0 +1,15 @@
+user=> (/ 1 0)
+
+ArithmeticException Divide by zero  clojure.lang.Numbers.divide
+(Numbers.java:158)
+
+user=> *e
+#error {
+ :cause "Divide by zero"
+ :via
+ [{:type java.lang.ArithmeticException
+   :message "Divide by zero"
+   :at [clojure.lang.Numbers divide "Numbers.java" 158]}]
+ :trace
+ [[clojure.lang.Numbers divide "Numbers.java" 158]
+ << And so on for quite some time... >>

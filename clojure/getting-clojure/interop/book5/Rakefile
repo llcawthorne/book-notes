@@ -1,0 +1,8 @@
+require_relative "../java_targets"
+
+task :default => [:compile_java, :test]
+
+
+task :test do
+  run_java_class("com.russolsen.blottsbooks.BookTest")
+end

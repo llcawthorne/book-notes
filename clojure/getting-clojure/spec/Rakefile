@@ -1,0 +1,4 @@
+require_relative '../util/targets.rb'
+
+
+lein_run('inventory')

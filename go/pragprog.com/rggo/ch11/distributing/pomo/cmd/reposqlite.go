@@ -1,0 +1,19 @@
+//go:build !inmemory && !containers
+// +build !inmemory,!containers
+
+package cmd
+
+import (
+	"github.com/spf13/viper"
+	"pragprog.com/rggo/ch10/persistentDataSQL/pomo/pomodoro"
+	"pragprog.com/rggo/ch10/persistentDataSQL/pomo/pomodoro/repository"
+)
+
+func getRepo() (pomodoro.Repository, error) {
+	repo, err := repository.NewSQLite3Repo(viper.GetString("db"))
+	if err != nil {
+		return nil, err
+	}
+
+	return repo, nil
+}

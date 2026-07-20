@@ -1,0 +1,33 @@
+Help on module docstr:
+
+NNAAMMEE
+    docstr - I am: docstr.__doc__
+
+FFIILLEE
+    /home/cawthorn/programming/python/LearningPython/docstr.py
+
+CCLLAASSSSEESS
+    builtins.object
+        spam
+    
+    class ssppaamm(builtins.object)
+     |  I am: spam.__doc__ or docstr.spam.__doc__
+     |  
+     |  Methods defined here:
+     |  
+     |  mmeetthhoodd(self, arg)
+     |      I am: spam.method.__doc__ or self.method.__doc__
+     |  
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |  
+     |  ____ddiicctt____
+     |      dictionary for instance variables (if defined)
+     |  
+     |  ____wweeaakkrreeff____
+     |      list of weak references to the object (if defined)
+
+FFUUNNCCTTIIOONNSS
+    ffuunncc(args)
+        I am: docstr.func.__doc__
+

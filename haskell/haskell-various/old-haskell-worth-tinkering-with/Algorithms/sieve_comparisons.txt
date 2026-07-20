@@ -1,0 +1,40 @@
+-- ONeill
+cawthorn@cocky ~/10Spring/CSCE350/haskell_implementations $ time ./test_oneill 
+"15485867"
+
+real    0m4.690s
+user    0m4.670s
+sys     0m0.020s
+
+-- CPP Sieve of Erat
+cawthorn@cocky ~/programming/cpp $ time ./cpp_sieve 
+10000th is 15485867
+
+real    0m11.779s
+user    0m11.769s
+sys 0m0.010s
+
+-- Python Sieve of Erat
+cawthorn@cocky ~/10Spring/CSCE350/python_implementations $ time ./sieve_erat.py 
+15485867
+
+real    0m14.582s
+user    0m13.969s
+sys 0m0.600s
+
+
+-- Better Sieve of Erat
+cawthorn@cocky ~/10Spring/CSCE350/haskell_implementations $ time ./test_better 
+"15485867"
+
+real    0m24.815s
+user    0m24.685s
+sys     0m0.130s
+
+-- Basic Sieve of Erat [Cancelled @ 15min mark]
+cawthorn@cocky ~/10Spring/CSCE350/haskell_implementations $ time ./test_erat 
+^C
+
+real    15m18.166s
+user    15m17.164s
+sys     0m0.750s

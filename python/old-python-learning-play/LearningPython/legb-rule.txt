@@ -1,0 +1,8 @@
+Scope:
+
+Local
+Enclosing
+Global (ie Module)
+Built-In
+
+LEGB

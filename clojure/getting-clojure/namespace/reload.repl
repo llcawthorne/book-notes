@@ -1,0 +1,32 @@
+;
+blottsbooks.core=> (require '[blottsbooks.pricing :as pricing])
+nil
+blottsbooks.core=> (pricing/discount-price {:title "Emma" :price 20.0})
+17.0
+;
+
+;
+blottsbooks.core=> (require '[blottsbooks.pricing :as pricing])
+nil
+;
+
+;
+blottsbooks.core=> (pricing/compute-discount-price
+                     {:title "Emma" :price 20.0})
+
+CompilerException java.lang.RuntimeException:
+  No such var: pricing/compute-discount-price, ...
+;
+
+
+;
+blottsbooks.core=> (require :reload '[blottsbooks.pricing :as pricing])
+nil
+blottsbooks.core=> (pricing/compute-discount-price
+                     {:title "Emma" :price 20.0})
+17.0
+;
+
+;
+blottsbooks.core=> (ns-unmap 'blottsbooks.pricing 'discount-price)
+;

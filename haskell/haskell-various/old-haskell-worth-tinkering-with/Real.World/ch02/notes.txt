@@ -1,0 +1,23 @@
+
+-- We can declare variable types explicitly
+[1,2,3] :: [Int]  -- list is type Int, instead of default Integer
+[1,2,3] :: [Double] -- returns [1.0, 2.0, 3.0]
+1 :: Double         -- returns 1.0
+"Doggy" :: String   -- calls it String instead of [Char]
+-- in ghci, 'let x = 3 :: Int' works too!
+
+-- an empty tuple () is called a "unit" and is like void
+
+-- head, tail, take, drop are very important with lists
+head [1,2,3]   -- returns 1
+tail [1,2,3]   -- returns [2,3]
+take 2 [1,2,3] -- returns [1,2]
+drop 2 [1,2,3] == returns [3]
+
+-- if Bool then Val else Val
+-- is a three-part statement (if, then, else)
+-- all three parts are REQUIRED
+-- also the then and else must evaluate to the same type
+if x>0 then "Big!" else "Small!"  -- is fine
+if x>0 then "Big!" else 0         -- breaks!
+if x>0 then "Big!"                -- breaks!

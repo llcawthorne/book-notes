@@ -1,0 +1,9 @@
+require_relative '../util/targets.rb'
+
+sub_rake('book1')
+sub_rake('book2')
+sub_rake('book3')
+sub_rake('book4')
+sub_rake('book5')
+
+boot_runtest

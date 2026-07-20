@@ -1,0 +1,88 @@
+# Learn Funx - Interactive Examples
+# Copy and paste these commands into IEx to explore functional programming patterns
+
+# =============================================================================
+# 1. SETUP - Create tables
+# =============================================================================
+
+iex -S mix
+
+Hero.Repo.create_table()
+Team.Repo.create_table()
+Dispatch.Repo.create_table()
+
+# =============================================================================
+# 2. HEROES - Self-healing constructors
+# =============================================================================
+
+superman = Hero.make("Superman", 85, powers: [:flight, :strength])
+batman = Hero.make("Batman", 75, powers: [:detective, :gadgets])
+wonder_woman = Hero.make("Wonder Woman", 80, powers: [:strength, :lasso])
+
+# Invalid data heals automatically
+
+weak_hero = Hero.make("", -10)
+
+# → %Hero{name: "Unknown Hero", power_level: 1, ...}
+
+# Invalid powers are filtered out
+
+hero_with_junk = Hero.make("Test", 50, powers: [:flight, "invalid", 123, :strength])
+hero_with_junk.powers
+
+# → [:flight, :strength]
+
+# =============================================================================
+# 3. VALIDATION - Either pattern
+# =============================================================================
+
+# Valid data returns Right
+
+Hero.validate(superman)
+# → %Either.Right{right: %Hero{...}}
+
+# Invalid data using unsafe_change (bypasses self-healing)
+
+invalid_hero = Hero.unsafe_change(superman, %{name: "", power_level: 200})
+Hero.validate(invalid_hero)
+
+# → %Either.Left{left: %ValidationError{errors: [...]}}
+
+# =============================================================================
+# 4. TEAMS - Same healing and validation
+# =============================================================================
+
+strong_team = Team.make("Justice League", heroes: [superman, batman, wonder_woman])
+
+# → %Team{name: "Justice League", hero_ids: [1, 2, 3], ...}
+
+Team.make("")
+
+# → %Team{name: "Unnamed Team", hero_ids: [], ...}
+
+# =============================================================================
+# 5. DISPATCHES - Team strength checks with Either
+# =============================================================================
+
+weak_hero1 = Hero.make("Weak1", 25)
+weak_hero2 = Hero.make("Weak2", 30)
+mixed_team = Team.make("Mixed Squad", heroes: [superman, weak_hero1, weak_hero2])
+
+# Success: all heroes meet requirement
+
+Dispatch.make(strong_team, required_power: 50)
+
+# → %Either.Right{right: %Dispatch{...}}
+
+# Success: mixed team meets lower requirement
+
+Dispatch.make(mixed_team, required_power: 20)
+
+# → %Either.Right{right: %Dispatch{...}}
+
+# Failure: some heroes fail to meet requirement
+
+Dispatch.make(mixed_team, required_power: 50)
+
+# → %Either.Left{left: %ValidationError{errors: [error1, error2]}}
+#   Exactly 2 errors: one for each weak hero that failed the requirement

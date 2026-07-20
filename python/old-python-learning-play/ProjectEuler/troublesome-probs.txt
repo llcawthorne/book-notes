@@ -1,0 +1,5 @@
+
+Problem012 is terribly slow.  Really need to work on my divisor algorithm.
+Problem019 is fast, but ugly.  Clean it up.
+Problem057 has too many levels for recursion.
+Problem071 ran me outta memory!  Must be an easier way.
