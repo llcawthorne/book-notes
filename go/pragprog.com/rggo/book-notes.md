@@ -1,4 +1,4 @@
-# Power Command-Line Applications in Go
+# Powerful Command-Line Applications in Go
 
 ## Chapter 1 - Your First Command-Line Program in Go
 
