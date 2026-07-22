@@ -76,8 +76,8 @@
     `{:ok, x} | {:error, reason}` so the caller has to handle failure explicitly.
   - `new!` (bang) — construction can fail, and on failure it raises instead of
     returning an error tuple. The ! is a hard convention signal meaning "this will
-    raise — expect an exception if things go wrong, not a return value you need to
-    pattern-match."
+    raise — expect an exception if things go wrong, not a return value you need
+    to pattern-match."
   - `make`, `build`, `from_x` — no real convention weight; these are just "whatever
     the author felt like." You'll see all three used interchangeably for the same
     non-failing-constructor purpose.
@@ -221,7 +221,7 @@
   comparing values.
 - `contramap/1` is similar to `map` which loosely speaking "transforms values
   in a container", but it is less "map but before comparing" and more like
-  "compare a temporary view of the data, computed on the fly." 
+  "compare a temporary view of the data, computed on the fly."
 - We're not actually going to change our `Eq` definition from identity. We're
   just going to add a new `eq_time` function that compares time.
 
@@ -559,9 +559,9 @@
   end
   ```
 
-- We're going to make our `Ord` easy to use by writing a general purpose 
+- We're going to make our `Ord` easy to use by writing a general purpose
   `compare/2` function. In many languages this would return -1, 0, 1, but as
-  we've seen with `DateTime`, in Elixir it is standard to return 
+  we've seen with `DateTime`, in Elixir it is standard to return
   `:lt, :eq, :gt`.
 
   ```elixir
@@ -635,7 +635,7 @@
   # ]
   ```
 
-- Sorting then reversing is inefficient compared to being able to reverse an 
+- Sorting then reversing is inefficient compared to being able to reverse an:
   `Ord`.
 
   ```elixir
@@ -2667,3 +2667,625 @@
     |> filter_map(check_vip_or_pass)
   end
   ```
+
+## Chapter 9 - Model Outcomes with Either
+
+- Either is another branching structure for success or failure, but it adds
+  information to the failure path. Either has Right for success and Left for
+  Failure and both store a value. It implements `Eq`, `Ord`, `Foldable`,
+  and `Monad`, but unlike Maybe does not implement `Filterable` - it isn't
+  possible to generate a new Left when the predicate fails. The Either Module
+  provides functions for constructing, inspecting, and adapting Either values.
+  Either is biased towards success, which allows `map`, `bind`, and `ap` to
+  compose along the Right branch and short-circuit on Left.
+
+  ```elixir
+  # lib/fun_park/monad/either/right.ex
+  defmodule FunPark.Monad.Either.Right do
+    @enforce_keys [:right]
+    defstruct [:right]
+
+    def pure(value), do: %__MODULE__{right: value}
+  end
+
+  # lib/fun_park/monad/either/left.ex
+  defmodule FunPark.Monad.Either.Left do
+    @enforce_keys [:left]
+    defstruct [:left]
+
+    def pure(value), do: %__MODULE__{left: value}
+  end
+  ```
+
+- We already used Maybe to model excluding Patrons from the fast lane, but now
+  we want to model that with Either so we can give Patrons a reason. We already
+  have the predicates; we just need to lift them into the Either context.
+
+  ```elixir
+  # lib/fun_park/monad/either.ex
+  def lift_predicate(value, predicate, on_false)
+      when is_function(predicate, 1) and is_function(on_false, 1) do
+    fold_l(
+      fn -> predicate.(value) end,
+      fn -> right(value) end,
+      fn -> left(on_false.(value)) end
+    )
+  end
+  ```
+
+- A service, as defined by DDD, is a logical grouping of operations that don't
+  naturally belong to a single entity. Since Ride is getting crowded, we are
+  going to introduce a FastLane service. Services are an organizational tool,
+  grouping related behavior under a shared namespace.
+
+  ```elixir
+  # lib/fun_park/ride/fast_lane.ex
+  def ensure_height(%Patron{} = patron, %Ride{} = ride) do
+    patron
+    |> Either.lift_predicate(
+      curry_r(&Ride.tall_enough?/2).(ride),
+      fn p -> "#{Patron.get_name(p)} is not tall enough" end
+    )
+    |> Either.map_left(&ValidationError.new/1)
+  end
+
+  def ensure_age(%Patron{} = patron, %Ride{} = ride) do
+    patron
+    |> Either.lift_predicate(
+      curry_r(&Ride.old_enough?/2).(ride),
+      fn p -> "#{Patron.get_name(p)} is not old enough" end
+    )
+    |> Either.map_left(&ValidationError.new/1)
+  ```
+
+- Not that we're wrapping our left values in a `ValidationError` so downstream
+  callers can distinguish validation issues from other errors. Exceptions in
+  Elixir are just structs that implement the Exception protocol.
+
+  ```elixir
+  # lib/fun_park/errors/validation_error.ex
+  defmodule FunPark.Errors.ValidationError do
+    defstruct errors: [], __exception__: true
+
+    @behaviour Exception
+
+    def new(errors) when is_list(errors), do: %__MODULE__{errors: errors}
+
+    def new(error), do: %__MODULE__{errors: [error]}
+
+    def merge(%__MODULE__{errors: e1}, 5__MODULE__{errors: e2}),
+      do: %__MODULE__{errors: e1 ++ e2}
+
+    @impl Exception
+    def exception(args) when is_list(args), do: struct(__MODULE__, args)
+
+    @impl Exception
+    def exception(message) when is_binary(message),
+      do: %__MODULE__{errors: [message]}
+
+    @impl Exception
+    def message(%__MODULE__{errors: errors}) do
+      Enum.map_join(errors, ", ", &to_string/1)
+    end
+  end
+  ```
+
+- We need to be able to combine rules, so we need `bind`. The book implements
+  it off-screen, but I pulled the code out here before using it. I also pulled
+  the `to_string` definition, since we haven't seen one of those in a while.
+
+  ```elixir
+  # lib/fun_park/monad/either/right.ex
+  defimpl String.Chars, for: FunPark.Monad.Either.Right do
+    alias FunPark.Monad.Either.Right
+
+    def to_string(%Right{right: value}), do: "Right(#{value})"
+  end
+
+
+  defimpl FunPark.Monad, for: FunPark.Monad.Either.Right do
+    alias FunPark.Monad.Either.{Left, Right}
+
+    def ap(%Right{right: func}, %Right{right: value}), do: Right.pure(func.(value))
+    def ap(%Right{right: _func}, %Left{} = left), do: left
+
+    def bind(%Right{right: value}, func), do: func.(value)
+    def map(%Right{right: value}, func), do: Right.pure(func.(value))
+  end
+
+  # lib/fun_park/monad/either/left.ex
+  defimpl String.Chars, for: FunPark.Monad.Either.Left do
+    alias FunPark.Monad.Either.Left
+
+    def to_string(%Left{left: left}), do: "Left(#{left})"
+  end
+
+
+  defimpl FunPark.Monad, for: FunPark.Monad.Either.Left do
+    alias FunPark.Monad.Either.{Left, Right}
+    def map(%Left{} = left, _func), do: left
+
+    def ap(%Left{} = left, %Left{}), do: left
+    def ap(%Left{} = left, %Right{}), do: left
+
+    def bind(%Left{} = left, _func), do: left
+  end
+
+  # lib/fun_park/ride/fast_lane.ex
+  def ensure_eligibility(%Patron{} = patron, %Ride{} = ride) do
+    validate_height = curry_r(&ensure_height/2)
+
+    patron
+    |> ensure_age(ride)
+    |> bind(validate_height.(ride))
+  end
+
+  def ensure_fast_pass(%Patron{} = patron, %Ride{} = ride) do
+    patron
+    |> Either.lift_predicate(
+      curry_r(&Ride.fast_pass?/2).(ride)
+      fn p -> "#{Patron.get_name(p)} does not have a fast pass" end
+    )
+    |> Either.map_left(&ValidationError.new/1)
+  end
+
+  def ensure_vip_or_fast_pass(%Patron{} = patron, %Ride{} = ride) do
+    patron
+    |> Either.life_predicate(
+      &Patron.vip?/1
+      fn p -> "#{Patron.get_name(p)} is not a VIP" end
+    )
+    |> Either.map_left(&ValidationError.new/1)
+    |> Either.or_else(fn -> ensure_fast_pass(patron, ride) end)
+  end
+  ```
+
+- We defined a `map_left/2` that maps a function over left values and ignores
+  any Right values, in addition to `map/2` with works with Right values.
+- The last example introduces `or_else/2`. It isn't explicitly mentioned by
+  the book, but is similar to `or_else/2` on Maybe. I've pulled the code out
+  of the repo, along with `get_or_else/2` and `filter_or_else/2` and
+  `right/1`, `left/1`, `right?/1`, and `left?/1`.
+
+  ```elixir
+  # lib/fun_park/monad/either.ex
+  def right(value), do: Right.pure(value)
+  def left(value), do: Left.pure(value)
+  def pure(value), do: right(value)
+
+  def right?(%Right{}), do: true
+  def right?(_), do: false
+
+  def left?(%Left{}), do: true
+  def left?(_), do: false
+
+  def filter_or_else(either, predicate, left_func) do
+    fold_l(
+      either,
+      fn value ->
+        if predicate.(value) do
+          either
+        else
+          left(left_func.())
+        end
+      end,
+      fn _left_value -> either end
+    )
+  end
+
+  def get_or_else(either, default) do
+    fold_l(
+      either,
+      fn value -> value end,
+      fn _ -> default end
+    )
+  end
+
+  def or_else(%Left{}, fallback_fun) when is_function(fallback_fun, 0), do: fallback_fun.()
+  def or_else(%Right{} = right, _), do: right
+
+  def lift_eq(custom_eq) do
+    custom_eq = Eq.Utils.to_eq_map(custom_eq)
+
+  # There's a lot more code in Either.ex, including some unsurprising Eq and
+  # Ord implementations, a `flip/1`, a `lift_maybe/2` and some list functions
+  # but the book coverses `traverse_a/2` shortly.
+  # I will explicitly list `from_try/1` and  `from_result/1` since they cover
+  # translation from other error handling schemes.
+  def flip(%Left{left: l}), do: %Right{right: l}
+  def flip(%Right{right: r}), do: %Left{left: r}
+
+  def concat(list) do
+    list
+    |> fold_l([], fn
+      %Right{right: value}, acc -> [value | acc]
+      %Left{}, acc -> acc
+    end)
+    |> :lists.reverse()
+  end
+
+  def concat_map(list, func) do
+    list
+    |> fold_l([], fn item, acc ->
+      case func.(item) do
+        %Right{right: value} -> [value | acc]
+        %Left{} -> acc
+      end
+    end)
+    |> :lists.reverse()
+  end
+
+  def sequence(list), do: traverse(list, & &1)
+
+  def traverse([], _func), do: pure([])
+
+  def traverse(list, func) do
+    Enum.reduce_while(list, pure([]), fn item, %Right{right: acc} ->
+      case func.(item) do
+        %Right{right: value} -> {:cont, pure([value | acc])}
+        %Left{} = left -> {:halt, left}
+      end
+    end)
+    |> map(&:lists.reverse/1)
+  end
+
+  def from_result({:ok, value}), do: right(value)
+  def from_result({:error, reason}), do: left(reason)
+
+  def to_result(either)
+      when is_struct(either, Right) or
+             is_struct(either, Left) do
+    case either do
+      %Right{right: value} -> {:ok, value}
+      %Left{left: reason} -> {:error, reason}
+    end
+  end
+
+  def from_try(func) do
+    try do
+      result = func.()
+      right(result)
+    rescue
+      exception ->
+        left(exception)
+    end
+  end
+
+  def to_try!(%Right{right: value}), do: value
+
+  def to_try!(%Left{left: reason}) do
+    raise normalize_reason(reason)
+  end
+
+  defp normalize_reason(%_{} = exception), do: exception
+
+  defp normalize_reason(reason) when is_list(reason),
+    do: Enum.map_join(reason, ", ", &to_string/1)
+
+  defp normalize_reason(reason) when is_binary(reason), do: reason
+
+  defp normalize_reason(reason), do: "Unexpected error: #{inspect(reason)}"
+  ```
+
+- Back to domain problems! We need to chain eligibility checks so we don't
+  allow Patrons in the line for a ride they don't qualify for.
+
+  ```elixir
+  def ensure_fast_pass_lane(%Patron{} = patron, %Ride{} = ride) do
+    ensure_vip_or_pass = curry_r(&ensure_vip_or_fast_pass/2)
+
+    patron
+    |> ensure_eligibility(ride)
+    |> bind(ensure_vip_or_pass.(ride))
+  end
+
+  def ensure_fast_pass_lane_group(
+    patrons,
+    %Ride{} = ride,
+  )
+  when is_list(patrons) do
+    eligible_for_fast_lane = curry_r(&ensure_fast_pass_lane/2)
+
+  Either.traverse(
+      patrons,
+      eligible_for_fast_lane.(ride)
+    )
+  end
+  ```
+
+- Remember what `traverse` does. It takes a list of Either's and converts them
+  into one `Right list` or short-circuits on the first Left.
+- And I needed explanation for why we curry sometimes and not others.
+  So the rule of thumb: anything called directly inside a pipe stage, with all
+  its arguments already at hand, never needs currying — the pipe supplies the
+  missing piece immediately. Anything being handed to `bind`/`map`/`ap` as a
+  value, to be invoked by that function rather than by you, needs to already
+  be down to exactly one remaining argument — which is what `curry_r` is for
+  whenever the underlying function's real arity is higher than that.
+- Monads are useful for dependent steps and for expensive operations where
+  early failure avoids unnecessary work, but sometimes we want to run multiple
+  checks and return all the results instead of the first failure. To solve this
+  we need to switch from monadic traversal to applicative traversal, which runs
+  checks independently and collects the results into an Either - either a
+  Right (list_of_results) or a Left(list_of_reasons).
+
+  ```elixir
+  # lib/fun_park/monad/either.ex
+  def traverse_a([], _func), do: right([])
+
+  def traverse_a(list, func) when is_list(list) and is_function(func, 1) do
+    fold_l(list, right([]), fn item, acc_result ->
+      case {func.(item), acc_result} do
+        {%Right{right: value}, %Right{right: acc}} ->
+          right([value | acc])
+
+        {%Left{left: new}, %Left{left: existing}} ->
+          left(append(existing, coerce(new)))
+
+        {%Right{}, %Left{left:existing}} ->
+          left(existing)
+
+        {%Left{left: err}, %Right{}} ->
+          left(coerce(err))
+      end
+    end)
+    |> map(&:lists.reverse/1) # Remember: map only modifies Right.
+  end
+
+  # Appendable is a generic interface for combining items of the same kind.
+  # lib/fun_park/appendable.ex
+  defprotocol FunPark.Appendable do
+    @fallback_to_any true
+
+    def coerce(term)
+
+    def append(accumulator, coerced)
+  end
+
+
+  defimpl FunPark.Appendable, for: Any do
+    def coerce(value) when is_list(value), do: value
+    def coerce(value), do: [value]
+
+    def append(acc, value), do: coerce(acc) ++ coerce(value)
+  end
+
+  # And ValidationError implements Appendable:
+  # lib/fun_park/errors/validation_error.ex
+  defimpl FunPark.Appendable, for: FunPark.Errors.ValidationError do
+    alias FunPark.Errors.ValidationError
+
+    # If you're working with a ValidationError, e is already a list from `new`.
+    def coerce(%ValidationError{errors: e}). do ValidationError.new(e)
+
+    def append(%ValidationError{} = acc, %ValidationError{} = value) do
+      ValidationError.merge(acc, value)
+    end
+  end
+  ```
+
+- Instead of checking a list of Patrons multiple ways, we're going to collect
+  multiple ways to check and apply it to a Patron:
+
+  ```elixir
+  iex> valid_height = FunPark.Utils.curry_r(
+    &FunPark.Ride.FastLane.ensure_height/2
+  )
+  iex> valid_age = FunPark.Utils.curry_r(&FunPark.Ride.FastLane.ensure_age/2)
+  iex> validators = [
+    valid_height.(haunted_mansion),
+    valid_age.(haunted_mansion),
+  ]
+  iex> FunPark.Monad.Either.traverse_a(validators, & &1.(alice))
+  # Returns a Left of one validation error.
+  iex> FunPark.Monad.Either.traverse_a(validators, & &1.(beth))
+  # Also returns a Left of one validation error.
+  iex> FunPark.Monad.Either.traverse_a(validators, & &1.(charles))
+  # Also returns a Left of two validation errors.
+  iex> FunPark.Monad.Either.traverse_a(validators, & &1.(dave))
+  # Also returns a Right with two Dave's.
+  ```
+
+- So we need a way to apply a list of validations and transform the list of
+  success back to the original value.
+
+  ```elixir
+  # lib/fun_park/monad/either.ex
+  def validate(value, validators) when is_list(validators) do
+    traverse_a(validators, fn validator -> validator.(value) end)
+    |> map(fn _ -> value end)
+  end
+
+  # lib/fun_park/ride/fast_lane.ex
+  def validate_eligibility(%Patron{} = patron, %Ride{} = ride) do
+    validate_height = curry_r(&ensure_height/2)
+    validate_age = curry_r(&ensure_age/2)
+    patron
+    |> Either.validate([validate_height.(ride), validate_age.(ride)])
+  end
+
+  # lib/fun_park/ride.ex
+  def ensure_online(%__MODULE__{} = ride) do
+    Either.lift_predicate(
+      ride,
+      &online?/1,
+      fn r -> "#{r.name} is offline" end
+    )
+    |> Either.map_left(&ValidationError.new/1)
+  end
+
+  def validate_fast_pass_lane(%Patron{} = patron, %Ride{} = ride) do
+    validate_eligibility = curry(&validate_eligibility/2)
+    validate_vip_or_pass = curry(&ensure_vip_or_fast_pass/2)
+
+    Either.validate(
+      ride,
+      [
+        validate_eligibility.(patron),
+        validate_vip_or_pass.(patron),
+        &Ride.ensure_online/1
+      ]
+    )
+    |> map(fn _ -> patron end)
+  end
+
+  # lib/fun_park/ride/fast_lane.ex
+  def validate_fast_pass_lane_group(
+    patrons,
+    %Ride{} = ride,
+  )
+  when is_list(patrons) do
+    validate_fast_lane = curry_r(&validate_fast_pass_lane/2)
+
+    # Here we use `traverse_a` on a list of Patrons and a single validation.
+    patrons
+    |> Either.traverse_a(validate_fast_lane.(ride))
+  end
+  ```
+
+- The chapter ends with an interesting value of making an in-memory-key-value
+  store for Rides and wrapping the ETS results in Either with simplied error
+  messages instead of crashing on error since ETS throws. After defining basic
+  ETS access functions, it makes a repo. This code is in `lib/fun_park/store.ex`
+  for the ETS functions and `lib/fun_park/ride/repo.ex` for the repository.
+
+## Chapter 10 - Coordinate Tasks with Effect
+
+- Elixir developers typically manage I/O using Task, a lightweight abstraction
+  built on Erlang's process model. Task is problematic from a functional
+  perspective; it runs eagerly, breaks the separation between definition and
+  execution, and raises errors instead of keeping them in context. Our Effect
+  class, inspired by Scala's ZIO, uses Either to represent success or failure
+  and Reader to provide a shared environment.
+
+  ```elixir
+  # lib/fun_park/monad/effect/right.ex
+  def pure(value) do
+    %__MODULE__{
+      effect: fn _env ->
+        Task.async(fn -> Either.pure(value) end)
+      end
+    }
+  end
+
+  # lib/fun_park/monad/effect/left.ex
+  def pure(value) do
+    %__MODULE__{
+      effect: fn _env ->
+        Task.async(fn -> Either.left(value) end)
+      end
+    }
+  end
+
+  # lib/fun_park/monad/effect.ex
+  def run(%_{effect: thunk}, env \\ %{}), do: execute_effect(thunk.(env))
+
+  defp execute_effect(task) do
+    start_time = System.monotonic_time(:millisecond)
+
+    result =
+      try do
+        case Task.yield(task, 5000) || Task.shutdown(task) do
+          {:ok, %Either.Right{} = right} ->
+            right
+
+          {:ok, %Either.Left{} = left} ->
+            left
+
+          {:ok, other} ->
+            Either.left(
+              EffectError.new(
+                :run,
+                {:invalid_result, other}
+              )
+            )
+
+          nil ->
+            Either.left(EffectError.new(:run, :timeout))
+        end
+      rescue
+        error -> Either.left(EffectError.new(:run, error))
+      end
+
+    elapsed = System.monotonic_time(:millisecond) - start_time
+    IO.puts("Task completed in #{elapsed}ms")
+
+    result
+  end
+  ```
+
+- The Effect module constructs values using `right/1`, `left/1`, or `pure/1`.
+  Access to the environment is through `asks/1`. It includes `lift_func/1`,
+  `lift_either/1`, `lift_maybe/2`, and `lift_predicate/3` lifting functions.
+  It has `from_result/1`, `to_result/1`, `from_try/1`, and `to_try!/1` interops
+  functions. And it supports sequencing through `traverse/2`, `sequence/1`,
+  `traverse_a/2`, `sequence_a/1`, and `validate/2`.
+- We're going to make a Repo that uses an ETS to store tables about Rides.
+
+  ```elixir
+  # lib/fun_park/maintenance/store.ex
+  def add(%Ride{} = ride, table) do
+    Effect.lift_either(fn -> Store.insert_item(table, ride) end)
+    |> map(&simulate_delay/1)
+    |> Effect.map_left(&simulate_delay/1)
+  end
+
+  def get(%Ride{id: id}, table) do
+    Effect.lift_either(fn -> Store.get_item(table, id) end)
+    |> map(&simulate_delay/1)
+    |> Effect.map_left(&simulate_delay/1)
+  end
+
+  def remove(%Ride{id: id}, table) do
+    Effect.lift_either(fn -> Store.delete_item(table, id) end)
+    |> map(&simulate_delay/1)
+    |> Effect.map_left(&simulate_delay/1)
+  end
+
+  # lib/fun_park/maintenance/repo.ex
+  def create_store do
+    Either.sequence_a([
+      Store.create_table(:schedule),
+      Store.create_table(:unschedule),
+      Store.create_table(:lockout),
+      Store.create_table(:compliance),
+    ])
+  end
+
+  defp validate_ride_effect(ride) do
+    Effect.lift_either(fn -> Ride.validate(ride) end)
+  end
+
+  depf add_to_store_effect(valid_ride) do
+    Effect.asks(fn env -> env[:table] end)
+    |> bind(fn table -> Store.add(valid_ride, table) end)
+  end
+
+  def add_ride_effect(%Ride{} = ride) do
+    validate_ride_effect(ride)
+    |> bind(&add_to_store_effect/1)
+  end
+
+  def add_schedule(%Ride{} = ride) do
+    ride
+    |> add_ride_effect
+    |> Effect.run(%{table: :schedule})
+  end
+
+  # There is also `add_unschedule/1`, `add_lockout/1`, and `add_compliance/1`
+  # for other tables. And similar `remove_ride_effect/1` function.
+
+  # Unlike `add_ride_effect/1` which is tightly coupled to the store, we could
+  # have a `has_ride_effect/2` where the store is injected.
+  def has_ride_effect(%Ride{} = ride, table) do
+    Effect.asks(fn env -> env[:store] end)
+    |> bind(fn store -> store.get(ride, table) end)
+    |> map(fn _ -> ride end)
+  end
+
+  def in_schedule(%Ride{} = ride), do: has_ride_effect(ride, :schedule)
+  # And three others for other tables.
+  ```
+
+- Remember `bind/2` to run Effects sequentially, `traverse_a` to run them all
+  at once.
