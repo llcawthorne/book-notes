@@ -1,8 +1,16 @@
-
+---
+creationDate: 2026-07-21 22:28
+modifiedDate: 2026-07-23 14:57
+tags:
+  - book-notes
+  - programming
+parent:
+  - "[[Book Notes]]"
+  - "[[Interests MOC]]"
+---
 # Book Notes by Lewis
 
-Note: Currently "Python for DevOps" and "Advanced Functional Programming with
-Elixir" are works in progress.
+Note: Currently "Python for DevOps" and "From Objects to Functions" are works in progress.
 
 ## Elixir
 
