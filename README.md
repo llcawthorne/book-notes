@@ -10,7 +10,8 @@ parent:
 ---
 # Book Notes by Lewis
 
-Note: Currently "Python for DevOps" and "From Objects to Functions" are works in progress.
+Note: Currently "Python for DevOps" and "From Objects to Functions" are works
+in progress.
 
 ## Elixir
 

@@ -3584,6 +3584,177 @@ data class ListName internal constructor(val name: String) {
       ElevatorProjectionRow(elevatorId, this.floor, this)
   ```
 
+## Chapter 9 - Using Monads to Persist Data Safely
+
+- So far we've used unit tests to check logic and DDT's to test a slice of
+  functionality end-to-end. Now we will add integration tests to test our
+  integration with an external service. We will be using PostgreSQL as our
+  database backend and start with a spike to evaluate the technology for our
+  use. We'll use PostgreSQL via Docker. Dockerfile is in the repo, or you
+  can always install PostgreSQL the old fashioned way. We're using the Exposed
+  library for database access, but the people at JetBrains. Exposed isn't
+  "functional", but that let's it serve as a good example of how to use a
+  non-functional library in our functional code. We will use PostgreSQL's
+  document feature to store the entire event in a `jsonb` field. We aren't
+  using our uuid as key, since we need to sort events in order and an increasing
+  key makes that easy.
+
+  ```kotlin
+  data class PgEventTable(override val tableName: String) : Table(tableName) {
+
+      val id = long("id").autoIncrement()
+      override val primaryKey = PrimaryKey(id, name = "${tablename}_pkey")
+
+      val recorded_at = timestamp("recorded_at")
+          .defaultExpression(CurrentTimestamp())
+      val entity_id = uuid("entity_id")
+      val event_type = varchar("event_type", 100)
+      val event_version = integer("event_version")
+      val event_source = varchar("event_source", 100)
+      val json_data = jsonb("json_data")
+  }
+  ```
+
+- `jsonb` isn't supported by Exposed, so it took about fifty lines of code
+  to define it as a field type in the database. All that is present in the
+  sample code in `com.ubertob.fotf.zettai.db.jdbc.PgJson.kt`.
+- So we need a `Parser` to convert events and a type with all the fields we are
+  going to write to the database.
+
+  ```kotlin
+  data class Parser<A, S>(
+      val render: (A) -> S,
+      val parse: (S) -> Outcome<OutcomeError, A>
+  ) {
+
+      fun parseOrThrow(encoded: S) =
+          parse(encoded).onFailure { error("Error parsing $encoded ${it.msg}") }
+  }
+
+  data class PgEvent(
+      val entityId: EntityId,
+      val eventType: String,
+      val jsonString: String,
+      val version: Int,
+      val source: String
+  )
+  ```
+
+- We need to convert our ToDoListEvent objects to PgEvent objects, but first we
+  should write a test. We are just going to generate a good number of random
+  events then converet them to PgEvent and back and make sure they are identical
+  afterwards.
+
+  ```kotlin
+  class ToDoListEventParserTest {
+
+      val eventParser = toDoListEventParser()
+
+      @Test
+      fun `convert events to and from`() {
+  
+          eventsGenerator().take(100).forEach { event ->
+
+              val conversion = eventParser.render(event)
+              val newEvent = eventParser.parse(conversion).expectSuccess()
+
+              expectThat(newEvent).isEqualTo(event)
+
+          }
+      }
+  }
+
+  fun randomEvent(): ToDoListEvent =
+      when (val kClass = ToDoListEvent::class.sealedSubclasses.random()) {
+          ListCreated::class -> ListCreated(
+              ToDoListId.mint(), randomUser(), randomListName())
+          ItemAdded::class -> ItemAdded(ToDoListId.mint(), randomItem())
+          ItemRemoved::class -> ItemRemoved(ToDoListId.mint(), randomItem())
+          ItemModified::class -> ItemModified(
+              ToDoListId.mint(), randomItem(), randomItem())
+          ListPutOhHold::class -> ListPutOnHold(
+              ToDoListId.mint(), randomText(20))
+          ListReleased::class -> ListReleased(ToDoListId.mint())
+          ListClosed::class -> ListClosed(ToDoListId.mint(), Instant.now())
+          else -> error("Unexpected class: $kClass")
+      }
+
+  fun eventsGenerator(): Sequence<ToDoListEvent> = generateSequence {
+      randomEvent()
+  }
+  ```
+
+- We're using Klaxon as our JSON library since it supports reflection to
+  transform a Kotlin class into JSON. This is a temporary solution until we
+  learn to safely handle serialization and deserialization later.
+
+  ```kotlin
+  fun toDoListEventParser(): Parser<ToDoListEvent, PgEvent> =
+      Parser(::toPgEvent, :toToDoListEvent)
+
+  fun toPgEvent(event: ToDoListEvent): PgEvent =
+      PgEvent(
+          entityId = event.id,
+          eventType = event::class.simpleName.orEmpty(),
+          version = 1,
+          source = "event store",
+          jsonString = event.toJsonString()
+      )
+
+  fun toToDoListEvent(pgEvent: PgEvent): ZettaiOutcome<ToDoListEvent> =
+      Outcome.tryOrFail {
+          when (pgEvent.eventType) {
+              ListCreated::class.simpleName ->
+                  klaxon.parse<ListCreated>(pgEvent.jsonString)
+              ItemAdded::class.simpleName ->
+                  klaxon.parse<ItemAdded>(pgEvent.jsonString)
+              ItemRemoved::class.simpleName ->
+                  klaxon.parse<ItemRemoved>(pgEvent.jsonString)
+              ItemModified::class.simpleName ->
+                  klaxon.parse<ItemModified>(pgEvent.jsonString)
+              ListPutOnHold::class.simpleName ->
+                  klaxon.parse<ListPutOnHold>(pgEvent.jsonString)
+              ListClosed::class.simpleName ->
+                  klaxon.parse<ListClosed>(pgEvent.jsonString)
+              ListReleased::class.simpleName ->
+                  klaxon.parse<ListReleased>(pgEvent.jsonString)
+              else -> null
+          } ?: error("type not known ${pgEvent.eventType}")
+      }.transformFailure { ZettaiParsingError(
+          "Error parsing ToDoListEvent: ${pgEvent} with error: $it ") }
+  ```
+
+- We also need a table to store our Projection where we record RowId and
+  timestamp of the last update with the `jsonb` field with the row data.
+  All rows are the same type, so we can go directly from a Row to a JSON string.
+  And we need another table to store the sequentially incrementing counter of
+  the last event processed in each projection and when it was updated.
+
+  ```kotlin
+  data class PgProjectionTable<ROW : Any>(
+          override val tableName: String,
+          val parser: Parser<ROW, String>): Table(tableName) {
+  
+      val id = varchar("id", 50)
+
+      override val primaryKey = PrimaryKey(id, name = "${tableName}_pkey")
+
+      val updated_at = timestamp("recorded_at")
+          .defaultExpression(CurrentTimestamp())
+
+      val row_data = jsonb("row_data",
+          parser::parseOrThrow,
+          parserver::render.get()
+  }
+
+  data class PgLastEventTable(override val tableName: String):Table(tableName) {
+
+      val last_event_id = long("last_event_id")
+      val updated_at = timestamp("recorded_at")
+          .defaultExpression(CurrentTimestamp())
+  }
+  ```
+
 ## Appendices
 
 ### A1 - What Is Functional Programming
