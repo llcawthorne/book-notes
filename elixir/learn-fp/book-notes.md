@@ -5,7 +5,7 @@
 
 - Run `elixir -v` to check version and `iex` for an interactive REPL.
   Hit Ctrl+C twice to quickly exit the REPL. It has tab completion.
-- End script files with `exs` and compiled files with `ex`. It's just
+- End script files with `.exs` and compiled files with `.ex`. It's just
   `elixir hello_world.exs` to run a script.
 
 ## Chapter 1 - Thinking Functionally
@@ -21,7 +21,7 @@
   - The function's result is only affected by the function's arguments.
   - The function doesn't generate effects beyond the value it returns.
 - In Elixir the focus is on data-transformation flow, and it has a special
-  operator called pipe (`|>`) to combine multiple functions call and results.
+  operator called pipe (`|>`) to combine multiple functions calls together.
 
   ```elixir
   def capitalize_words(title) do
@@ -87,7 +87,7 @@
   ```
 
 - You can put two commands on the same line with the semicolon (;).
-- Closures remember all the free variables that were reference in the lexical
+- Closures remember all the free variables that were referenced in the lexical
   scope in which they were created.
 - Common Elixir modules: `String`, `Integer`, `Float`, `IO`, `Kernel` with
   `String.capitalize("hI Friends!")`, `String.downcase("OW")`,
@@ -174,7 +174,7 @@ end
   with a `MatchError` unless `x` is 2. The pin operator (`^`) avoids rebinding
   and uses the value of `x` to pattern match. Otherwise a variable on the left
   of equals is rebound.
-- Destructuring is our primary tool to get a string part, and item from a
+- Destructuring is our primary tool to get a string part, an item from a
   list, or a value from a map.
 
   ```elixir
@@ -200,10 +200,10 @@ end
   IO.puts "Your ability modifier is #{ability_modifier}"
   ```
 
-- `Integer.parse` returns a parsed number and the remaining text that wasn't
-  parsed as a tuple of success. It returns an `:error` atom on failure.
-- `=` is for pattern matching and assignment. `==` returns `true` when the
-  elements are equal, including equivalent integers and floats. `===` returns
+- On success, `Integer.parse` returns `{parsed_number, remaining_text}`. On
+  failure, it returns `:error`.
+- `= `is the match operator - it only does pattern matching, but matching a
+  bare variable against a value looks like assignment.
   `true` when arguments are equivalent and have the same type.
 - In Elixir, lists are *linked lists*. The last item is an empty list (`[]`).
 - A variable has a unique value in an expression, so:
@@ -222,7 +222,8 @@ end
 - The `|` operator matches the first item(s) of a list, values to the
   right always matches the rest of the elements.
 - A map pattern match checks a subset of a map, so you only need to provide
-  keys your interested in. If the keys don't exist, a `MatchError` will rise.
+  keys your interested in. If the keys don't exist, a `MatchError` will be
+  raised.
 
   ```elixir
   abilities = %{strength: 16, dexterity: 12, intelligence: 10}
@@ -240,13 +241,13 @@ end
   ```elixir
   [b, c] = [a: 1, a: 12] # b == {:a, 1}; c == {:a, 12}
   # the below uses a keyword list to import two functions of different arity.
-  import String, only: [pad_leader: 2, pad_leader: 3]
+  import String, only: [pad_leading: 2, pad_leading: 3]
   ```
 
 - Structs are useful for consistent structures that have the same set of keys
   everywhere in the application. All structs have a list of permitted
   attributes and these are guaranteed by the compiler. All `Date` structs
-  have `year`, `month`, `day`, and `calendar`. You could not define `hot_dot`
+  have `year`, `month`, `day`, and `calendar`. You could not define `hot_dog`
   in a `Date` struct. Pattern matching works for them similar to maps.
 
   ```elixir
@@ -271,8 +272,8 @@ end
   end
   ```
 
-- `defp` defines private functions of your module. Others don't need `check`
-  to import and use `greater`.
+- `defp` defines private functions of your module. Other modules don't need 
+  access to `check`  in order to use `greater`.
 - We can define a default value for an argument with `\\`. You can only have
   one default value for a particular parameter.
 
@@ -286,7 +287,7 @@ end
   iex> Checkout.total_cost(12) # 120
   iex> Checkout.total_cost(12, 5) # 60
   ```
-- Guard clauses allows us to add Boolean expressions to our functions.
+- Guard clauses allow us to add Boolean expressions to our functions.
 
   ```elixir
   defmodule NumberCompare do
@@ -456,10 +457,12 @@ end
 
 - You can access map elements as `item[:title]` or `item.title`. The latter
   only works for atoms, but `item["title"]` for example is fine for strings.
+  Bracket access returns `nil` for a missing key, but dot-access requires the
+  key to exists or else it throws a `KeyError`.
 - In recursion, you can decrease and conquer or divide and conquer. Decrease
   and conquer starts from the base case. Divide and conquer is about
   separating the problem into two or more parts that can be processed
-  independently and combined at the end end.
+  independently and combined at the end.
 - To use tail-call optimization, we need to make sure the last expression
   of our function is a function call. An easy way to do this is to replace
   the use of the function result with an extra argument that accumulates
@@ -566,7 +569,7 @@ end
       fn arg -> f.(g.(arg)) end
     end
   end
-  first_letter_and_upcase = compose(&String.upcaase/1, &String.first/1)
+  first_letter_and_upcase = compose(&String.upcase/1, &String.first/1)
   first_letter_and_upcase("works") # W
   # Now let's see the same with pipe.
   first_letter_and_upcase = &(&1 |> String.first |> String.upcase)
@@ -621,7 +624,7 @@ end
     def build(alphabet, positions) do
       # String.at/2 requires two arguments, a string and a position.
       letters = Enum.map(positions, String.at(alphabet)) # won't work
-      Enum.join(letter)
+      Enum.join(letters)
     end
   end
   # But we can write this with partial application to set String.at/2's
@@ -630,7 +633,7 @@ end
     # We set the first parameter and it still takes the second one.
     partial = fn at -> String.at(alphabet, at) end
     letters = Enum.map(positions, partial)
-    Enum.join(letter)
+    Enum.join(letters)
   end
   WordBuilder.build("world", [4, 1, 1, 2]) # "door"
   # We could've also written that anonymously, which is common.
@@ -695,10 +698,10 @@ end
 - `~w` is the sigil for word list. `Enum.zip/2` pairs items from two lists
   until one of the lists runs out. `Stream.zip/2` would be useful for a lazy
   combination.
-- A Elixir pipeline composed of `Enum` calls will be eager. Most functions are
+- An Elixir pipeline composed of `Enum` calls will be eager. Most functions are
   eager. But we can instead compose a lazy pipeline with Elixir streams.
   `Stream.map/2` will process items one at a time in a pipeline, and
-  `Stream.chunk/2` combined with `Stream.flat_map/2` will process in chunks
+  `Stream.chunk_every/2` combined with `Stream.flat_map/2` will process in chunks
   at a time. This is very useful when you have a collection of tasks that
   may take some time and don't want to leave the consumer at the end waiting.
 
@@ -794,7 +797,7 @@ end
   end
   ```
 
-- Elixir support type specifications and the Dialyzer tool with static check
+- Elixir supports type specifications and the Dialyzer tool with static check
   to verify if type usage is correct. It is common to use `t` for the struct
   type. Ex:
 
@@ -828,7 +831,7 @@ end
 
 - For Dialyzer you need to add a dependency:
   `{:dialyxir, "~> 0.5", only: [:dev], runtime: false},` (now version 1.4)
-- Run `mix do deps.get + deps.compile` after updating dependencies.
+- Run `mix do deps.get, deps.compile` after updating dependencies.
 - dialyxir adds a `mix dialyzer` command.
 - You can make a copy of a map with an updated key with the syntax:
   `%{character | hit_points: new_hit_points}`.
@@ -891,17 +894,16 @@ end
   data types. Behaviours define a list of functions that a module should
   implement.
 - DungeonCrawl is a pretty simple module, but it has `DungeonCrawl`, 
-  `DungeonCrawl.cli`, `DungeonCrawl.room`,  `DungeonCrawl.room.triggers`,
-  and `mix.tasks` namespaces.
+  `DungeonCrawl.CLI`, `DungeonCrawl.Room`,  `DungeonCrawl.Room.Triggers`,
+  and `Mix.Tasks` namespaces.
 
 ## Chapter 7 - Handling Impure Functions
 
 - Pure functions are simple to maintain because they are predictable. Impure
-  functions are necessary to build useful software. To build more maintainable
-  software, you should.
+  functions are necessary to build useful software. 
 - Three ways we will see to deal with unexpected results is with control flow,
   exceptions (try/catch), and the error monad. We have examples of each in
-  `ch07/dc_flow`, `ch07/dc_try`, `ch07/dc_monad`, and `dc_with`.
+  `ch07/dc_flow`, `ch07/dc_try`, `ch07/dc_monad`, and `ch-7/dc_with`.
   They are all just
   copies of `dungeon_crawler` that handle errors different ways.
 - Here's a simple example of using flow control for errors:
@@ -949,7 +951,8 @@ end
   def calculate({quantity, _}, {price, _}), do: quantity * price
   ```
 
-- Most of the time, functions that can raise errors or throw values have
+- Most of the time, functions that can raise an exception on failure instead
+  of returning an error tuple have
   names that end in an exclamation point like `File.cd!/1`.
 - Elixir supports both `raise/rescue` and `try/throw/catch`.
 
@@ -1071,7 +1074,6 @@ end
 
     def ask_for_option(options) do
       result =
-        # We need to wrap `options` in a monad, because lists are monads.
         return(options)
         ~>> (&display_options/1)
         ~>> (&generate_question/1)
@@ -1103,7 +1105,7 @@ end
   Elixir will first execute the code on the right of the `<-` operator.
   Then if the pattern matches on the left, Elixir will execute the next
   instruction. You can add many instructions inside of `with` by separating
-  them with commands. `with` will stop if one of the instructions don't 
+  them with commas. `with` will stop if one of the instructions don't
   match. The `do` block at the end is the final execution. You can also
   use an `else` block with `with`.
 

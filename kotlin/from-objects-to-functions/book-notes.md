@@ -1,20 +1,20 @@
 
 # From Objects to Functions
 
-Note: For this book, I do a lot more long, drawn out code examples. This is
+Note: For this book, I use longer, detailed code examples. This is
 because they present each series of code transformations as a logical
 step-by-step process to an end state, and this isn't readily apparent from
-the big jumps from step1 to step2 in the actual code examples directory.
+the big jumps from step 1 to step 2 in the actual code examples directory.
 You lose a lot of context without the intermediate steps.
 
 ## Chapter 1 - Preparing a New Application
 
-- In this book we will be working on a To Do List web application named Zettai.
-- We used user stories and *event storming* to plan our new application. Event
-  storming is where you write down on a sticky note all the "things" that
-  happen relevant to your future application. They can be something external to
-  the application (ex: you finished something you had to do) or something
-  internal (ex: you checked the new thing to do). You describe these
+- In this book we will be working on a to-do-list web application named Zettai.
+- We used user stories and *EventStorming* to plan our new application. In
+  EventStorming, you write down on a sticky note each "thing" that happens in
+  the future application. Events can be external to the application (e.g., you
+  finished something you had to do) or internal (e.g., you checked off a new
+  to-do item). You describe these
   events in the past tense. Then you arrange the sticky notes from left to
   right by timing and try to group together related events. Then with sticky
   notes of a different color, you write down the actions that caused the
@@ -40,7 +40,7 @@ You lose a lot of context without the intermediate steps.
   functionality.
 - We will be using JUnit for tests and Strikt as an assertion library with
   a convenient DSL.
-- We will also use property based testing. It is a good way to test pure
+- We will also use property-based testing. It is a good way to test pure
   functions which transform an input type A to a different type B.
 - Here is a small example of testing addition to show off the testing and
   assertion libraries and present the idea of property based testing:
@@ -94,9 +94,9 @@ You lose a lot of context without the intermediate steps.
   }
   ```
 
-- Note that we are using soft assertions, a new feature in JUnit 5 that
-  allows us to still get all the results if some assertions are failing.
-  That is why we are wrapping our assertions in an `expect` lambda block.
+- Note that we are using Strikt's soft assertions, which allow us to see all
+  assertion results even if some assertions fail. That is why we are wrapping
+  our assertions in an `expect` lambda block.
 - With functional code, you often provide input and test output or else
   define some property and test it with any inputs, so there is no need
   to mock objects.
@@ -132,7 +132,8 @@ You lose a lot of context without the intermediate steps.
   }
   ```
 
-- We can use Lambda Variables for each route or pass functions.
+- We can store functions in lambda values for each route or pass named
+  functions directly.
 
   ```kotlin
   val app: HttpHandler = routes(
@@ -281,10 +282,10 @@ You lose a lot of context without the intermediate steps.
   }
   ```
 
-- Note in the above code that throwing errors is not very functional. We'll
-  learn better ways to deal with invalid input later. The way we are doing
-  here would drop an unexplained 500 error on our user instead of a nice
-  404 page.
+- Note in the above code that throwing exceptions makes these functions
+  partial. We'll learn better ways to deal with invalid input later. The way
+  we are doing it here would return an unexplained 500 error to the user
+  instead of a helpful 404 page.
 - The beauty of the way we defined our `Zettai` class is it is easy to run
   both normally and in testing. Here is our first acceptance test:
 
@@ -375,8 +376,8 @@ You lose a lot of context without the intermediate steps.
   }
   ```
 
-- Chapter 2 had a pair of exercises that caught my eye. I was able to create 
-  a functional stack class easily enough, but the for the reverse polish
+- Chapter 2 had a pair of exercises that caught my eye. I was able to create
+  a functional stack class easily enough, but for the reverse Polish
   notation calculator that uses it I was able to program with the immutable
   structure but only if I bound it to a var that I could update. The book
   solves this problem using fold. It's an intuition that I need to build:
@@ -390,7 +391,7 @@ You lose a lot of context without the intermediate steps.
   mutation through recursion and passing a new `acc` on every call.
 
   ```kotlin
-  // First, an immmutable stack.
+  // First, an immutable stack.
   data class FunStack<T>(private val elements: List<T> = emptyList()) {
       fun push(element: T): FunStack<T> = FunStack(listOf(element) + elements)
       fun pop(): Pair<T, FunStack<T>> = elements.first() to FunStack(elements.drop(1))
@@ -1148,7 +1149,7 @@ You lose a lot of context without the intermediate steps.
 
       val httpHandler = routes(
           "/todo/{user}/{listname}" bind GET to ::getToDoList,
-          "/todo/{user}/{listname}" bind POST to :addNewItem
+          "/todo/{user}/{listname}" bind POST to ::addNewItem
       )
 
       fun addNewItem(request: Request): Response {
@@ -1159,12 +1160,12 @@ You lose a lot of context without the intermediate steps.
               ?.let(::ListName)
               ?: return Response(Status.BAD_REQUEST)
           val item = request.form("itemname")
-              ?.let(::ToDoItem(it))
+              ?.let(::ToDoItem)
               ?: return Response(Status.BAD_REQUEST)
 
           // Now we have everything we need from HTTP, so we let the 
           // hub handle the domain action.
-          val hub.addItemToList(user, listName, item)
+          hub.addItemToList(user, listName, item)
               ?.let { Response(Status.SEE_OTHER) 
                   .header("Location", "/todo/${user.name}/${listName.name}") }
               ?: Response(Status.NOT_FOUND)
@@ -1360,7 +1361,7 @@ You lose a lot of context without the intermediate steps.
   2. Naming - denoting our types with precise names instead of using
      primitives makes the signature of our function clearer and their intent
      easier to understand.
-  3. A third important property of a type is cardinality, the number of
+  3. A third important property of a type is cardinality: the number of
      possible values. The less values a type can have, the harder it is for
      it to express values that don't have a meaning in the domain.
 - To limit the cardinality of our `ListName`, we will make the constructor
@@ -1368,8 +1369,8 @@ You lose a lot of context without the intermediate steps.
   constructed from a trust or untrusted source. We want our `ListName` values
   to be alphanumeric so they can be part of the URL and of reasonable length,
   say no more than 40 characters. For our untrusted constructor, we choose
-  to return NULL for invalid values. Since we don't care about the reason
-  for failure, it is simplest to return NULL and handle it through Kotlin
+  to return `null` for invalid values. Since we don't care about the reason
+  for failure, it is simplest to return `null` and handle it through Kotlin
   language features. When we care about the source of error, there are better
   ways to handle it we will learn later.
 
@@ -1453,7 +1454,7 @@ data class ListName internal constructor(val name: String) {
   // Now we can write our `fromUntrusted` function. Note this lives in
   // ToDoList.kt. I'm going to reproduce the entire `ListName` and `ToDoList`
   // definitions for convenience since it's short. The example code also
-  // defines `fromUntrustedOrThrow` which doesn't substitute NULL and is
+  // defines `fromUntrustedOrThrow` which doesn't substitute `null` and is
   // used by the actual `ToDoList` which the book hasn't discussed yet.
   fun String.capitalize() = replaceFirstChar {
       if (it.isLowerCase()) it.titlecase(
@@ -1481,7 +1482,7 @@ data class ListName internal constructor(val name: String) {
           fun build(
               listName: String, items: List<String>
           ): ToDoList = ToDoList(ListName.fromUntrustedOrThrow(listName),
-              items.map() { ToDoItem(it) })
+              items.map { ToDoItem(it) })
       }
   }
 
@@ -1635,7 +1636,7 @@ data class ListName internal constructor(val name: String) {
   fun randomListName(): ListName = ListName.fromTrusted(randomString(lowercase, 3, 6))
   ```
 
-## Chapter 7 - Using Events to Modify the State
+## Chapter 5 - Using Events to Modify the State
 
 - So our app has worked well so far with a single user having a single list.
   Our next goal is to add scenarios for multiple lists and creating a new one.
@@ -2211,7 +2212,7 @@ data class ListName internal constructor(val name: String) {
   object InitialState: ToDoListState() {
       override fun combine(event: ToDoListEvent): ToDoListState =
           when(event) {
-              is ListCreated -> create(event.id, event.name, emptyList())
+              is ListCreated -> create(event.id, event.owner, event.name, emptyList())
               else -> this // ignore other events
           }
   }
@@ -2260,10 +2261,10 @@ data class ListName internal constructor(val name: String) {
       ActiveToDoList(id, owner, name, items)
 
   fun ActiveToDoList.onHold(reason: String) =
-      OnHoldToDoList(id, name, items, reason)
+      OnHoldToDoList(id, owner, name, items, reason)
 
   fun OnHoldToDoList.release() =
-      ActiveToDoList(id, name, items)
+      ActiveToDoList(id, owner, name, items)
 
   fun ActiveToDoList.close(closedOn: Instant) =
       ClosedToDoList(id, closedOn)
@@ -2291,9 +2292,7 @@ data class ListName internal constructor(val name: String) {
   internal class ToDoListCommandsTest {
   
       // We're mocking the retriever to just return InitialState
-      val fakeRetriever: ToDoListRetriever = {
-          (user: User, listName: ListName) -> InitialState
-      }
+      val fakeRetriever: ToDoListRetriever = { _: User, _: ListName -> InitialState }
 
       @Test
       fun `CreateToDoList generate the correct event`() {
@@ -2324,7 +2323,7 @@ data class ListName internal constructor(val name: String) {
           }
 
       private fun CreateToDoList.execute(): List<ToDoListEvent>? =
-          entityRetriever.retrieveByName(user, name)
+          entityRetriever(user, name)
               ?.let { listState ->
                   when (listState) {
                       InitialState -> {
@@ -2384,7 +2383,7 @@ data class ListName internal constructor(val name: String) {
 
   typealias EventStreamer<E> = (EntityId) -> List<E>?
 
-  typealias EventPersister<E> = (List<E>) -> List<E>
+  typealias EventPersister<E> = (Iterable<E>) -> List<E>
 
   class ToDoListEventStore(
       val eventStreamer: ToDoListEventStreamer
@@ -2400,9 +2399,8 @@ data class ListName internal constructor(val name: String) {
               ?.let(::retrieveById)
               ?: InitialState
 
-      override fun invoke(events: Iterable<ToDoListEvent>) {
+      override fun invoke(events: Iterable<ToDoListEvent>): List<ToDoListEvent> =
           eventStreamer.store(events)
-      }
   }
 
   // And now we add our in-memory `EventStreamer`
@@ -2533,7 +2531,7 @@ data class ListName internal constructor(val name: String) {
               ?.let { listState ->
                   when (listState) {
                       is ActiveToDoList -> {
-                          if (listState.items.any { it.name == item.name })
+                          if (listState.items.any { it.description == item.description })
                               null //cannot have 2 items with same name
                           else {
                               readModel.addItemToList(user, listState.name, item)
@@ -2764,7 +2762,7 @@ data class ListName internal constructor(val name: String) {
      directly on functors.
 
   ```kotlin
-  // Method 1: Define a transofrm method that returns a new `Holder` with
+  // Method 1: Define a transform method that returns a new `Holder` with
   // the value inside.
   data class Holder<T>(private val value: T) {
       fun <U> transform(f: (T) -> U): Holder<U> = Holder( f(value) )
@@ -3081,10 +3079,10 @@ data class ListName internal constructor(val name: String) {
 ## Chapter 8 - Using Functors to Project Events
 
 - We run into the problem that events don't contain the whole information of
-  an entity but only what's changed. That's why we need projections. Instead
+  an entity but only what changed. That's why we need projections. Instead
   of querying the events, we will *project* the events in a stateful data
   structure that we can query like it was a database table. Projections can
-  be stored in a persistance layer or recreate in memory every time the
+  be stored in a persistence layer or recreated in memory every time the
   application starts. This chapter we will work with them in memory.
 - A projection is like a database table; it's a collection of records, known
   as rows, that can be queried. One nice advantage is we can tailor the row
@@ -3098,7 +3096,7 @@ data class ListName internal constructor(val name: String) {
     interface Projection<ROW: Any, EVENT: EntityEvent> {
 
         // This will fetch new events since last update.
-        val eventFetcher: FetchStoreEvents<EVENT>
+        val eventFetcher: FetchStoredEvents<EVENT>
 
         // This function returns the last event that has been projected.
         fun lastProjectedEvent(): EventSeq
@@ -3114,7 +3112,7 @@ data class ListName internal constructor(val name: String) {
 - To keep track of which events have been processed, we need a sequential
   progressive number associated to each event. To store this progressive
   number, we create the `EventSeq` type and the new generic type
-  `StoredEvent<E>` to keep the even with its progressive.
+  `StoredEvent<E>` to keep the event with its progressive number.
 
   ```kotlin
   data class EventSeq(val progressive: Int) {
@@ -3128,7 +3126,7 @@ data class ListName internal constructor(val name: String) {
   ```
 
 - The `projector` is a function that updates the projection rows by creating
-  a `DeletaRow` from each even representing the information to update the
+  a `DeltaRow` from each event representing the information needed to update
   projection. A `DeltaRow` is similar to a SQL CREATE/UPDATE/DELETE.
 
   ```kotlin
@@ -3147,8 +3145,8 @@ data class ListName internal constructor(val name: String) {
                                val updateRow: R.()->R): DeltaRow<R>()
   ```
 
-- Note that `UpdateRow` takes a receiver-typed lambda which allows it to
-  call methods on it's receiver without `this` or `it` or a named parameter.
+- Note that `UpdateRow` takes a receiver-typed lambda, which allows it to
+  call methods on its receiver without `this`, `it`, or a named parameter.
 
   ```kotlin
   val updateRow: (Row) -> Row = { it.copy(name = "new name") }
@@ -3178,7 +3176,7 @@ data class ListName internal constructor(val name: String) {
           eventFetcher(lastProjectedEvent())
               .forEach{ storedEvent ->
                   applyDelta(storedEvent.eventSeq,
-                      eventProjector(storedEvent.Event))
+                      eventProjector(storedEvent.event))
               }
       }
 
@@ -3205,13 +3203,13 @@ data class ListName internal constructor(val name: String) {
       private val lastEventRef: AtomicReference<EventSeq> =
           AtomicReference(EventSeq(-1))
 
-      override fun allRow(): Map<RowId, R> = rowsReference.get()
+      override fun allRows(): Map<RowId, R> = rowsReference.get()
 
 
       override fun applyDelta(eventSeq: EventSeq, deltas: List<DeltaRow<R>>) {
 
           deltas.forEach { delta ->
-              rowsReference.getAndUpdate { row ->
+              rowsReference.getAndUpdate { rows ->
                   when (delta) {
                       is CreateRow -> rows + (delta.rowId to delta.row)
                       is DeleteRow -> rows - delta.rowId
@@ -3269,7 +3267,7 @@ data class ListName internal constructor(val name: String) {
           is ItemModified -> UpdateRow(e.rowId()) { replaceItem(e.prevItem, e.item) }
           is ListPutOnHold -> UpdateRow(e.rowId()) { putOnHold() }
           is ListReleased -> UpdateRow(e.rowId()) { release() }
-          is ListClosed -> deleteRow(e.rowId())
+          is ListClosed -> DeleteRow(e.rowId())
       }.toSingle()
   }
 
@@ -3339,11 +3337,11 @@ data class ListName internal constructor(val name: String) {
   ```kotlin
   class ToDoListHub(...) {
       //...
-      override fun getList(user: User, ListName: ListName): 
+      override fun getList(user: User, listName: ListName):
               ZettaiOutcome<ToDoList> =
           listProjection.findList(user, listName)
               .failIfNull(
-                  InvalidRequestError("List $listName of user $user not found!")))
+                  InvalidRequestError("List $listName of user $user not found!"))
 
       override fun getLists(user: User): ZettaiOutcome<List<ListName>> =
           listProjection.findAll(user)
@@ -3372,7 +3370,7 @@ data class ListName internal constructor(val name: String) {
 
   class ToDoListQueryRunner(eventFetcher: FetchStoredEvents<ToDoListEvent>):
                                           QueryRunner<ToDoListQueryRunner> {
-      internal val listProjection = ListProjection(eventFetcher)
+      internal val listProjection = ToDoListProjection(eventFetcher)
 
       override fun <R> invoke(f: ToDoListQueryRunner.() -> R) =
           ProjectionQuery(setOf(listProjection)) { f(this) }
@@ -3382,7 +3380,7 @@ data class ListName internal constructor(val name: String) {
 - That `Self` reference plugs in the concrete class as the type reference
   so we have access to stuff contained in `ToDoListQueryRunner` like 
   `listProjection` with it as receiver. We want our internal `listProjection`
-  reference accessile from our DSL.
+  reference accessible from our DSL.
 - The functor also interacts well with laziness. We are going to use Kotlin
   lazy sequences so the projection is only calculated once when used. This
   could make resources hard to plan for since we don't know when it will be
@@ -3414,7 +3412,7 @@ data class ListName internal constructor(val name: String) {
   class ToDoListHub(
       val queryRunner: ToDoListQueryRunner,
       val commandHandler: ToDoListCommandHandler,
-      val persistEvent: EventPersister<ToDoListEven>
+      val persistEvent: EventPersister<ToDoListEvent>
   ) : ZettaiHub {
   
       // other methods...
@@ -3483,7 +3481,7 @@ data class ListName internal constructor(val name: String) {
                   .filter { it.listId in lists }
                   .filter { it.item.dueDate != null
                             && it.item.status == ToDoStatus.Todo }
-                  .sortedByDescending { it.item.dueDate }
+                  .sortedBy { it.item.dueDate }
                   .take(maxRows)
   }
 
@@ -3592,8 +3590,9 @@ data class ListName internal constructor(val name: String) {
   database backend and start with a spike to evaluate the technology for our
   use. We'll use PostgreSQL via Docker. Dockerfile is in the repo, or you
   can always install PostgreSQL the old fashioned way. We're using the Exposed
-  library for database access, but the people at JetBrains. Exposed isn't
-  "functional", but that let's it serve as a good example of how to use a
+  library for database access. It is by the same people at JetBrains responsible
+  for Kotlin. Exposed is not "functional", but that lets it
+  serve as a good example of how to use a
   non-functional library in our functional code. We will use PostgreSQL's
   document feature to store the entire event in a `jsonb` field. We aren't
   using our uuid as key, since we need to sort events in order and an increasing
@@ -3603,7 +3602,7 @@ data class ListName internal constructor(val name: String) {
   data class PgEventTable(override val tableName: String) : Table(tableName) {
 
       val id = long("id").autoIncrement()
-      override val primaryKey = PrimaryKey(id, name = "${tablename}_pkey")
+      override val primaryKey = PrimaryKey(id, name = "${tableName}_pkey")
 
       val recorded_at = timestamp("recorded_at")
           .defaultExpression(CurrentTimestamp())
@@ -3642,7 +3641,7 @@ data class ListName internal constructor(val name: String) {
 
 - We need to convert our ToDoListEvent objects to PgEvent objects, but first we
   should write a test. We are just going to generate a good number of random
-  events then converet them to PgEvent and back and make sure they are identical
+  events, then convert them to PgEvent and back, and make sure they are identical
   afterwards.
 
   ```kotlin
@@ -3672,7 +3671,7 @@ data class ListName internal constructor(val name: String) {
           ItemRemoved::class -> ItemRemoved(ToDoListId.mint(), randomItem())
           ItemModified::class -> ItemModified(
               ToDoListId.mint(), randomItem(), randomItem())
-          ListPutOhHold::class -> ListPutOnHold(
+          ListPutOnHold::class -> ListPutOnHold(
               ToDoListId.mint(), randomText(20))
           ListReleased::class -> ListReleased(ToDoListId.mint())
           ListClosed::class -> ListClosed(ToDoListId.mint(), Instant.now())
@@ -3690,7 +3689,7 @@ data class ListName internal constructor(val name: String) {
 
   ```kotlin
   fun toDoListEventParser(): Parser<ToDoListEvent, PgEvent> =
-      Parser(::toPgEvent, :toToDoListEvent)
+      Parser(::toPgEvent, ::toToDoListEvent)
 
   fun toPgEvent(event: ToDoListEvent): PgEvent =
       PgEvent(
@@ -3744,7 +3743,8 @@ data class ListName internal constructor(val name: String) {
 
       val row_data = jsonb("row_data",
           parser::parseOrThrow,
-          parserver::render.get()
+          parser::render
+      )
   }
 
   data class PgLastEventTable(override val tableName: String):Table(tableName) {
@@ -3755,14 +3755,202 @@ data class ListName internal constructor(val name: String) {
   }
   ```
 
+- So we just define our actual tables, along with some database helper functions
+  (found in `com.ubertob.fotf.zettai.db.ZettaiTables`):
+
+  ```kotlin
+  val toDoListEventsTable = PgEventTable("todo_list_events")
+
+  val toDoListProjectionTable = PgProjectionTable(
+      "todo_list_projection", toDoListProjectionParser)
+
+  val toDoListLastEventTable = PgLastEventTable(
+      "${toDoListProjectionTable.tableName}_last_processed_event")
+
+  fun resetDatabase(datasource: DataSource) {
+
+      val db = Database.connect(datasource)
+
+      transaction(db) {
+          addLogger(StdOutSqlLogger)
+
+          dropTables()
+          prepareDb()
+      }
+  }
+
+  fun prepareDatabase(datasource: DataSource) {
+
+      val db = Database.connect(datasource)
+
+      transaction(db) {
+          addLogger(StdOutSqlLogger)
+
+          prepareDb()
+      }
+  }
+
+  private fun Transaction.prepareDb() {
+      SchemaUtils.createMissingTablesAndColumns(
+          toDoListEventsTable,
+          toDoListProjectionTable,
+          toDoListLastEventTable,
+      )
+  }
+
+  private fun dropTables() {
+      SchemaUtils.drop(
+          toDoListEventsTable,
+          toDoListProjectionTable,
+          toDoListLastEventTable,
+      )
+  }
+  ```
+
+- At this point, the focus on purity comes across as a little obsessive, but
+  we'll see how it works out. The plan is that since the Exposed database
+  library works primarily through side effects, we will hack on the library
+  source code a bit to make it more functional. Specifically the Transaction
+  is stored in a hidden singleton, and we want to pass it as an argument.
+  There are a full set of tests based around this in the source repo, but I'll
+  list the example from the book:
+
+  ```kotlin
+  val dataSource = pgDataSourceForTest()
+
+  @Test
+  fun `can read and write events from db`() {
+
+      val db = Database.connect(dataSource)
+
+      transaction(db) {
+
+          val listId = ToDoListId.mint()
+          val event = ListCreated(listId, user, list.listName)
+          val pgEvent = toPgEvent(event)
+
+          val eventId = toDoListEventsTable.insertIntoWithReturn(this,
+                  stored(event)) {
+              newRow ->
+                  newRow[entity_id] = pgEvent.entityId.raw
+                  newRow[event_source] = pgEvent.source
+                  newRow[event_type] = pgEvent.eventType
+                  newRow[json_data] = pgEvent.jsonString
+                  newRow[event_version] = pgEvent.version
+              }.eventSeq
+
+          expectThat(eventId.progressive).isGreaterThan(0)
+
+          val row = toDoListEventsTable.selectWhere(this,
+                  toDoListEventsTable.id eq eventId.progressive)
+                  .single()
+
+          expectThat(row.get(toDoListEventsTable.entity_id)).isEqualTo(listId.raw)
+      }
+  }
+  ```
+
+- So we provide some extensions functions to database library objects that
+  take Transaction as an argument to get our tests working. The goal here is
+  to abstract away the transaction and create a mechanism for operating in
+  any "context" that facilitates the reading and writing of data. The code
+  is mostly extension functions in the code repo at:
+  `com.ubertob.fotf.zettai.db.jdbc.TransactionProvider.kt`.
+- We want to move data access into operations that run inside a transaction.
+  A higher-order function remains referentially transparent only when its
+  evaluation does not introduce effects. Passing an impure callback such as
+  `context::read` makes the resulting operation effectful, even if the
+  surrounding composition is otherwise clean.
+- We currently have two issues. One is passing the context explicitly each time,
+  and we will focus on that first. The other is the fact that remote access can
+  fail for a lot of reasons, and there is no indication of what can fail and
+  why. For errors we will define a `ContextProvider` that correctly handles the
+  context even in case of failures, closing file handlers or database
+  connections, then return an Outcome with the result or error.
+- First let's sketch out how all this will work:
+
+  ```kotlin
+  // simple sketch
+  val context = remoteStorageContext("config")      //impure computation
+  val a = readA(context::read, id)                  //pure function
+  val b = calculateB(a)                             //pure function
+  writeB(context::write, b)                         //pure function
+
+  // sketchy definition - wrap any computation that needs the context with
+  // a `ContextReader` and let them run together at the end with the context.
+  fun readA(id: String): ContextReader<CTX, A> = //...
+  fun calculateB(a: A): B = //...
+  fun writeB(b: B): ContextReader<CTX, Unit> = //...
+  reader = readA(id)
+      .transform{ a -> calculateB(a) }
+      .transform{ b -> write(b) }
+  reader.runWith{ TODO("Here we need the context") }
+  ```
+
+- Note that although we're thinking about the database, we aren't committed to that
+  context. A `ContextReader` could work with a connection to a database, a CSV
+  file, or a structure in memory. We are using a functor to inject the context
+  into the chain of transformations.
+
+  ```kotlin
+  data class ContextReader<CTX, out T>(val runWith: (CTX) -> T) {
+
+      fun <U> transform(f: (T) -> U): ContextReader<CTX, U> =
+          ContextReader { t -> f(runWith(t)) }
+  }
+
+  interface ContextProvider<CTX> {
+      fun <T> tryRun(reader: ContextReader<CTX, T>): Outcome<ContextError, T>
+  }
+  ```
+
+- If you squint hard enough, you can see this is what is in the repo at
+  `com.ubertob.fotf.zettai.db.fp.{ContextProvider, ContextReader}`, although
+  both implementations have gotten considerably more complicated when finished.
+  The `ContextProvider` doesn't require much elaboration, but the
+  `ContextReader` has grown to 50 lines. So let's move back to our domain.
+  We want our functor to store projections. We'll start with the types.
+  Note that we're reaturing a ContextReader with a Row inside and returning
+  Unit inside a ContextReader.
+
+  ```kotlin
+  fun readRow(id: String):
+      ContextReader<Transaction, ToDoListProjectionRow> = TODO()
+
+  fun writeRow(row: ToDoListProjectionRow):
+      ContextReader<Transaction, Unit> = TODO()
+
+  fun remoteStorageProvider: ContextProvider<Transaction> = TODO()
+
+  // In pseudocode, we could use this as follows:
+  val listUpdater = readRow("myRowId")
+          .transform { r -> r.copy(active = false) }
+          .transform { r -> writeRow(r) }
+
+  remoteStorageProvider.tryRun(listUpdater).expectSuccess()
+  ```
+
+- The code above compiles, but it has a problem. `listUpdater` is of types
+  `ContextReader<Transaction, ContextReader<Transaction, Unit>>` when we wanted
+  `ContextReader<Transaction, Unit>`.
+- So now we reach Monads. Contrary to opinions that they are impossible to
+  explain, a Monad is merely what is formed by a Functor that can be combined
+  with another Functor of the same type. If you think of a Functor as a generic
+  type `Foo<T>` that has a method like `Foo<T>.bar(f: (T) -> U): Foo<U>`, then
+  a Monad could be simplified to a generic type `Foo<T>` that has a method like
+  `Foo<T>.barbar(f: (T) -> Foo<U>): Foo<U>`. There's more to it than that, but
+  that's a good rule of thumb. We're going to call `barbar` just `bind`, but
+  you might see it as `flatmap` or even `collect` in other languages.
+
 ## Appendices
 
 ### A1 - What Is Functional Programming
 
-- The essence of functional programming is referential transparency.
-  - *Purity:* The same inputs always produce the same results.
-  - *Immutability:* All data structures are immutable.
-  - *Totality:* Functions return a result for any input, without throwing
+- The core goal of functional programming is referential transparency.
+  - *Purity:* The same inputs produce the same results and do not cause
+    observable side effects.
+  - *Immutability:* Prefer data structures that are not changed in place.
+  - *Totality:* Functions return a result for every input without throwing
     exceptions.
 - Think in Morphisms - Functional Programming Heuristics
   1. *Treat functions as data.* Define behavior combining simpler functions 
@@ -3779,7 +3967,7 @@ data class BowlingGameFP( val rolls: List<Pins>,
     val score by lazy { scoreFn(rolls) }
     fun roll(pins: Pins): BowlingGameFP = copy(rolls = rolls + pins)
     companion object {
-        fun newBowlingGame() = BowlingGameFP(emptyList(), ::calBowlingScoreRec)
+        fun newBowlingGame() = BowlingGameFP(emptyList(), ::calcBowlingScoreRec)
         fun calcBowlingScoreRec(rolls: List<Pins>): Int {
             val lastFrame = 10
             val noOfPins = 10
@@ -3787,7 +3975,7 @@ data class BowlingGameFP( val rolls: List<Pins>,
             fun List<Int>.isSpare(): Boolean = take(2).sum() == noOfPins
         fun calcFrameScore(frame: Int, rolls: List<Int>): Int =
             when {
-                frame == lastFrame || roll.size < 3 -> 
+                frame == lastFrame || rolls.size < 3 ->
                     rolls.sum()
                 rolls.isStrike() -> 
                     rolls.take(3).sum() + calcFrameScore(frame + 1, rolls.drop(1))
