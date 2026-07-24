@@ -5,13 +5,13 @@
 
 - We are going to model a theme park using Domain-Driven Design to divide our
   system into *bounded contexts*. This way each context owns part of the domain
-  and defines howw its data and behavior fit together. This will allow us to apply
-  functional techniques within well-defined boundariees, ensuring that change stays
-  local and models stay aligned with real-world concerns. We can split FunPark into
-  Rides, Patrons, and FastPass.
+  and defines how its data and behavior fit together. This will allow us to apply
+  functional techniques within well-defined boundaries, ensuring that change
+  stays local and models stay aligned with real-world concerns. We can split 
+  FunPark into Rides, Patrons, and FastPass.
 - In bounded contexts, names matter. Terms should match the language used by the
-  people who owork in and understand that part of the domain.
-- An *ubiquitous language* is shared vocabularly used consistently by developers,
+  people who work in and understand that part of the domain.
+- An *ubiquitous language* is shared vocabulary used consistently by developers,
   designers, and domain experts within a bounded context.
 - Here are our main entities in this book and their `make` factory methods:
 
@@ -66,9 +66,10 @@
     end
   end
 
+  iex> mansion = FunPark.Ride.make("Dark Mansion", min_age: 14, tags: [:dark])
   # This one requires a DateTime, so to use it we might:
   iex> datetime = DateTime.new!(~D[2025-06-01], ~T[13:00:00])
-  fast_pass = FunPark.FastPass.make(dark_mansion, datetime)
+  iex> fast_pass = FunPark.FastPass.make(mansion, datetime)
   ```
 
 - A note on constructor names.
@@ -96,7 +97,7 @@
               dislikes: []
 
     def make(name, age, height, opts \\ [])
-        when is_bitstring(name) and
+        when is_binary(name) and
                is_integer(age) and
                is_integer(height) and
                age > 0 and
@@ -152,7 +153,7 @@
   doesn't explicitly implement `Eq`, Elixir falls back to a generic implementation
   for `Any`, since we specified `@fallback_to_any true`. We have to write this
   implementation for `Any` like we did above.
-- Before we define `Eq`, let introduce a way to change our structs:
+- Before we define `Eq`, let's introduce a way to change our structs:
 
   ```elixir
   # lib/fun_park/patron.ex
@@ -173,7 +174,7 @@
 - Our current definition of `Eq` for `Any` doesn't work in our bounded context of
   Patrons. If a Patron changes its ticket_tier, it currently is considered a
   different patron. We want to consider two Patrons as equal if they share the
-  same `id`, because that is there identity.
+  same `id`, because that is their identity.
 
   ```elixir
   defimpl FunPark.Eq, for: FunPark.Patron do
@@ -191,7 +192,7 @@
   complex structures.
 - We define `change/2` and `Eq` similarily for `Ride` and `FastPass`.
   It is tempting to define a shared `change` utility function, but this would
-  undermind the separation between contexts. Each entity could change in a
+  undermine the separation between contexts. Each entity could change in a
   different way.
 - Our domain expert already brought up a problem. For a Fast Pass two with the
   same Datetime are effectively duplicates because the Patron cannot be in two
@@ -199,7 +200,7 @@
   two Fast Passes with the same `id` equal. We are going to deal with this by
   defining a `contramap` function. It is built in for many functional languages,
   but not Elixir. Functional programming includes the *contravariant functor*,
-  which transforms the input before its processed. This is use for abstractions
+  which transforms the input before its processed. This is used for abstractions
   like `Eq` and `Ord` where we want to transform a value before comparison.
 
   ```elixir
@@ -220,13 +221,19 @@
   and adapts it to work on a different type by applying a function *before*
   comparing values.
 - `contramap/1` is similar to `map` which loosely speaking "transforms values
-  in a container", but it is less "map but before comparing" and more like
-  "compare a temporary view of the data, computed on the fly."
+  in a container", but it's less 'transform, then compare' and more 'compare
+  using a temporary view of the data, computed on the fly.
 - We're not actually going to change our `Eq` definition from identity. We're
   just going to add a new `eq_time` function that compares time.
 
   ```elixir
   # lib/fun_park/fast_pass.ex
+  def get_ride(%__MODULE__{ride: ride}), do: ride
+
+  def eq_ride do
+    Eq.Utils.contramap(&get_ride/1)
+  end
+
   def get_time(%__MODULE__{time: time}), do: time
 
   def eq_time do
@@ -259,13 +266,14 @@
       eq?: fn a, b -> eq.eq?.(f.(a), f.(b)) end,
       not_eq?: fn a, b -> eq.not_eq?.(f.(a), f.(b)) end
     }
+  end
   ```
 
 - So now we've standardized the representation and `eq \\ Eq` preserves the
   default while still allowing us to swap in custom equality logic.
 
   ```elixir
-  # lib/fun_park_eq/utils.ex
+  # lib/fun_park/eq/utils.ex
   def eq?(a, b, eq \\ Eq) do
     eq = to_eq_map(eq)
     eq.eq?.(a, b)
@@ -325,7 +333,7 @@
       when is_list(list1) and is_list(list2) do
     list1
     |> Enum.reject(fn item ->
-      Enum.any?(list2, &Eq.Utils.eq?(item, &1, eq)
+      Enum.any?(list2, &Eq.Utils.eq?(item, &1, eq))
     end)
     |> uniq(eq)
   end
@@ -339,7 +347,7 @@
 
   def subset?(small, large, eq \\ FunPark.Eq)
       when is_list(small) and is_list(large) do
-    Enum.all?(small, fun item ->
+    Enum.all?(small, fn item ->
       Enum.any?(large, &Eq.Utils.eq?(item, &1, eq))
     end)
   end
@@ -371,7 +379,7 @@
 - Equality isn't just a basic comparison - it reflects the rules of the domain.
   For patrons, rides, or FastPasses, *equal* means what the business says it
   means. The big shift in functional programming is moving from ad hoc checks
-  scattered around the codebase to a composable structure that tays flexible
+  scattered around the codebase to a composable structure that stays flexible
   as the domain evolves.
 
 ## Chapter 3 - Create Flexible Ordering with Protocols
@@ -427,12 +435,12 @@
   # We just have to deal with its return values of `:gt/:lt/:eq`.
   defimpl FunPark.Ord, for: FunPark.FastPass do
     alias FunPark.Ord
-    alias FunPark.Ride
+    alias FunPark.FastPass
 
-    def lt?(%Ride{time: v1}, %Ride{time: v2}), do: Ord.lt?(v1, v2)
-    def le?(%Ride{time: v1}, %Ride{time: v2}), do: Ord.le?(v1, v2)
-    def gt?(%Ride{time: v1}, %Ride{time: v2}), do: Ord.gt?(v1, v2)
-    def ge?(%Ride{time: v1}, %Ride{time: v2}), do: Ord.ge?(v1, v2)
+    def lt?(%FastPass{time: v1}, %FastPass{time: v2}), do: Ord.lt?(v1, v2)
+    def le?(%FastPass{time: v1}, %FastPass{time: v2}), do: Ord.le?(v1, v2)
+    def gt?(%FastPass{time: v1}, %FastPass{time: v2}), do: Ord.gt?(v1, v2)
+    def ge?(%FastPass{time: v1}, %FastPass{time: v2}), do: Ord.ge?(v1, v2)
   end
 
   defimpl FunPark.Ord, for: DateTime do
@@ -453,6 +461,7 @@
   and maps using their size (which is the same for our structs) then by their
   keys in alphabetical order, so `ride1 < ride2` depends
   on `id` values since `id` is the first key alphabetically.
+  Assuming `:calendar`, `:day`, and `:hour` are all the same,
   `datetime1 < datetime2` compares `:microsecond` values since it comes
   alphabetically before `:minute`.
 - This is easy to use (and a good reminder we wrote a `change` function for
@@ -545,7 +554,7 @@
   ```elixir
   # lib/fun_park/patron.ex
   def get_reward_points(%__MODULE__{reward_points: reward_points}),
-    do: reward_point
+    do: reward_points
 
   def ord_by_reward_points do
     Ord.Utils.contramap(&get_reward_points/1)
@@ -599,7 +608,7 @@
   # lib/fun_park/ord/utils.ex
   def to_eq(ord \\ Ord) do
     %{
-      eq? fn a, b -> compare(a, b, ord) == :eq end,
+      eq?: fn a, b -> compare(a, b, ord) == :eq end,
       not_eq?: fn a, b -> compare(a, b, ord) != :eq end
     }
   end
@@ -651,11 +660,11 @@
     }
   end
 
-  iex> ticket_ord = FunPark.Patrong.ord_by_ticket_tier()
+  iex> ticket_ord = FunPark.Patron.ord_by_ticket_tier()
   iex> reverse_ticket_ord = FunPark.Ord.Utils.reverse(ticket_ord)
   ```
 
-- Since `Eq` and `Ord` are mostly boiletplat, we can automate our typical use
+- Since `Eq` and `Ord` are mostly boilerplate, we can automate our typical use
   case with a macro rather than implementing `Ord` for every struct.
 
   ```elixir
@@ -740,7 +749,7 @@
 - Many simple comparison problems are actually combination problems. Who is
   first out of omeone with a FastPass, a VIP, and a rider with accessibility
   needs. With *monoids* we get a reusable abstraction to explicitly combine.
-- A *semigroup* defines how elements combine and satisifies two rules:
+- A *semigroup* defines how elements combine and satisfies two rules:
   - Associativity: `a + (b + c) = (a + b) + c`. Grouping doesn't change result.
   - Closure: Combining two elements produces another element of the same kind.
 - A *monoid* adds a third rule:
@@ -903,8 +912,8 @@
 
     def append(%All{} = eq1, %All{} = eq2) do
       %All{
-        eq?: fn a, b -> eq1.eq?.(a, b) && eq2.eq?.(a, b) end,
-        not_eq?: fn a, b -> eq1.not_eq?.(a, b) || eq2.not_eq?.(a, b) end
+        eq?: fn a, b -> eq1.eq?.(a, b) && eq2.eq?.(a, b) end, # AND
+        not_eq?: fn a, b -> eq1.not_eq?.(a, b) || eq2.not_eq?.(a, b) end # OR
       }
     end
 
@@ -965,7 +974,7 @@
   iex> FunPark.Eq.Utils.eq?(fast_pass_a, fast_pass_b, eq_both) # false
   ```
 
-- If this is a common comparison, it belong in the FastPass bounded context.
+- If this is a common comparison, it belongs in the FastPass bounded context.
 
   ```elixir
   # lib/fun_park/fast_pass.ex
@@ -974,7 +983,7 @@
   end
   ```
 
-- But our domain expert correct us, we really wanted to still compare two
+- But our domain expert corrected us, we really wanted to still compare two
   FastPasses with the same id as equal but also consider them equal if they
   are for the same ride and time. So we need `id || ride && time`.
 
@@ -996,8 +1005,8 @@
 
     def append(%Any{} = eq1, %Any{} = eq2) do
       %Any{
-        eq?: fn a, b -> eq1.eq?.(a, b) || eq2.eq?.(a, b) end,
-        not_eq?: fn a, b -> eq1.not_eq?.(a, b) && eq2.not_eq?.(a, b) end
+        eq?: fn a, b -> eq1.eq?.(a, b) || eq2.eq?.(a, b) end, # OR
+        not_eq?: fn a, b -> eq1.not_eq?.(a, b) && eq2.not_eq?.(a, b) end # AND
       }
     end
 
@@ -1060,7 +1069,7 @@
     defstruct lt?: &FunPark.Monoid.Ord.default?/2,
               le?: &FunPark.Monoid.Ord.default?/2,
               gt?: &FunPark.Monoid.Ord.default?/2,
-              ge?: &FunPark.Monoid.Ord.default?/2,
+              ge?: &FunPark.Monoid.Ord.default?/2
 
     def default?(_, _), do: false
   end
@@ -1143,7 +1152,7 @@
   iex> ord_priority = FunPark.Ord.Utils.concat(
       [ord_ticket, ord_reward_points, FunPark.Ord]
   )
-  iex> FunPark.List.sort([charles, beth, alice])
+  iex> FunPark.List.sort([charles, beth, alice], ord_priority)
   # returns result of ordering by ticket_tier then reward_points then name.
 
   # lib/fun_park/patron.ex
@@ -1157,11 +1166,11 @@
   ```
 
 - The `Monoid.Max` encapsulates both the value and the ordering logic for
-  finding the maximum and is defined in `lib/fun_park_monoid/max.ex`. It's 
+  finding the maximum and is defined in `lib/fun_park/monoid/max.ex`. It's 
   not much code so I'll list it here too. Worth pointing out is `min_value`
   has to be passed to `empty` by the user since minium for a domain isn't
   something the code can just guess and when you `append` together two
-  `Monoid.Max` they're `Ord` must be equal to be joined so the `Ord` of
+  `Monoid.Max` their `Ord` must be equal to be joined so the `Ord` of
   the second is ignored. It's meaningless to try to determine `Max` with
   two separate `Ord` orderings.
 
@@ -1197,7 +1206,7 @@
   # lib/fun_park/math.ex
   # We will have to assume we're working with numbers. This is Math.
   def max(a, b) do
-    m_append(%Monoid.Max{value: Float.min_finte()}, a, b)
+    m_append(%Monoid.Max{value: Float.min_finite()}, a, b)
   end
 
   def max(list) when is_list(list) do
@@ -1225,7 +1234,7 @@
   iex> alice = FunPark.Patron.make("Alice", 15, 150)
   iex> beth = FunPark.Patron.make("Beth", 15, 150, reward_points: 100)
   iex> FunPark.Patron.highest_priority([beth, alice]) # beth by reward_points
-  iex> FunPark.Patron.change(alice, %{ticket_tier: :vip})
+  iex> alice = FunPark.Patron.change(alice, %{ticket_tier: :vip})
   iex> FunPark.Patron.highest_priority([beth, alice]) # alice by ticket_tier
   ```
 
@@ -1239,12 +1248,12 @@
   consideration, and above 10 signals high complexity which is difficult to
   extend and maintain. An imperative implementation of `ord_by_priority`
   scores a cyclomatic complexity of 9 easily, and where do you start when
-  a new business rule is introduce such as patrons with 50 or more reward
+  a new business rule is introduced such as patrons with 50 or more reward
   points receive the same priority of those with a ticket upgrade. And then
   the rule gets modified, reward points trump `:basic` to `:premium` but not
   `:vip`. Every developer that makes a change needs to navigate the complexity
   anew. Declarative code like we've been writing focuses on what should
-  happen instead of how to do it. We could've written `ord_by_prioity` as:
+  happen instead of how to do it. We could've written `ord_by_priority` as:
 
   ```elixir
   def ord_by_priority do
@@ -1259,7 +1268,7 @@
   functions. Because the logic is declarative and consistent, it's easier
   for teams to understand, adapt, and extend together.
 - `Eq, Ord, Monoid` aren't just abstractions; they're mental models. The more
-  we use them, the more they shape how we seed problems: as equality, ordering,
+  we use them, the more they shape how we see problems: as equality, ordering,
   or combination. And once we see the shape of a problem we can reason about
   it more clearly.
 
@@ -1270,7 +1279,7 @@
   functions whose shapes don't align.
 - Elixir also has some idioms that complicate functional solutions: no built-in
   currying, a pipe operator that targets the first argument, and different
-  syntax for name and anonymous functions.
+  syntax for named and anonymous functions.
 - A *predicate* is a statement that can be true or false within a context.
   Because they follow Boolean algebra, they compose:
   - Conjunction (a && b): True if both are true.
@@ -1297,7 +1306,7 @@
   # lib/fun_park/ride.ex
   def short_wait?, do: p_not(&long_wait?/1)
 
-  # Now a new rule. A ride is suggested if it online and has a short wait.
+  # Now a new rule. A ride is suggested if it's online and has a short wait.
   ```
 
 - Predicate logic has well-defined rules for combination.
@@ -1343,7 +1352,7 @@
   `() -> false`.
   
   ```elixir
-  # lib/fun_park/predicate.ex
+  # lib/fun_park/monoid/pred_any.ex
   defmodule FunPark.Monoid.Predicate.Any do
     defstruct value: &FunPark.Monoid.Predicate.Any.default_pred?/1
 
@@ -1356,7 +1365,7 @@
     def empty(_), do: %Any{}
 
     def append(%Any{} = p1, %Any{} = p2) do
-      $Any{
+      %Any{
         value: fn value -> p1.value.(value) or p2.value.(value) end
       }
     end
@@ -1369,7 +1378,7 @@
   end
   ```
 
-- One of the best part about monoids is they are closed under their operation,
+- One of the best parts about monoids is they are closed under their operation,
   so with predicates, every composition returns a predicate.
 
   ```elixir
@@ -1405,11 +1414,11 @@
   end
   ```
 
-- Now we have the machinery we need to combine `online?/` and `long_wait?/1`:
+- Now we have the machinery we need to combine `online?/1` and `long_wait?/1`:
 
   ```elixir
   # lib/fun_park/ride.ex
-  def suggested?(%__MODULE__{}} = ride),
+  def suggested?(%__MODULE__{} = ride),
     do: p_all([&online?/1, p_not(&long_wait?/1)]).(ride)
   ```
 
@@ -1524,7 +1533,7 @@
 - So with the FastPass there are business rules that govern who gets fast lane
   access and under what conditions. These rules span three bounded contexts:
   Patron, FastPass, and Ride. The Patron manages the collection of passes, the
-  FastPass defines what makes one valid, and the Ride determine access to the
+  FastPass defines what makes one valid, and the Ride determines access to the
   fast lane. We'll later lift these same rules into monads for richer forms
   of validation.
 - So the Patron needs to manage the collection of passes:
@@ -1578,7 +1587,7 @@
   end
   ```
 
-- But we forgot VIP patrons always have access to the fast line if they are
+- But we forgot VIP patrons always have access to the fast lane if they are
   eligible for the Ride.
 
   ```elixir
@@ -1589,14 +1598,14 @@
 
 - But now we have a problem. `has_fast_pass/2` and `is_eligible/2` take a
   Patron as their first argument and a Ride as their second. But `vip?/1` takes
-  a Patron as it's only argument, not a Ride, so doesn't fit in the pipeline.
+  a Patron as its only argument, not a Ride, so doesn't fit in the pipeline.
   We can use `curry_r/1` to curry from right to left so we have three functions
   that accept a Patron.
 
   ```elixir
   # lib/fun_park/utils.ex
   def curry_r(fun) when is_function(fun) do
-    arity = :erland.fun_info(fun, :arity) |> elem(1)
+    arity = :erlang.fun_info(fun, :arity) |> elem(1)
     curry_r(fun, arity, [])
   end
 
@@ -1662,18 +1671,18 @@
   end
   ```
 
-- Foldable behaves differently for types with a fixed, small number of shapes
-  like Maybe (Just/Nothing) or a predicate (true/false) - versus types like
-  List, which have no fixed shape count. For the fixed-shape case, fold takes
-  the item plus one function per possible shape, and dispatches to whichever
-  function matches. We implement Foldable for: Function rather than for:
-  Predicate because a predicate is just a zero-arity Function that happens to
-  return a boolean by convention — Elixir dispatches protocols on runtime
-  type, and there's no way to narrow "a Function" down to specifically "a
-  Function returning Boolean," so Function is the only type actually available
-  to implement against. And yes, the zero-arity Predicate is different from
-  what we've been working with; we fold with a thunk that needs to be
-  evaluated.
+- Foldable behaves differently for fixed-shape types — Maybe (Just/Nothing), a
+  predicate (true/false) — than for types like List that have no fixed shape
+  count. Fixed-shape fold takes the item plus one function per possible shape,
+  and dispatches to whichever function matches.
+- We implement Foldable `for: Function`, not `for: Predicate`, because there's
+  no `Predicate` type to dispatch on — a predicate here is just a zero-arity
+  `Function` that happens to return a boolean by convention. Elixir's protocol
+  dispatch works on the actual runtime type, and it can't distinguish "a
+  Function" from "a Function that returns Boolean," so `Function` is the only
+  thing actually available to implement against. Note this zero-arity predicate
+  is a thunk — we have to evaluate it (call it with no args) to fold over it,
+  unlike the one-argument predicates we built in Chapter 5.
 
   ```elixir
   iex> tea_cup = FunPark.Ride.make("Tea Cup", online: true, wait_time: 100)
@@ -1695,8 +1704,8 @@
   ```elixir
   # lib/fun_park/patron.ex
   # First we need the machinery for likes/dislikes
-  def get_likes(%__MODULE__{likes: likes}), do likes
-  def get_dislikes(%__MODULE__{dislikes: dislikes}), do dislikes
+  def get_likes(%__MODULE__{likes: likes}), do: likes
+  def get_dislikes(%__MODULE__{dislikes: dislikes}), do: dislikes
 
   def add_likes(%__MODULE__{} = patron, likes)
       when is_list(likes) do
@@ -1742,10 +1751,10 @@
     Ride.has_any_tag?(ride, dislikes)
   end
 
-  # We already have `suggested?/2` to check online/wait time/eligiblity.
+  # We already have `suggested?/2` to check online/wait time/eligibility.
   # We just need to combine it with `likes_ride?/2` and NOT `dislikes_ride?/2`.
   def recommended?(%__MODULE__{} = patron, %Ride{} = ride) do
-    p.all([
+    p_all([
       curry(&likes_ride?/2).(patron),
       p_not(curry(&dislikes_ride?/2).(patron)),
       curry(&Ride.suggested?/2).(patron)
@@ -1753,13 +1762,14 @@
   end
   ```
 
-# Chapter 6 - Compose in Context with Monads
+## Chapter 6 - Compose in Context with Monads
 
 - Predicates and monoids translate naturally from their mathematical
-  foundations, but moands are *inspired* by category theory and non the direct
-  implmentation of a mathematical counterpart. Monads compose computations
-  within a context. In functional programming, *compose* means combining
-  behavior. Monads deal with context in an abstract sense. Context can mean
+  foundations, but monads are *inspired* by category theory and rather than a
+  direct implementation of a mathematical counterpart. Monads compose
+  computations within a context. In functional programming, *compose* means
+  combining behavior.
+  Monads deal with context in an abstract sense. Context can mean
   a read-only environment (Reader), the context of absence (Maybe), the
   context of failure (Either), or the context of asynchronous computation
   (Effect). We've already been using one monad, the List, where we compose
@@ -1768,11 +1778,11 @@
   `bind` to chain context aware computations.
 - Anyone who has mapped over a list has used a Functor. In a List, each item is
   transformed while the structure stays the same - returning the same number of
-  items in the same order. A Functor follows two rules: 
+  items in the same order. A Functor follows two rules:
   - Identity - mapping with the identity function returns a copy of the
     original structure. `map(fn x -> x end, F(a)) = F(a)`
   - Composition - mapping in two steps is the same as mapping once with the
-    composed function. 
+    composed function{
     `map(f, map(g, F(a))) = map(fn x -> f.(g.(x)) end, F(a))`
 - Note: It's worth pointing out that `F(a)` above means `a` wrapped in the
   data structure of the Functor. So when we're dealing with lists, we're
@@ -1780,7 +1790,7 @@
   List.
 - These two rules are basically a way to say mapping is nothing but function
   application, faithfully lifted into the context, with zero extra behavior
-  smuggled in. If the process of mapping changed anything on it's own, it
+  smuggled in. If the process of mapping changed anything on its own, it
   wouldn't respect these two rules. List combined with the `Enum.map/2`
   operation is a Functor. It applies
   a transformation to each element of a list, preserving the list's structure.
@@ -1794,7 +1804,8 @@
   unlike `map`, there's no universally agreed upon name for this operation,
   so we will refer to it using Haskell's terminology of `bind`. The `bind`
   operation respects three laws:
-  - Left Identity: wrapping a value then binding it to a function is the same   as applying the function directly; `bind(pure(a), f) = f(a)`
+  - Left Identity: wrapping a value then binding it to a function is the same
+    as applying the function directly; `bind(pure(a), f) = f(a)`
   - Right Identity: binding a monad to `pure` has no effect;
     `bind(m, pure) = m`
   - Associativity: it doesn't matter how you nest your bindings, the result
@@ -1814,13 +1825,13 @@
   predictably. Elixir's `Enum` includes `bind` as `flat_map/2`. The basic idea
   here is "apply a context producing function, then collapse the nested context
   back down to one level." Again, `Enum.flat_map/2` is a faithful witness for
-  List but not every Enumerable because of it's return type. `Enum.flat_map/2`
+  List but not every Enumerable because of its return type. `Enum.flat_map/2`
   can be thought of as taking a function `a -> [b]`, applying it to each
   element of a List for a "List of Lists", then flattening it back down to
   one List of results.
 - A function that takes an input and returns a monad is known as a Kleisli
   function: `kleisli_fn = fn x -> if rem(x, 2) == 0, do: [x * x], else [] end`.
-  The Kleisli functino takes a number and returns a list. Now imagine a list
+  The Kleisli function takes a number and returns a list. Now imagine a list
   of values `list = [1, 2, 3, 4, 5, 6]`. Then
   `list |> Enum.flat_map(kleisli_fn)` is `[4, 16, 36]`. Unlike `map`, `bind`
   allowed us to reshape the structure. We started with a list of 6 elements
@@ -1837,11 +1848,11 @@
     value can be lifted into a function and applied to the context instead.
     `ap(F(f), pure(a)) = ap(pure(fn g -> g.(a) end), F(f))`
   - Composition: Applying functions step by step inside the context behaves
-    the same as applying them all at once. 
+    the same as applying them all at once.
 
     ```
-    ap(ap(ap(pure(fn f -> fn g -> fn x -> f.(g.(x)))) end, F(f)),
-    F(g)), F(a)) = ap(F(f), ap(F(g), F(a)))
+    compose = fn f -> fn g -> fn x -> f.(g.(x)) end end end
+    ap(ap(ap(pure(compose), F(f)), F(g)), F(a)) = ap(F(f), ap(F(g), F(a)))
     ```
 
 - These look complicated, these rules make sure that applying functions in
@@ -1856,7 +1867,7 @@
   functions and applying each function to every value to produce a new list of
   results. `ap/2` acts within a context and can reshape the structure. In a
   series of `bind` each step depends on the result of the previous one; where
-  with `ap` each function is applied indepdently to each input with no
+  with `ap` each function is applied independently to each input with no
   dependency between steps.
 - To summarize: `map` transforms; `bind` chains; `ap` collects.
   - Functor's `map`: plain function, wrapped value → wrapped result.
@@ -1882,7 +1893,7 @@
   ```
 
 - We define `pure/1` with the implementation rather than using protocol
-  dispatch. `pure(5)` is meaningless without know what Monad you're wrapping
+  dispatch. `pure(5)` is meaningless without knowing what Monad you're wrapping
   5 in, and the author chose not to implement a `pure/2` with a witness
   struct, probably because `pure` is one argument in Haskell.
 - The simplest Monad is the `Identity` Monad. It wraps a value without adding
@@ -1939,17 +1950,17 @@
 
     %{
       lt?: fn
-        %__MODULE__{value: v1}, %__MODULE__{value: v2} ->
-          custom_ord.lt?.(v1, v2),
+        %__MODULE__{value: v1}, %__MODULE__{value: v2} -> custom_ord.lt?.(v1, v2)
+      end,
       le?: fn
-        %__MODULE__{value: v1}, %__MODULE__{value: v2} ->
-          custom_ord.le?.(v1, v2),
+        %__MODULE__{value: v1}, %__MODULE__{value: v2} -> custom_ord.le?.(v1, v2)
+      end,
       gt?: fn
-        %__MODULE__{value: v1}, %__MODULE__{value: v2} ->
-          custom_ord.gt?.(v1, v2),
+        %__MODULE__{value: v1}, %__MODULE__{value: v2} -> custom_ord.gt?.(v1, v2)
+      end,
       ge?: fn
-        %__MODULE__{value: v1}, %__MODULE__{value: v2} ->
-          custom_ord.ge?.(v1, v2),
+        %__MODULE__{value: v1}, %__MODULE__{value: v2} -> custom_ord.ge?.(v1, v2)
+      end,
     }
   end
 
@@ -1997,8 +2008,8 @@
 
 - `run` is our escape hatch. It's when we execute what's stored in the Reader
   with the `env` and get back a value outside the monadic context; much like
-  `unwrap` for our Monoids. Every wrapper type needs an exit function and its
-  never part of what makes it Monad.
+  `unwrap` for our Monoids. Every wrapper type needs an exit function and it's
+  part of what makes it Monad.
 
   ```elixir
   # lib/fun_park/monad/reader.ex
@@ -2016,32 +2027,30 @@
   end
   ```
 
-- One thing worth understanding is that `pure` isn't the only way to get inside
-  the Reader. `pure` constructs a minimal Reader where the function
-  ignores `env`. If it was all we had, we would never use the environment.
-  In other Reader libraries, there might be an `ask/0` function that constructs
-  a `Reader{run: fn env -> env end}` that just returns the whole environment
-  so you can `bind` in other functions that use it. Here in Elixir, struct
-  fields aren't private, so we can always construct a struct directly like
-  `%Reader{run: fn env -> end end}` or some simpler function that returns
-  parts of the `env` we are interested in. Everything chained on via
-  `map/bind/ap` is blind to `env` - your own callback functions only ever
-  receive already-produced values, never the environment itself. The only
-  place `env` genuinely gets touched is at the root of the chain: whatever
-  Reader you started with, built either directly
-  (`%Reader{run: fn env -> ... end}`) or via something like ask/0/asks/1.
-  Reader's own internal env -> closures (baked into map/bind/ap's definitions,
-  not anything you write) are what thread that same environment down to the
-  root, invisibly, on your behalf. But we're going to define `asks/1`.
+- `pure` isn't the only way to get a value inside a Reader — it constructs a
+  minimal Reader whose function just ignores `env`. If that were all we had,
+  we'd never actually use the environment. Other Reader libraries expose
+  `ask/0`, which builds `%Reader{run: fn env -> env end}` — a Reader that just
+  hands back the whole environment. Since Elixir struct fields aren't private,
+  we can always build one directly, or write a simpler function that pulls
+  out just the parts of env we care about. We're going to define `asks/1`
+  for that.
+- The key thing to understand: everything you chain on with `map`/`bind`/`ap`
+  never sees `env` directly — your callbacks only ever receive already-produced
+  values. `env` only gets touched once, at the root: inside whichever Reader
+  you started the chain with (built directly, or via `ask/0`/`asks/1`). From
+  there, Reader's own internal plumbing — the `env ->` closures baked into
+  `map`/`bind`/`ap`'s definitions, not anything you write — is what threads
+  that same `env` down to the root invisibly on your behalf.
 
   ```elixir
   # lib/fun_park/monad/reader.ex
   def asks(func), do: %__MODULE__{run: func}
   ```
 
-- `asks/1` allows functinos within the context to access the read-only copy
+- `asks/1` allows functions within the context to access the read-only copy
   of the environment. This allows Reader to solve common problems like prop
-  drilling, depedency injection, and shared configuration.
+  drilling, dependency injection, and shared configuration.
 - *prop drilling* is passing information through functions that don't need it 
   and is widely considered an anti-pattern. Let's look at a simple example:
 
@@ -2089,7 +2098,7 @@
   API keys, feature flags, or endpoint URLs. `config` here is a simple map,
   but it could just as easily be a database lookup. The ride knows how to
   apply shared rules but not how they're delivered - preserving a clean
-  boudary between domain behavior and infrastructure.
+  boundary between domain behavior and infrastructure.
 
   ```elixir
   # lib/fun_park/ride.ex
@@ -2105,14 +2114,15 @@
   end
 
   iex> apple_config = %{min_age: 10, min_height: 120}
-  # Now let's create a defferred_apple, a Ride that waits for it's config
+  # Now let's create a deferred_apple, a Ride that waits for its config
   iex> deferred_apple = FunPark.Ride.make_from_env("Apple Cart")
   iex> apple = FunPark.Reader.run(deferred_apple, apple_config)
   ```
 
 - Remember, a Reader is a deferred computation, so within its context `Eq`
-  and `Ord` are not defined. What does it mean to order two computations
-  without running them.
+  and `Ord` are not defined. Ordering two Readers doesn't make sense — there's
+  nothing to compare until each is run with an environment and produces an
+  actual value.
 - In object-oriented programming; prop drilling, dependency injection, and
   configuration sharing are all treated as separate concerns, but in functional
   programming they are all variations of deferring access to a required input
@@ -2130,10 +2140,10 @@
   # lib/fun_park/monad/maybe/just.ex
   defmodule FunPark.Monad.Maybe.Just do
     @enforce_keys [:value]
-    deftruct [:value]
+    defstruct [:value]
 
     def pure(nil), do: raise(ArgumentError, "Cannot wrap nil in a Just")
-    def pure(value), do %__MODULE__{value: value}
+    def pure(value), do: %__MODULE__{value: value}
   end
 
   # lib/fun_park/monad/maybe/nothing.ex
@@ -2204,10 +2214,10 @@
   end
   ```
 
-- A predicate captures a busness rule, such as "this patron is a VIP." By
+- A predicate captures a business rule, such as "this patron is a VIP." By
   lifting that rule into a Maybe we are *making illegal states unrepresentable*
   because non-VIPs are excluded from the context entirely, so we don't need
-  defensive checks. A lifted predicate refins the context according to a
+  defensive checks. A lifted predicate refines the context according to a
   business rule.
   
   ```elixir
@@ -2218,6 +2228,7 @@
       fn -> just(value) end,
       fn -> nothing() end,
     )
+  end
   ```
 
 - Interops let you drop into FP-mode, chain a few operations, then cut back
@@ -2239,6 +2250,7 @@
       &FastPass.valid?(&1, ride),
     )
     |> Maybe.from_nil()
+  end
   ```
 
 - Maybe has a concept of `Eq` and `Ord`
@@ -2250,7 +2262,7 @@
     alias FunPark.Eq
 
     def eq?(%Just{value: v1}, %Just{value: v2}), do: Eq.eq?(v1, v2)
-    def eq?(%Just{}, %Nothing{), do: false
+    def eq?(%Just{}, %Nothing{}), do: false
 
     def not_eq?(%Just{value: v1}, %Just{value: v2}),
       do: Eq.not_eq?(v1, v2)
@@ -2261,12 +2273,11 @@
   defimpl FunPark.Eq, for: FunPark.Monad.Maybe.Nothing do
     alias FunPark.Monad.Maybe.{Just, Nothing}
 
-    def eq?(%Nothing{}, %Nothing{), do: true
+    def eq?(%Nothing{}, %Nothing{}), do: true
     def eq?(%Nothing{}, %Just{}), do: false
 
     def not_eq?(%Nothing{}, %Nothing{}), do: false
     def not_eq?(%Nothing{}, %Just{}), do: true
-      do: Eq.not_eq?(v1, v2)
   end
 
   # lib/fun_park/monad/maybe/just.ex
@@ -2325,25 +2336,25 @@
 
     %{
       lt?: fn
-        %Just{value: v1}, %Just{value: v2} -> custom_org.lt?.(v1, v2)
+        %Just{value: v1}, %Just{value: v2} -> custom_ord.lt?.(v1, v2)
         %Nothing{}, %Nothing{} -> false
         %Nothing{}, %Just{} -> true
         %Just{}, %Nothing{} -> false
       end,
       le?: fn
-        %Just{value: v1}, %Just{value: v2} -> custom_org.le?.(v1, v2)
+        %Just{value: v1}, %Just{value: v2} -> custom_ord.le?.(v1, v2)
         %Nothing{}, %Nothing{} -> true
         %Nothing{}, %Just{} -> true
         %Just{}, %Nothing{} -> false
       end,
       gt?: fn
-        %Just{value: v1}, %Just{value: v2} -> custom_org.gt?.(v1, v2)
+        %Just{value: v1}, %Just{value: v2} -> custom_ord.gt?.(v1, v2)
         %Nothing{}, %Nothing{} -> false
         %Nothing{}, %Just{} -> true
         %Just{}, %Nothing{} -> false
       end,
       ge?: fn
-        %Just{value: v1}, %Just{value: v2} -> custom_org.ge?.(v1, v2)
+        %Just{value: v1}, %Just{value: v2} -> custom_ord.ge?.(v1, v2)
         %Nothing{}, %Nothing{} -> true
         %Nothing{}, %Just{} -> true
         %Just{}, %Nothing{} -> false
@@ -2383,9 +2394,9 @@
   defimpl FunPark.Monad, for: FunPark.Monad.Maybe.Nothing do
     alias FunPark.Monad.Maybe.Nothing
 
-    def map(%Nothing{}, _func), do %Nothing{}
-    def ap(%Nothing{}, _val), do %Nothing{}
-    def bind(%Nothing{}, _func), do %Nothing{}
+    def map(%Nothing{}, _func), do: %Nothing{}
+    def ap(%Nothing{}, _val), do: %Nothing{}
+    def bind(%Nothing{}, _func), do: %Nothing{}
   end
 
   # lib/fun_park/monad/maybe/just.ex
@@ -2476,7 +2487,7 @@
     check_vip_or_pass = curry_r(&check_vip_or_fast_pass/2)
 
     patron
-    |> check_ride_eligility(ride)
+    |> check_ride_eligibility(ride)
     |> bind(check_vip_or_pass.(ride))
   end
 
@@ -2525,9 +2536,9 @@
   # lib/fun_park/monad/maybe.ex
   def traverse([], _func), do: pure([])
 
-  def traverse(list, fun) when is_list(list) and is_function(func, 1) do
+  def traverse(list, func) when is_list(list) and is_function(func, 1) do
     list
-    |> Enum.reduce_while(pure([]), fn item, %Just{value: acc}) ->
+    |> Enum.reduce_while(pure([]), fn item, %Just{value: acc} ->
       case func.(item) do
         %Just{value: value} -> {:cont, pure([value | acc])}
         %Nothing{} -> {:halt, nothing()}
@@ -2586,9 +2597,9 @@
   defimpl FunPark.Filterable, for: FunPark.Monad.Maybe.Nothing do
     alias FunPark.Monad.Maybe.Nothing
 
-    def guard(%Nothing{}, _boolean), do %Nothing{}
-    def filter(%Nothing{}, _predicate), do %Nothing{}
-    def filter_map(%Nothing{}, _func), do %Nothing{}
+    def guard(%Nothing{}, _boolean), do: %Nothing{}
+    def filter(%Nothing{}, _predicate), do: %Nothing{}
+    def filter_map(%Nothing{}, _func), do: %Nothing{}
   end
 
   # lib/fun_park/monad/maybe/just.ex
@@ -2616,6 +2627,7 @@
         _ -> Maybe.nothing()
       end
     end
+  end
   ```
 
 - Here's some examples of using the `Filterable` protocol on Maybe.
@@ -2736,9 +2748,10 @@
       fn p -> "#{Patron.get_name(p)} is not old enough" end
     )
     |> Either.map_left(&ValidationError.new/1)
+  end
   ```
 
-- Not that we're wrapping our left values in a `ValidationError` so downstream
+- Note that we're wrapping our left values in a `ValidationError` so downstream
   callers can distinguish validation issues from other errors. Exceptions in
   Elixir are just structs that implement the Exception protocol.
 
@@ -2753,7 +2766,7 @@
 
     def new(error), do: %__MODULE__{errors: [error]}
 
-    def merge(%__MODULE__{errors: e1}, 5__MODULE__{errors: e2}),
+    def merge(%__MODULE__{errors: e1}, %__MODULE__{errors: e2}),
       do: %__MODULE__{errors: e1 ++ e2}
 
     @impl Exception
@@ -2823,7 +2836,7 @@
   def ensure_fast_pass(%Patron{} = patron, %Ride{} = ride) do
     patron
     |> Either.lift_predicate(
-      curry_r(&Ride.fast_pass?/2).(ride)
+      curry_r(&Ride.fast_pass?/2).(ride),
       fn p -> "#{Patron.get_name(p)} does not have a fast pass" end
     )
     |> Either.map_left(&ValidationError.new/1)
@@ -2831,8 +2844,8 @@
 
   def ensure_vip_or_fast_pass(%Patron{} = patron, %Ride{} = ride) do
     patron
-    |> Either.life_predicate(
-      &Patron.vip?/1
+    |> Either.lift_predicate(
+      &Patron.vip?/1,
       fn p -> "#{Patron.get_name(p)} is not a VIP" end
     )
     |> Either.map_left(&ValidationError.new/1)
@@ -2884,12 +2897,9 @@
   def or_else(%Left{}, fallback_fun) when is_function(fallback_fun, 0), do: fallback_fun.()
   def or_else(%Right{} = right, _), do: right
 
-  def lift_eq(custom_eq) do
-    custom_eq = Eq.Utils.to_eq_map(custom_eq)
-
   # There's a lot more code in Either.ex, including some unsurprising Eq and
   # Ord implementations, a `flip/1`, a `lift_maybe/2` and some list functions
-  # but the book coverses `traverse_a/2` shortly.
+  # but the book covers `traverse_a/2` shortly.
   # I will explicitly list `from_try/1` and  `from_result/1` since they cover
   # translation from other error handling schemes.
   def flip(%Left{left: l}), do: %Right{right: l}
@@ -2995,13 +3005,13 @@
 
 - Remember what `traverse` does. It takes a list of Either's and converts them
   into one `Right list` or short-circuits on the first Left.
-- And I needed explanation for why we curry sometimes and not others.
-  So the rule of thumb: anything called directly inside a pipe stage, with all
-  its arguments already at hand, never needs currying — the pipe supplies the
-  missing piece immediately. Anything being handed to `bind`/`map`/`ap` as a
-  value, to be invoked by that function rather than by you, needs to already
-  be down to exactly one remaining argument — which is what `curry_r` is for
-  whenever the underlying function's real arity is higher than that.
+- And I needed an explanation for why we curry sometimes and not others...
+  Rule of thumb: if a function is called directly inside a pipe stage with all
+  its arguments already at hand, it never needs currying — the pipe supplies
+  the missing piece. But if you're handing a function to `bind`/`map`/`ap` as a
+  value (something they'll call, not you), it needs to already be down to one
+  remaining argument. That's what `curry_r` is for when the function's real
+  arity is higher."
 - Monads are useful for dependent steps and for expensive operations where
   early failure avoids unnecessary work, but sometimes we want to run multiple
   checks and return all the results instead of the first failure. To solve this
@@ -3022,7 +3032,7 @@
         {%Left{left: new}, %Left{left: existing}} ->
           left(append(existing, coerce(new)))
 
-        {%Right{}, %Left{left:existing}} ->
+        {%Right{}, %Left{left: existing}} ->
           left(existing)
 
         {%Left{left: err}, %Right{}} ->
@@ -3056,7 +3066,7 @@
     alias FunPark.Errors.ValidationError
 
     # If you're working with a ValidationError, e is already a list from `new`.
-    def coerce(%ValidationError{errors: e}). do ValidationError.new(e)
+    def coerce(%ValidationError{errors: e}), do: ValidationError.new(e)
 
     def append(%ValidationError{} = acc, %ValidationError{} = value) do
       ValidationError.merge(acc, value)
@@ -3144,7 +3154,7 @@
   ```
 
 - The chapter ends with an interesting value of making an in-memory-key-value
-  store for Rides and wrapping the ETS results in Either with simplied error
+  store for Rides and wrapping the ETS results in Either with simplified error
   messages instead of crashing on error since ETS throws. After defining basic
   ETS access functions, it makes a repo. This code is in `lib/fun_park/store.ex`
   for the ETS functions and `lib/fun_park/ride/repo.ex` for the repository.
@@ -3152,9 +3162,10 @@
 ## Chapter 10 - Coordinate Tasks with Effect
 
 - Elixir developers typically manage I/O using Task, a lightweight abstraction
-  built on Erlang's process model. Task is problematic from a functional
-  perspective; it runs eagerly, breaks the separation between definition and
-  execution, and raises errors instead of keeping them in context. Our Effect
+  built on Erlang's process model.
+  Task is problematic from a functional perspective for three reasons:
+  it runs eagerly, it breaks the separation between definition and execution,
+  and it raises errors instead of keeping them in the return value. Our Effect
   class, inspired by Scala's ZIO, uses Either to represent success or failure
   and Reader to provide a shared environment.
 
@@ -3178,6 +3189,8 @@
   end
 
   # lib/fun_park/monad/effect.ex
+  # `%_{...}` matches a struct of any module — that's what lets `run/2` accept
+  # either a Right or Left Effect without a separate clause for each
   def run(%_{effect: thunk}, env \\ %{}), do: execute_effect(thunk.(env))
 
   defp execute_effect(task) do
@@ -3256,7 +3269,7 @@
     Effect.lift_either(fn -> Ride.validate(ride) end)
   end
 
-  depf add_to_store_effect(valid_ride) do
+  defp add_to_store_effect(valid_ride) do
     Effect.asks(fn env -> env[:table] end)
     |> bind(fn table -> Store.add(valid_ride, table) end)
   end
