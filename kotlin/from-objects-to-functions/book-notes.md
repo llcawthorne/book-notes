@@ -1,4 +1,3 @@
-
 # From Objects to Functions
 
 Note: For this book, I use longer, detailed code examples. This is
@@ -137,9 +136,9 @@ You lose a lot of context without the intermediate steps.
 
   ```kotlin
   val app: HttpHandler = routes(
-      "/greetings" bind Method.GET to ::greetings,
-      "/data" bind Method.POST to ::receiveData,
-      "/todo/{user}/{list}" bind Method.GET to ::showList
+      "/greetings" bind GET to ::greetings,
+      "/data" bind POST to ::receiveData,
+      "/todo/{user}/{list}" bind GET to ::showList
   )
 
   fun greetings(req: Request): Response = Response(OK).body(greetingPage)
@@ -233,7 +232,7 @@ You lose a lot of context without the intermediate steps.
   data class Zettai(val lists: Map<User, List<ToDoList>>) : HttpHandler {
 
       val routes = routes(
-          "/todo/{user}/{list}" bind Method.GET to ::getToDoList
+          "/todo/{user}/{list}" bind GET to ::getToDoList
       )
 
       override fun invoke(request: Request): Response =
@@ -2554,7 +2553,7 @@ data class ListName internal constructor(val name: String) {
   ```kotlin
   class Zettai(val hub: ZettaiHub): HttpHandler {
       //...
-      "/todo/{user}/{listname}" bind Method.POST to ::addNewItem,
+      "/todo/{user}/{listname}" bind POST to ::addNewItem,
       //...
       private fun addNewItem(request: Request): Response {
           val user = request.extractUser()
@@ -3887,7 +3886,8 @@ data class ListName internal constructor(val name: String) {
   reader.runWith{ TODO("Here we need the context") }
   ```
 
-- Note that although we're thinking about the database, we aren't committed to that
+- Note that although we're thinking about the database, we aren't committed to
+  that
   context. A `ContextReader` could work with a connection to a database, a CSV
   file, or a structure in memory. We are using a functor to inject the context
   into the chain of transformations.
@@ -3941,6 +3941,2535 @@ data class ListName internal constructor(val name: String) {
   `Foo<T>.barbar(f: (T) -> Foo<U>): Foo<U>`. There's more to it than that, but
   that's a good rule of thumb. We're going to call `barbar` just `bind`, but
   you might see it as `flatmap` or even `collect` in other languages.
+- To combine two endofunctors, they must be of the same type. We can flatten a
+  `List<List<Int>>` or an `Outcome<E, Outcome<E, Int>>` but in general we cannot
+  do much with a `List<Outcome <E, Int>>` except maybe change it into an
+  `<Outcome<E, List<Int>>`.
+- Monad Laws
+  1. Left Identity - If we apply a plain monad to a value and we bind a function
+     that creates a new monad, the result would be the same as applying that
+     function to our initial value.
+  2. Right Identity - If we have a monadic value and we bind it to a function
+     that returns the plain monad, the result would be the same as our initial
+     monadic value.
+  3. Associativity - If we have a chain of functions to bind, it shouldn't
+     matter how we nest them.
+- We are going to make `Outcome` into a monad by defining `bind` and `join`.
+  `join` flattens an `Outcome` nested inside another one.
+
+  ```kotlin
+  // Start with the tests
+  val genericFail = DivisionError("generic error").asFailure()
+  val divFail = DivisionError("You cannot divide by zero").asFailure()
+
+  private fun divide100by(x: Int): Outcome<DivisionError, Int> =
+      if (x == 0)
+          divFail
+      else
+          (100 / x).asSuccess()
+
+  @Test
+  fun `binding two outcome together`() {
+      val valid = 5.asSuccess()
+      expectThat(valid.bind(::divide100by)).isEqualTo(20.asSuccess())
+
+      val invalid = DivisionError("generic error").asFailure()
+      expectThat(genericFail.bind(::divide100by)).isEqualTo(divFail)
+
+      val zero = 0.asSuccess()
+      expectThat(zero.bind(::divide100by)).isEqualTo(divFail)
+  }
+
+  @Test
+  fun `joining two outcome together`() {
+      val valid = 10.asSuccess().asSuccess()
+      expectThat(valid.join()).isEqualTo(10.asSuccess())
+
+      val invalid = genericFail.asSuccess() {
+      expectThat(invalid.join()).isEqualTo(genericFail)
+  }
+
+  // An the implementations are quite simple:
+  inline fun <T, U, E : OutcomeError>
+          Outcome<E, T>.bind(f: (T) -> Outcome<E, U>): Outcome<E, U> =
+      when (this) {
+          is Success -> f(value)
+          is Failure -> this
+      }
+ 
+  fun <T, E: OutcomeError> Outcome<E, Outcome<E, T>>.join(): Outcome<E, T> =
+      bind { it }
+
+  // Let's also finish our ContextReader, This is also known as the Reader monad.
+  data class ContextReader<CTX, out T>(val runWith: (CTX) -> T) {
+
+      fun <U> transform(f: (T) -> U): ContextReader<CTX, U> =
+          ContextReader { ctx -> f(runWith(ctx)) }
+
+      fun <U> bind(f: (T) -> ContextReader<CTX, U>): ContextReader<CTX, U> =
+          ContextReader { ctx -> f(runWith(ctx)).runWith(ctx) }
+  }
+  ```
+
+- We can't extract these out to interfaces since we can't express their types
+  in Kotlin. We need type classes, which are unavailable.
+- The exercises this chapter were to implement `join` without `bind` and then
+  define `bind` in terms of `join`.
+
+  ```kotlin
+  data class ContextReader<CTX, out T>(val runWith: (CTX) -> T) {
+
+      fun <U> transform(f: (T) -> U): ContextReader<CTX, U> = ContextReader { ctx -> f(runWith(ctx)) }
+
+
+      fun <U> bind(f: (T) -> ContextReader<CTX, U>): ContextReader<CTX, U> =
+          this.transform(f).join()
+  // original
+  //        ContextReader { ctx -> f(runWith(ctx)).runWith(ctx) }
+  }
+
+  fun <CTX, T> ContextReader<CTX, ContextReader<CTX, T>>.join(): 
+          ContextReader<CTX, T> =
+      ContextReader { ctx ->
+          this.runWith(ctx).runWith(ctx)
+      }
+  ```
+
+## Chapter 10 - Read Context to Handle Commands
+
+- Now that our ContextReader is a monad, we can combile read and write in the
+  same transaction.
+
+  ```kotlin
+  val listUpdater = readRow("myRowId")
+      .transform { r -> r.copy(active = false) }
+      .bind { r -> writeRow(r) }
+
+  runInTransaction(listUpdater).exxpectSuccess()
+  ```
+
+- It is worth pointing out explicitly that all the database changes take place
+  in the last line above. Until we run the ContextReader in a transaction, it is
+  simply maintaining a record of oepration we intend to carry out on the
+  database. We do still need to implement `readRow` and `writeRow`.
+
+  ```kotlin
+  typealias TxReader<T> = ContextReader<Transaction, T>
+
+  fun readRow(id: String): TxReader<ToDoListProjectionRow> = TxReader { tx ->
+      toDoListProjectionTable.selectWhere(tx, toDoListProjectionTable.id eq id)
+          .map { it[toDoListProjectionTable.row_data] }
+          .single()
+  }
+
+  fun writeRow(row: ToDoListProjectionRow): TxReader<Unit> = TxReader { tx ->
+      toDoListProjectionTable.insertInto(tx) { newRow ->
+          newRow[id] = row.id.toRowId()
+          newRow[row_data] = row
+      }
+  }
+
+  data class TransactionProvider(
+          private val dataSource: DataSource,
+          val isolationLevel: TransactionIsolationLevel,
+          val maxAttempts: Int = 10): ContextProvider<Transaction> {
+
+      override fun <T> tryRun(
+              reader: ContextReader<Transaction, T>): Outcome<ContextError, T> =
+
+          inTopLevelTransaction(
+                 db = Database.connect(dataSource),
+                 transactionIsolation = isolationLevel.jdbcLevel,
+                 repetitionAttempts = maxAttempts) {
+
+              addLogger(StdOutSqlLogger)
+  
+              try {
+                  reader.runWith(this).asSuccess()
+              } catch (t: Throwable) {
+                  rollback()
+                  TransactionError("Transaction rolled back: ${t.message}", t)
+                      .asFailure()
+              }
+          }
+  }
+
+  // We can now successfully run the full test on the projection row
+  class TxContextReaderTest {
+
+      @Test
+      fun `write and read from a table`() {
+
+          val user = randomUser()
+          val expectedList = randomToDoList()
+          val listId = ToDoListId.mint()
+          val row = ToDoListProjectionRow(listId, user, true, expectedList)
+
+          val listReader: TxReader<ToDoList> =
+              writeRow(row)
+                .bind { readRow(listId.toRowId()) }
+                .transform { row -> row.list }
+
+          val list = transactionContextForTest().tryRun(listReader)
+              .expectSuccess()
+
+          expectThat(list).isEqualTo(expectedList)
+      }
+  }
+  ```
+
+- We still want to support in-memory storage, so we modify our in-memory
+  EventStreamer.
+
+  ```kotlin
+  // Before - no ContextReader
+  interface EventStreamer<E: EntityEvent, NK: Any> {
+      fun fetchByEntity(entityId: EntityId): List<E>?
+      fun fetchAfter(eventSeq: EventSeq): Sequence<StoredEvent<E>>
+      fun retrieveIdFromNaturalKey(key: NK): EntityId?
+      fun store(newEvents: Iterable<E>): List<storedEvent <E>>
+  }
+
+  // After - ContextReader
+  interface EventStreamer<CTX, E : EntityEvent, NK : Any> {
+      fun fetchByEntity(entityId: EntityId): ContextReader<CTX, List<E>>
+      fun fetchAfter(eventSeq: EventSeq): 
+              ContextReader<CTX, Sequence<StoredEvent<E>>>
+      fun retrieveIdFromNaturalKey(key: NK): ContextReader<CTX, EntityId?>
+      fun store(newEvents: Iterable<E>): 
+              ContextReader<CTX, List<storedEvent <E>>>
+  }
+
+  typealias ToDoListInMemoryRef = AtomicReference<List<ToDoListStoredEvent>>
+  typealias InMemoryEventsReader<T> = ContextReader<ToDoListInMemoryRef, T>
+
+  class InMemoryEventsProvider() : ContextProvider<ToDoListInMemoryRef> {
+
+      val events = AtomicReference<List<ToDoListStoredEvent>>(listOf())
+
+      override fun <T> tryRun(reader: InMemoryEventsReader<T>) =
+          try {
+              reader.runWith(events).asSuccess()
+          } catch (e: Exception) {
+              ToDoListEventsError("Operation failed: ${e.message}", e)
+                  .asFailure()
+          }
+      }
+  }
+
+  class EventStreamerInMemory : ToDoListEventStreamer<ToDoListInMemoryRef> {
+
+      override fun store(newEvents: Iterable<ToDoListEvent>) =
+          InMemoryEventsReader { events ->
+              newEvents.toSavedEvents(events.get().size.toLong())
+                  .also { ne -> events.updateAndGet { it + ne } }
+          }
+      //... similar changes to rest of the methods
+  }
+  ```
+
+- Next we implement `EventStreamerTx`, an implementation of the `EventStramer`
+  working with the database and transactions. Start with tests!
+
+  ```kotlin
+  fun transactionProviderForTest() = TransactionProvider(
+          pgDataSourceForTest(), ReadCommitted)
+  fun createToDoListEventStreamerOnPg(): EventStreamerTx = TODO()
+
+  class ToDoListEventStreamerOnPgTest {
+
+      val user = randomUser()
+
+      val streamer = createToDoListEventStreamerOnPg()
+
+      private val txProvider = transactionProviderForTest()
+
+      @Test
+      fun `store some events and then fetch them by entity`() {
+  
+          val newList1 = randomListName()
+          val newList2 = randomListName()
+          val newList3 = randomListName()
+          val listId1 = ToDoListId.mint()
+          val listId2 = ToDoListId.mint()
+          val listId3 = ToDoListId.mint()
+          val item1 = randomItem()
+          val item2 = randomItem().copy(dueDate = LocalDate.now())
+      }
+  
+      val eventsToStore = listOf(
+          ListCreated(listId1, user, newList1),
+          ListCreated(listId2, user, newList2),
+          ItemAdded(listId2, item1),
+          ItemAdded(listId2, item2),
+          ListCreated(listId3, user, newList3)
+      )
+
+      val storeAndFetch = streamer.store(
+          eventsToStore
+      ).bind {
+          streamer.fetchByEntity(listId2)
+      }
+
+      val events = txProvider.tryRun(storeAndFetch).expectSuccess()
+
+      expectThat(events).isEqualTo(
+          listOf(
+              ListCreated(listId2, user, newList2),
+              ItemAdded(listId2, item1),
+              ItemAdded(listId2, item2),
+          )
+      )
+  }
+
+  // For this test to run, we need to implement EventStreamerTx
+  // But first let's add a method to the PgEventTable
+  fun PgEventTable.queryEvents(
+          condition: Op<Boolean>): TxReader<List<StoredEvent<PgEvent>>> =
+      TxReader { tx ->
+          selectWhere(tx, condition, id).map(::rowToPgEvent)
+      }
+  )
+
+  class EventStreamerTx<E : EntityEvent, NK : Any>(
+      private val table: PgEventTable,
+      private val eventParser: Parser<E, PgEvent>,
+      private val naturalKeySql: (NK) -> String
+  ) : EventStreamer<Transaction, E, NK> {
+
+      private fun pgEventsToEvents(pgEvents: List<StoredEvent<PgEvent>>) =
+          pgEvents.map {
+              StoredEvent(it.eventSeq, it.storedAt,
+                  eventParser.parseOfThrow(it.event))
+          }
+
+      override fun fetchByEntity(entityId: EntityId): TxReader<List<E>> =
+          table.queryEvents(table.entity_id eq entityId.raw)
+              .transform { pgEvents ->
+                  pgEventsToEvents(pgEvents).map(StoredEvent<E>::event) }
+
+      override fun fetchAfter(
+              eventSeq: EventSeq): TxReader<List<StoredEvent<E>>> =
+          table.queryEvents(table.id greater eventSeq.progressive)
+              .transform(this::pgEventsToEvents)
+
+      override fun retrieveIdFromNaturalKey(key: NK): TxReader<EntityId?> =
+          table.getEntityIdBySql(naturalKeySql(key))
+
+      override fun store(events: Iterable<E>): TxReader<List<StoredEvent<E>>> =
+          table
+              .insertEvents(events.map { eventParser.render(it) })
+              .transform(this::pgEventsToEvents)
+  }
+
+  typealias ToDoListEventStreamerTx =
+          EventStramer<Transaction, ToDoListEvent, UserListName>
+
+  fun createToDoListEventStreamerOnPg(): ToDoListEventStreamerTx =
+      EventStreamerTx(toDoListEventsTable, toDoListEventParser()) { natKey ->
+      """
+      SELECT    entity_id
+      FROM      todo_list_events
+      WHERE     event_type = 'ListCreated'
+                and json_date ->> 'owner' = '${natKey.user.name}'
+                and json_data ->> 'name' = ${natKey.listName.name}'
+      """.trimIdent()
+  }
+  ```
+
+- Let's backup and take in the big picture now. We have:
+  - `EventStreamer` - knows the events and the database (or in-memory list),
+    and it knows how to search for data in it, but it doesn't know the domain
+    entities.
+  - `EventStore` - knows how to convert events to domain entities and how to
+    use the `EventStreamer`. It doesn't know about actual persistence and can
+    work with both the database and in-memory streamers, and it doesn't know
+    about commands.
+  - `CommandHandler` - manages the logical transactions; it know how to use
+    the `EventStore`, but it doesn't know anything about the streamer.
+- So thinking about our `CommandHandler`, it needs a `ContextProvider` and an
+  `EventStore` passed as constructor dependencies. The `CommandHandler` must be
+  generic over the context type. The `Command::execute` methods will return a
+  `ContextReader`, so they need to be bound together with the storing of events
+  at the end of the operation:
+
+  ```kotlin
+  class ToDoListCommandHandler<CTX>(
+      private val contextProvider: ContextProvider<CTX>,
+      private val eventStore: ToDoListEventStore<CTX>
+  ) : (ToDoListCommand) -> ToDoListCommandOutcome {
+
+      override fun invoke(command: ToDoListCommand): ToDoListCommandOutcome =
+          contextProvider.tryRun(
+              when (command) {
+                  is CreateToDoList -> command.execute()
+                  is AddToDoItem -> command.execute()
+              }.bindOutcome(eventStore)
+          ).join()
+              .transform { storedEvents -> storedEvents.map { it.event } }
+              .transformFailure { it as? ZettaiError 
+                                    ?: ToDoListCommandError(it.msg) }
+
+      private fun CreateToDoList.execute() =
+          eventStore.retrieveByNaturalKey(UserListName(user, name))
+              .transform { listState ->
+                  when (listState) {
+                      null -> ListCreated(ToDoListId.mint(),
+                              user, name).asCommandSuccess()
+                      else -> InconsistentStateError(this, listState).asFailure()
+                  }
+              }
+
+      private fun AddToDoItem.execute() =
+          eventStore.retrieveByNaturalKey(UserListName(user, name))
+              .transform { listState ->
+                  when (listState) {
+                      is ActiveToDoList ->
+                          if (listState.items.any {
+                                  it.description == item.description })
+                              ToDoListCommandError("two items with same name!")
+                                  .asFailure()
+                          else {
+                              ItemAdded(listState.id, item).asCommandSuccess()
+                          }
+                      else -> InconsistentStateError(this, listState).asFailure()
+                  }
+              }
+  }
+  ```
+
+- `bindOutcome` is worth calling out, because it works as a monad transformer.
+
+  ```kotlin
+  fun <CTX, E : OutcomeError, T, U> ContextReader<CTX, Outcome<E, T>>
+          .bindOutcome(f: (T) -> ContextReader<CTX, U>):
+                                 ContextReader<CTX, Outcome<E, U>> =
+      ContextReader { ctx ->
+          val outcome = runWith(ctx)
+          when (outcome) {
+              is Success -> f(outcome.value).runWith(ctx).asSuccess()
+              is Failure -> outcome
+          }
+      }
+  ```
+
+- While it is generally not possible to combine monads of different types, it
+  is possible to write specific ad hoc functions like this. They are called
+  monad transformers and you need to write on for each pair of monads you want
+  to combine.
+- It's important that no two commands on the same entity are processed at the
+  same time, but we are going to handle that by setting the PostgreSQL isolation
+  level to *Serializable*. This could be a bottleneck and need to be replaced
+  if we had very high traffic on our service.
+- And now a Main.kt to pull it all together:
+
+  ```kotlin
+  // lib/source/kotlin/com/ubertob/fotf/zettai/webserver/Main.kt
+  fun main() {
+
+      val dataSource = prepareProductionDatabase()
+
+      val streamer = createToDoListEventStreamerOnPg()
+      val eventStore = ToDoListEventStore(streamer)
+      val txProvider = TransactionProvider(dataSource,
+                            TransactionIsolationLevel.Serializable)
+
+      val commandHandler = ToDoListCommandHandler(txProvider, eventStore)
+
+      //...
+  }
+  ```
+
+- We're going to continue using the in-memory event store for our tests
+  involving `DomainOnlyActions` and use the database for `HttpActions`.
+- You could store projections in-memory or in the database. It really depends
+  on performance needs and memory costs. We're going to convert one projection
+  to store in the database and leave the other in-memory so you see both ways.
+  There are no changes necessary to the `ToDoListProjection` interface or the
+  projector, since they are independent of persistence details. We're going
+  to make the test run twice, once for in-memory and once for the database.
+
+  ```kotlin
+  // queries.ToDoListProjectionAbstractTest.kt
+  abstract class ToDoListProjectionAbstractTest {
+
+      abstract fun buildListProjection(
+              events: List<ToDoListEvent>): ToDoListProjection
+
+      val user = randomUser()
+
+      @Test
+      fun `findAll returns all the lists of a user`() {
+
+          val listName1 = randomListName()
+          val listName2 = randomListName()
+
+          val projection = buildListProjection(
+              listOf(
+                  ListCreated(ToDoListId.mint(), user, listName1)
+                  ListCreated(ToDoListId.mint(), user, listName2)
+                  ListCreated(ToDoListId.mint(), randomUser(), randomListName())
+              )
+          )
+  
+           expectThat(projection.findAll(user).expectSuccess())
+                 .isEqualTo(listOf(listName1, listName2))
+      }
+
+      @Test
+      fun `findList get list with correct items`() {
+
+          val listName = randomListName()
+          val id = ToDoListId.mint()
+          val item1 = randomItem()
+          val item2 = randomItem()
+          val item3 = randomItem()
+
+          val projection: ToDoListProjection = buildListProjection(
+              listOf(
+                  ListCreated(id, user, listName),
+                  ItemAdded(id, item1),
+                  ItemAdded(id, item2),
+                  ItemModified(id, item2, item3),
+                  ItemRemoved(id, item1)
+              )
+          )
+
+          expectThat(projection.findList(user, listName).expectSuccess())
+                      .isNotNull()
+              .isEqualTo(ToDoList(listName, listOf(item3)))
+      }
+  }
+
+  // integrationtesting.com.ubertob.fotf.zettai.db.ToDoListProjectionOnPgTest.kt
+  internal class ToDoListProjectionOnPgTest : ToDoListProjectionAbstractTest() {
+
+      val dataSource = pgDataSourceFortest()
+      val txProvider = TransactionProvider(dataSource,
+                            TransactionIsolationLevel.ReadCommitted)
+      val streamer = createToDoListEventStreamerOnPg()
+      val projection = ToDoListProjectionOnPg(txProvider)
+                      { txProvider.tryRun(streamer.fetchAfter(it)) }
+
+      override fun buildListProjection(events: List<ToDoListEvent>) =
+          projection.apply {
+              txProvider.tryRun(streamer.store(events)).expectSuccess()
+              update()
+          }
+  }
+
+  // queries.ToDoListProjectionInMemoryTest
+  internal class ToDoListProjectionInMemoryTest 
+                    : ToDoListProjectionAbstractTest() {
+
+      override fun buildListProjection(
+                    events: List<ToDoListEvent>): ToDoListProjection =
+          ToDoListProjectionInMemory { after ->
+              events.mapIndexed { i, e -> 
+                  StoredEvent(EventSeq(after.progressive + i + 1),
+                  Instant.now(),
+                  e) 
+              }.asSuccess()
+          }.also(ToDoListProjectionInMemory::update)
+  }
+   ```
+
+- So now we have tests, so we need to update our `Projection` to work with
+  `ContextReader` and `ContextProvider`.
+
+  ```kotlin
+  typealias FetchStoredEvents<E> =
+              (EventSeq) -> Outcome<OutcomeError, List<StoredEvent<E>>>
+  typealias ProjectEvents<R, E> = (E) -> List<DeltaRow<R>>
+  
+  interface Projection<CTX, R : Any, E : EntityEvent> {
+
+      val contextProvider: ContextProvider<CTX>
+      val eventProjector: ProjectEvents<R, E>
+      val eventFetcher: FetchStoredEvents<E>
+
+      fun readRow(rowId: RowId): ContextReader<CTX, R?>
+      fun saveRow(rowId: RowId, row: R): ContextReader<CTX, Unit>
+      fun deleteRow(rowId: RowId): ContextReader<CTX, Unit>
+      fun updateRow(rowId: RowId, updateFn: (R) -> R): ContextReader<CTX, Unit>
+      fun lastProjectedEvent(): ContextReader<CTX, EventSeq>
+      fun updateLastProjectedEvent(eventSeq: EventSeq): ContextReader<CTX, Unit>
+
+      fun update() {
+          contextProvider.tryRun { ctx ->
+              eventFetcher(lastProjectedEvent()
+                  .runWith(ctx))
+                  .transform {
+                      it.onEach { storedEvent ->
+                          applyDelta(eventProjector(storedEvent.event))
+                              .runWith(ctx)
+                      }.lastOrNull()?.apply {
+                          updateLastProjectedEvent(eventSeq)
+                              .runWith(ctx)
+                      }
+                  }
+              }.recover {
+                  println("Error during update! $it")
+              }
+          }
+      }
+
+      fun applyDelta(deltas: List<DeltaRow<R>>): ContextReader<CTX, Unit> =
+          deltas.fold(ContextReader {}) { reader, delta ->
+              reader composeWith delta.transformation()
+          }
+
+      fun DeltaRow<R>.transformation() =
+          when (this) {
+              is CreateRow -> saveRow(rowId, row)
+              is DeleteRow -> deleteRow(rowId)
+              is UpdateRow -> updateRow(rowId) { oldRow -> updateRow(oldRow) }
+          }
+
+      infix fun <CTX, T> ContextReader<CTX, T>.composeWith(
+                              other: ContextReader<CTX, T>) = bind { other }
+  }
+  ```
+
+- We have options on when to update our Projections. We probably don't want to
+  do it on each query like we did when they were in-memory, because query
+  performance is important. We're going to update them when we save events to
+  the database, but not in the same transaction so failing to update a
+  projection won't roll back the new events. We could also update the projections
+  on a timer is "reasonably fresh" is good enough for our purposes.
+- Calling `runWith` multiple times if an example of the functional imperative
+  approach. To make things a little nicer add a `doRun` method to our
+  `ContextProvider` interface and overload the (+) operator to `runWith(ctx)`.
+
+  ```kotlin
+  interface ContextProvider<CTX> {
+      fun <T> tryRun(reader: ContextReader<CTX, T>): Outcome<ContextError, T>
+
+      fun <T> doRun(block: ContextWrapper<CTX>.() -> T) =
+          tryRun(ContextReader { ctx -> block(ContextWrapper(ctx)) } )
+  }
+
+  data class ContextWrapper<CTX>(val context: CTX) {
+      operator fun <T> ContextReader<CTX, T>.unaryPlus(): T = runWith(context)
+  }
+
+  // now rewrite update
+  fun update() {
+      contextProvider.doRun {
+          eventFetcher(+lastProjectedEvent())
+              .transform {
+                  it.onEach { storedEvent ->
+                      +applyDelta(eventProjector(storedEvent.event))
+                  }.lastOrNull()?.apply {
+                      +updateLastProjectedEvent(eventSeq)
+                  }
+              }
+      }.recover {
+          println("Erro during update! $it")
+      }
+  }
+  ```
+
+- To complete our projection, we need to implement queries in SQL. Here is
+  `findAll` and other queries are similar and in repo:
+
+  ```kotlin
+  class ToDoListProjectionOnPg(
+      txProvider: ContextProvider<Transaction>,
+      readEvents: FetchStoredEvents<ToDoListEvent>
+  ) : ToDoListProjection,
+      Projection<Transaction, ToDoListProjectionRow, ToDoListEvent> by
+          PgProjection(
+              txProvider,
+              readEvents,
+              ToDoListProjection.Companion::eventProjector,
+              projectionTable = toDoListProjectionTable,
+              lastEventTable = toDoListLastEventTable
+          ) {
+
+      override fun findAll(user: User): Outcome<OutcomeError, List<ListName>> =
+
+          contextProvider.tryRun(
+              toDoListProjectionTable.selectRowsByJson(findAllByUserSQL(user))
+          ).transform { it.map { row -> row.list.listName } }
+
+      private fun findAllByUserSql(user: User): String =
+          """SELECT *
+             FROM   ${toDoListProjectionTable.tableName}
+             WHERE  row_data ->> 'user' = '${user.name}'
+          """.trimIndent()
+
+      // other methods...
+  }
+  ```
+
+- Our fetcher is a little cumbersome, so we'll replace it with a `runWith`
+  method of the `ContextProvider` interface and expand out our main:
+
+  ```kotlin
+  fun <A, T> runWith(readerBuilder: (A) -> ContextReader<CTX, T>):
+      (A) -> Outcome<ContextError, T> =
+          { input -> tryRun( readerBuilder( input)) }
+
+  fun main() {
+
+      val dataSource = prepareProductionDatabase()
+
+      val streamer = createToDoListEventStreamerOnPg()
+      val eventStore = ToDoListEventStore(streamer)
+      val txProvider = TransactionProvider(dataSource, Serializable)
+
+      val commandHandler = ToDoListCommandHandler(txProvider, eventStore)
+
+      val fetcher = txProvider.runWIth(streamer::fetchAfter)
+  
+      val queryHandler = ToDoListQueryRunner(
+          ToDoListProjectionOnPg(txProvider, fetcher),
+          ToDoItemProjection(fetcher)
+      )
+
+      val hub = ToDoListHub(queryHandler, commandHandler)
+
+      Zettai(hub).asServer(Jetty(8080)).start()
+  }
+  ```
+
+- At this point, Zetta has full persistence and is a perfectly usable
+  application!
+- CQRS and Event Sourcing best practices.
+  1. Each event and each command should work on a single entity. For this reason,
+     the entity of an event sourcing models should coincide with the
+     *transactional scope* so we can modify it inside a single transaction.
+  2. We need to list all the commands that we need to complete our requirements.
+     If we have the commands, we can identify all the possible states of our
+     entity. Each state must represent a behavior, which is simply a different
+     way our entity will respond to inputs. Different behaviors should be mapped
+     on different states. In other words, there shouldn't be if's in our code
+     where the same state would do different things based on internal attributes.
+     States should be determined by what can happen afterwards, their behavior,
+     not by their history.
+  3. Draw and keep updating the state diagram for each entity. An event must
+     have a single destination, but it can have multiple origins. In other words,
+     in a drawing the arrows can fan in but they shouldn't fan out.
+  4. Names can be challenging. Commands should be in imperative form. Try to
+     avoid *meek commands* like `TryToPublish` or `EnsureCorrectPayment`. Just
+     call them `Publish` or `ProcessPayment`. States are situations with a
+     definite behavior. If there is no good noun, they can be expressed like
+     verb+ing like "Waiting for xxx" or "Listening at xxx".
+- Events should be versioned with the version stored in the database. Read
+  *Versioning in an Event Sourced System* by Greg Young for more on that.
+  If an event can't be migrated to the new version, it's better to consider
+  the new event a completely new even type and stop using the old event. The
+  old event would be kept only for compatibility purposes.
+- Rather than migrating stored projections, it is easier to recreate them using
+  events from the start and create a new table for the updated projection.
+- Chapter 10 had several interesting Monad exercises: a Logger monad, a
+  ConsoleContext monad, and an implementation of the RPN calculator using the
+  ConsoleContext monad. I'm listing all three here since they're instructive.
+
+  ```kotlin
+  // bind joins the two log values, so it respects monadic laws
+  data class Logger<T>(val value: T, val log: List<String>) {
+      fun <U> transform(f: (T) -> U): Logger<U> = Logger(f(value), log)
+
+      fun <U> bind(f: (T) -> Logger<U>): Logger<U> = f(value).let {
+          Logger(it.value, log + it.log)
+      }
+  }
+
+  // ConsoleContext is a Reader interface for console IO
+  interface ConsoleContext {
+      fun printLine(msg: String): String
+      fun readLine(): String
+  }
+
+  class SystemConsole : ConsoleContext {
+      override fun printLine(msg: String): String = msg.also { println(msg) }
+
+      val reader = BufferedReader(InputStreamReader(System.`in`))
+      override fun readLine(): String = reader.readLine()
+  }
+
+  fun contextPrintln(msg: String) = 
+      ContextReader<ConsoleContext, String> { ctx -> ctx.printLine(msg) }
+  fun contextReadln() = 
+      ContextReader<ConsoleContext, String> { ctx -> ctx.readLine() }
+
+  fun greetingsOnConsole() {
+      contextPrintln("Hello, what's your name?")
+          .bind { _ -> contextReadln() }
+          .bind { name -> contextPrintln("Hello, $name!") }
+          .runWith(SystemConsole())
+  }
+
+  fun main() {
+    greetingsOnConsole()
+  }
+
+  // For ConsoleRPNCalculator using ConsoleContext
+  fun main() {
+      consoleRpnCalculator().runWith(SystemConsole())
+  }
+
+  tailrec fun consoleRpnCalculator(): ContextReader<ConsoleContext, String> =
+      contextPrintln("Write an RPN expression to calculate the result or Q to quit.")
+          .bind { _ -> contextReadln() }
+          .bind { input ->
+              if (input == "Q")
+                  contextPrintln("Bye!")
+              else
+                  contextPrintln("The result is: ${RpnCalc.calc(input)}")
+          }
+          .bind { msg ->
+              if (msg == "Bye!")
+                  contextPrintln("")
+              else
+                  consoleRpnCalculator()
+          }
+
+  // The provided tests for the RPN calculator show how to use it, how to
+  // redirect input, and how to use multi-line strings to define expectation.
+  class E03_ConsoleRPNCalculatorTest {
+
+      @Test
+      fun `RPN calculator read and write from console`() {
+          val output = ByteArrayOutputStream()
+          val input = ByteArrayInputStream(
+              """
+              4 3 2 1 - + *
+              1 2 3 * 4 - +
+              Q
+          """.trimIndent().toByteArray()
+          )
+
+          val stdOut = System.out
+          val stdIn = System.`in`
+
+          try {
+              System.setIn(input)
+              System.setOut(PrintStream(output))
+
+              consoleRpnCalculator().runWith(SystemConsole())
+
+          } finally {
+              System.setOut(stdOut)
+              System.setIn(stdIn)
+          }
+
+          val expected =
+              """Write an RPN expression to calculate the result or Q to quit.
+                |The result is: 16.0
+                |Write an RPN expression to calculate the result or Q to quit.
+                |The result is: 3.0
+                |Write an RPN expression to calculate the result or Q to quit.
+                |Bye!
+                |
+                |""".trimMargin()
+          expectThat(output.toString()).isEqualTo(expected)
+      }
+  }
+  ```
+
+## Chapter 11 - Validating Data with Applicatives
+
+- To start this chapter off, we're picking a new user story: Renaming a List.
+
+  ```kotlin
+  @DDT
+  fun `the list owner can rename a list`() = ddtScenario {
+      setup {
+          ben.`starts with a list`("shopping", emptyList())
+      }.thenPlay(
+          ben.`can add #item to the #listname`("carrots", "shopping"),
+          ben.`can rename the list #oldname as #newname`(
+              origListName = "shopping",
+              newListName = "grocery"
+          ),
+          ben.`can add #item to the #listname`("potatoes", "grocery"),
+          ben.`can see #listname with #itemnames`(
+              "grocery", listOf("carrots", "potatoes")
+          )
+      ).wip(LocalDate.of(2026,07,25))
+  }
+  ```
+
+- To get this compiling, we need to create the rename step on the `ToDoListOwner`
+  and add the `renameList` method to `ZettiaAction`.
+
+  ```kotlin
+  // tooling.ZettaiActions.kt
+  interface ZettaiActions : DomainActions<DdtProtocol> {
+      // other methods...
+      fun renameList(user: User, oldName: ListName, newName: listName)
+  }
+
+  // commands.ToDoListCommand.kt
+  data class RenameToDoList(
+          val user: User,
+          val oldName: ListName,
+          val newName: ListName): ToDoListCommand()
+
+  // tooling.DomainOnlyActions.kt
+  class DomainOnlyActions: ZettaiActions {
+      // other methods...
+      override fun renameList(
+              user: User,
+              oldName: ListName,
+              newName: ListName) {
+          hub.handle(RenameToDoList(user, oldName, newName))
+      }
+  }
+
+  // tooling.HttpActions
+  data class HttpActions(val env: String = "local") : ZettaiActions {
+      // other methods....
+      private fun renameListForm(newName: ListName): Form =
+          listOf("newListName" to newList.name)
+
+      override fun renameList(
+              user: User,
+              oldName: ListName,
+              newName: ListName) {
+          val response = submitToZettai(
+                  renameListUrl(user, oldName), renameListForm(newName))
+          expectThat(response.status).isEqualTo(Status.SEE_OTHER)
+      }
+  )
+
+  // webserver.Routes.ks
+  "/todo/{user}/{listname}/rename" bind POST to ::renameList
+
+  private fun renameList(request: Request): Response {
+      val user = request.extractUser()
+              .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+      val listName = request.extractListName()
+              .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+
+      val newListName = request.form("newlistname")
+              ?.let(ListName.Companion::fromUntrusted)
+              ?: return Response(BAD_REQUEST).body("missing new listname in form")
+
+      return hub.handle(RenameToDoList(user, listName, newListName))
+              .transform { Response(SEE_OTHER)
+                            .header("Location", todoListPath(user, newListName)) }
+              .recovery { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+
+  // commands.ToDoListCommandHandler.kt
+  class ToDoListCommandHandler<CTX>(
+      private val contextProvider: ContextProvider<CTX>,
+      private val eventStore: ToDoListEventStore<CTX>
+  ) : (ToDoListCommand) -> ToDoListCommandOutcome {
+
+      override fun invoke(command: ToDoListCommand): ToDoListCommandOutcome =
+          contextProvider.tryRun(
+              when (command) {
+                  is CreateToDoList -> command.execute()
+                  is AddToDoItem -> command.execute()
+                  is RenameToDoList -> command.execute()
+              }.bindOutcome(eventStore)
+          ).join()
+              .transform { storedEvents -> storedEvents.map { it.event } }
+              .transformFailure { it as? ZettaiError ?: ToDoListCommandError(it.msg) }
+
+      // other methods...
+      private fun RenameToDoList.execute(): CommandOutcomeReader<CTX> =
+          eventStore.retrieveByNaturalKey( UserListName(user, oldName) )
+              .transform { listState ->
+                  when (listState) {
+                      is ActiveToDoList -> {
+                          ListRenamed(listState.id, user, newName).asCommandSuccess()
+                      }
+                      null -> ToDoListCommandError("list $oldName not found").asFailure()
+                      else -> InconsistentStateError(this, listState).asFailure()
+                  }
+              }
+          // other methods...
+  } 
+
+  // events.ToDoListEvent.kt
+  data class ListRenamed(override val id: ToDoListId,
+          val owner: User, val newName: ListName) : ToDoListEvent()
+  ```
+
+- If we add a TODO to the projections that don't know how to project the event,
+  this will compile.
+
+  ```kotlin
+  // events.ToDoListEventTest.kt
+  @Test
+  fun `renaming the list`() {
+      val newName = randomListName()
+      val events: List<ToDoListEvent> = listOf(
+          ListCreated(id, user, name),
+          ItemAdded(id, item1),
+          ListRenamed(id, user, newName)
+      )
+
+      val list = events.fold()
+
+      expectThat(list)
+          .isEqualTo(ActiveToDoList(id, user, newName, listOf(item1)))
+  }
+
+  // to pass this we need to add a `ListRenamed` event case to the 
+  // `ActiveToDoList`. events.ToDoListEvent.kt
+  data class ActiveToDoList internal constructor(
+      val id: ToDoListId,
+      val owner: User,
+      val name: ListName,
+      val items: List<ToDoItem>
+  ) :
+      ToDoListState() {
+      override fun combine(event: ToDoListEvent): ToDoListState =
+          when (event) {
+              is ItemAdded -> copy(items = items + event.item)
+              is ItemRemoved -> copy(items = items - event.item)
+              is ItemModified -> copy(items = items - event.prevItem + event.item)
+              is ListPutOnHold -> onHold(event.reason)
+              is ListClosed -> close(event.closedOn)
+              is ListRenamed -> rename(event.newName)
+              else -> this //ignore other events
+          }
+  }
+  // other methods...
+  fun ActiveToDoList.rename(newName: ListName) = copy(name = newName)
+  ```
+
+- So we have two projections that need to know how to handle the event. The
+  `ToDoItemProjection` only has two fields in its row - the list ID and the
+  item details - so it doesn't need to do anything. The `ToDoListProjection`
+  need to handle the rename, so we'll write a test for that.
+
+  ```kotlin
+  // queries.ToDoListProjectionAbstractTest
+  @Test
+  fun `findList get a renamed list`() {
+
+      val listName = randomListName()
+      val id = ToDoListId.mint()
+      val item1 = randomItem()
+      val newListName = randomListName()
+
+      val projection: ToDoListProjection = buildListProjection(
+          listOf(
+              ListCreated(id, user, listName),
+              ItemAdded(id, item1),
+              ListRenamed(id, user, newListName)
+          )
+      )
+
+      expectThat(projection.findList(user, listName).expectSuccess()).isNull()
+      expectThat(projection.findList(user, newListName).expectSuccess())
+              .isNotNull()
+              .isEqualTo(ToDoList(newListName, listOf(item1)))
+  }
+
+  // For this to pass, we need to handle the new event in the projector
+  // queries.ToDoListProjection.kt
+  data class ToDoListProjectionRow(
+          val id: ToDoListId,
+          val user: User,
+          val active: Boolean,
+          val list: ToDoList) {
+      // other methods...
+      fun rename(newName: ListName): ToDoListProjectionRow =
+              copy(list = list.copy(listName = newName))
+  }
+
+  interface ToDoListProjection {
+
+      companion object {
+          fun eventProjector(e: ToDoListEvent) =
+              when (e) {
+                  // other events...
+                  is ListRenamed -> UpdateRow(e.rowId()) { rename(e.newName) }
+              }.toSingle()
+      }
+  }
+  ```
+
+- We have completely coded the happy path, but renaming can fail if a list of
+  the same name already exists.
+
+  ```kotlin
+  // commands.ToDoListCommands.kt
+  @Test
+  fun `Rename list fails if a list with same name already exists`() {
+
+      handler(CreateToDoList(user, name)).expectSuccess()
+
+      val newName = randomListName()
+      handler(CreateToDoList(user, newName)).expectSuccess()
+      val res = handler(RenameToDoList(user, name, newName)).expectFailure()
+      expectThat(res).isA<ToDoListCommandError>()
+  }
+  ```
+
+- Unsurprisingly, this test fails. We need to search for `oldName` and make sure
+  it exits and search for `newName` to make sure it's free.
+
+  ```kotlin
+  // commands.ToDoListCommandHandler.kt
+  private fun RenameToDoList.execute(): CommandOutcomeReader<CTX> =
+      retrieveOldAndNewListName()
+          .transform { (listState, newNameList) ->
+              when (listState) {
+                  is ActiveToDoList -> {
+                      if (newNameList != null)
+                          ToDoListCommandError("list $newName already exists")
+                                  .asFailure()
+                      else
+                          ListRenamed(listState.id, user, newName)
+                                  .asCommandSuccess()
+                  }
+
+                  null -> ToDoListCommandError("list $oldName not found")
+                                  .asFailure()
+                  else -> InconsistentStateError(this, listState).asFailure()
+              }
+          }
+
+  private fun RenameToDoList.retrieveOldAndNewListName():
+          ContextReader<CTX, Pair<ToDoListState?, ToDoListState?>> =
+  
+      eventStore.retrieveByNaturalKey(UserListName(user, oldName))
+          .bind { currList ->
+              eventStore.retrieveByNaturalKey(UserListName(user, newName))
+                  .transform { currList to it }
+      }
+  ```
+
+- This is all good except now our DDT is failing. After we rename the list, 
+  the commands lose track of it and you can't access it under the new name.
+  The problem is `retrieveIdFromNaturalKey` queries by user and list name
+  and expects to find a `ListCreated` for the user/list name pairing. A renamed
+  list was never created under the new name. Let's capture this with a test:
+
+  ```kotlin
+  // commands.ToDoListCommandsTest.kt
+  @Test
+  fun `RetrieveIdFromNaturalKey consider the most recent ListName`() {
+      handler(CreateToDoList(user, name)).expectSuccess()
+      val newName = randomListName()
+      handler(RenameToDoList(user, name, newName)).expectSuccess()
+      val newNewName = randomListName()
+      handler(RenameToDoList(user, name, newNewName)).expectSuccess()
+
+      handler(AddToDoItem(user, name, randomItem())).expectFailure()
+      handler(AddToDoItem(user, newName, randomItem())).expectFailure()
+      handler(AddToDoItem(user, newNewName, randomItem())).expectSuccess()
+  }
+
+  // We can get this test to pass by changing retrieveIdFromNaturalKey
+  // events.EventstreamerInMemory.kt
+  override fun retrieveIdFromNaturalKey(key: UserListName) =
+      InMemoryEventsReader { events ->
+          events.get()
+              .mapNotNull {
+                  when (val e = it.event) {
+                      is ListCreated -> if (e.owner == key.user)
+                          e.id to e.name else null
+                      is ListRenamed -> if (e.owner == key.user)
+                          e.id to e.newName else null
+                      else -> null
+                  }
+              }
+              .groupBy({ it.first }, { it.second })
+              .filter { it.value.lastOrNull() == key.listName }
+              .keys.singleOrNull()
+  }
+
+  // This make our new test and the domain-only DDT pass, but the HTTP DDT
+  // is still failing. We're going to test the equivalent SQL query.
+  // db.ToDoListEventStreamerOnPgTest.kt
+  @Test
+  fun `RetrieveIdFromNaturalKey considers only the most recent name of a list`() {
+
+      val name = randomListName()
+      val newName = randomListName()
+      val newNewName = randomListName()
+      val listId = ToDoListId.mint()
+
+      val eventsToStore = listOf(
+          ListCreated(listId, user, name),
+          ListRenamed(listId, user, newName),
+          ListRenamed(listId, user, newNewName)
+      )
+
+      transactionProvider.doRun {
+          +streamer.store(eventsToStore)
+
+          expectThat(
+              +streamer.retrieveIdFromNaturalKey(UserListName(user, name))
+          ).isNull()
+
+          expectThat(
+              +streamer.retrieveIdFromNaturalKey(UserListName(user, newName))
+          ).isNull()
+
+          expectThat(
+              +streamer.retrieveIdFromNaturalKey(UserListName(user, newNewName))
+          ).isEqualTo(listId)
+      }.expectSuccess()
+  }
+  ```
+
+- To make this pass, we need similar logic to our in-memory streamer but
+  implemented in SQL instead of Kotlin.
+
+  ```kotlin
+  fun createToDoListEventStreamerOnPg(): ToDoListEventStreamerTx =
+      EventStreamerTx(toDoListEventsTable, toDoListEventParser()) {
+  """
+  select
+    entity_id 
+  from
+    todo_list_events
+  inner join (
+    select
+     MAX(id) as maxid
+    from
+     todo_list_events
+    where
+     json_data ->> 'owner' = '${it.user.name}'
+    and event_type in ('ListCreated', 'ListRenamed')
+    group by
+     entity_id) lastRename on
+    id = lastRename.maxid
+  where
+    json_data ->> 'owner' = '${it.user.name}'
+    and (json_data ->> 'name' = '${it.listName.name}'
+      or json_data ->> 'newName' = '${it.listName.name}')
+  """.trimIndent()
+    }
+  ```
+
+- This is a good example of letting the compiler and DDT's guide us to add
+  functionality quickly and safely. With these modifications all tests pass!
+- Now let's consider the function we recently defined
+  `retrieveOldAndNewListName`:
+
+  ```kotlin
+  // retrieveOldAndNewListName
+  eventStore.retrieveByNaturalKey(UserListName(user, oldName))
+      .bind { currList ->
+          eventStore.retrieveByNaturalKey(UserListName(user, newName))
+              .transform { newList -> currList to newList }
+      }
+
+  // What would it look like if we extracted local variables for each functor
+  // and the combining functions.
+  val cr1: ContextReader<CTX, ToDoListState?> =
+      eventStore.retrieveByNaturalKey(UserListName(user, oldName))
+  val cr2: ContextReader<CTX, ToDoListState?> =
+      eventStore.retrieveByNaturalKey(UserListName(user, newName))
+  val f: (ToDoListState?, ToDoListState?) ->
+          Pair<ToDoListState?, ToDoListState?> = :: Pair
+  return cr1.bind { v1 ->
+            cr2.transform{ v2 -> f(v1, v2)}
+  }
+
+  // That body looks kinda generic. We will extract it to `transform2`
+  fun <CTX, A, B, R> transform2(
+      first: ContextReader<CTX, A>,
+      second: ContextReader<CTX, B>,
+      f: (A, B) -> R
+  ): ContextReader<CTX, R> =
+      first.bind { a ->
+          second.transform { b ->
+              f(a, b)
+          }
+      }
+
+  // It becomes even clearer if we inline `bind`, but for Outcome
+  fun <ERR : OutcomeError, A, B, R> transform2(
+      first: Outcome<ERR, A>,
+      second: Outcome<Err, B>,
+      f: (A, B) -> R
+  ): Outcome<ERR, R> =
+      when (first) {
+          is Failure -> first
+          is Success -> second.transform {b -> f(first.value, b) }
+  }
+
+  // Consider the function signatures:
+  // transform
+  // (Outcome<ERR, A>, f: (A) -> R) -> Outcome<ERR, R>
+  // transform2
+  // (Outcome<ERR, A>, Outcome<ERR, B>, f: (A ,B) -> R) -> Outcome<ERR, R>
+
+  private fun RenameToDoList.retrieveOldAndNewListName() =
+      transform2(
+          eventStore.retrieveByNaturalKey(UserListName(user, oldName)),
+          eventStore.retrieveByNaturalKey(UserListName(user, newName)),
+          ::Pair
+      )
+  ```
+
+- Now consider validation. Lists should have names at least 3 characters long,
+  no longer than forty characters, and shouldn't contain spaces, slashes, or
+  other characters not valid in URLs. We will write each check as a separate
+  function and collect the results and report all errors. Below is the current
+  name validation we have and the first test prompting us to make it better.
+
+  ```kotlin
+  fun fromUntrusted(name: String): ListName? =
+      if (name.matches(pathElementPattern) && name.length in 1..40)
+          fromTrusted(name) else null
+
+  @Test
+  fun `Names longer than 40 chars are not valid`() {
+      stringsGenerator(validCharset, 41, 200)
+          .take(100)
+          .forEach {
+              val failure = ListName.fromUntrusted(it).expectFailure()
+              expectThat(failure.msg).contains("is too long")
+          }
+  }
+
+  // We can write these really easy with a `discardUnless` helper function.
+  // It returns nul if a Boolean condition is false.
+  fun <T> T.discardUnless(predicate: T.() -> Boolean): T? =
+      takeIf { predicate(it) }
+
+  fun nameTooShort(name: String): Outcome<ValidationError, String> =
+      name.discardUnless { length >= 3 }
+          .failIfNull(ValidtaionError("Name is too short!"))
+
+  fun nameTooLong(name: String): Outcome<ValidationError, String> =
+      name.discardUnless { length <= 40 }
+          .failIfNull(ValidationError("Name ${name} is too long"))
+
+  fun nameWithInvalidChars(name: String): Outcome<ValidationError, String> =
+      name.discardUnless { matches(pathElementPattern) }
+          .failIfNull(
+              ValidationError(
+                  "Name ${name} contains illegal characters:" +
+                  " only letters, digits, and hyphen are allowed"
+              )
+          )
+  ```
+
+- We need a way to return multiple errors from combined failures. One good way
+  to get started is write the function signature and then try to implement it.
+
+  ```kotlin
+  fun <E: OutcomeError, T> combineFailures(
+          first: Outcome<E, T>,
+          second: Outcome<E, T>): Outcome<E, T> =
+      when (first) {
+          is Success<*> -> second
+          if Failure<E> -> when (second) {
+              is Success<*> -> first
+              is Failure<E> -> ??? a failure with first.error + other error
+          }
+      }
+  )
+
+  // We would like to be able to pass a combining function to put the errors
+  // together as one. But looking at this and the signature, it looks like
+  // transform2 for Outcome we were playing with earlier except we want to 
+  // combine two errors instead of two successes.
+  fun <ER : OutcomeError, E1 : ER, E2 : ER, T> transform2Failures(
+      first: Outcome<E1, T>,
+      second: Outcome<E2, T>,
+      f: (E1, E2) -> ER
+  ): Outcome<ER, T> =
+      when (first) {
+          is Success<*> -> second
+          is Failure<E1> -> when (second) {
+              is Success<*> -> first
+              is Failure<E2> -> f(first.error, second.error).asFailure()
+          }
+      }
+
+  // Now we need a reduce for failures since we have a way to combine two.
+  // We also need a special `ValidationError` to store them.
+  fun <E : OutcomeError, T> List<Outcome<E, T>>
+          .reduceFailures(f: (E, E) -> E): Outcome<E, T> =
+      reduce { acc, r -> transform2Failures(acc, r, f) }
+
+  data class ValidationError(val errors: List<String>) : ZettaiError() {
+      constructor(error: String) : this(listOf(error))
+
+      override val msg: String = errors.joinToString()
+
+      fun combine(other: ValidationError): ValidationError =
+          ValidationError(errors + other.errors)
+  }
+
+  // And let's write a convenience extension function called `validateWith`
+  fun <T, E: OutcomeError> T.validateWith(
+          validations: List<(T) -> Outcome<E, T>>,
+          combineErrors: (E, E) -> E): Outcome<E, T> =
+
+      validations
+          .map { it(this) }
+          .reduceFailures(combineErrors)
+
+  typealias ListNameValidation = (String) -> Outcome<ValidationError, String>
+  typealias ListNameOutcome = Outcome<ValidationError, ListName>
+
+  data class ListName internal constructor(val name: String) {
+      companion object {
+          // other methods...
+          fun fromUntrusted(name: String): ListNameOutcome =
+              name.validateListName(
+                  ::nameTooShort,
+                  ::nameTooLong,
+                  ::nameWithInvalidChars)
+      }
+  }
+
+  fun String.validateListName(vararg validations: ListNameValidation) =
+      validateWith(validations.toList(), ValidationError::combine)
+          .transform { ListName.fromTrusted(it) }
+
+  // Now we need to return an Outcome from `extractListNameFromForm`
+  private fun Request.extractListNameFromForm(formName: String) =
+      form(formName)
+          .failIfNull(InvalidRequestError("missing list name in form!"))
+          .bind { ListName.fromUntrusted(it) }
+
+  private fun createNewList(request: Request): Response {
+
+      val user = request.extractUser()
+          .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+
+      val listName = request.extractListNameFromForm("listname")
+          .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+
+      hub.handle(CreateToDoList(user, listName))
+          .transform { allListsPath(user) }
+          .transform { Response(SEE_OTHER).header("Location", it) }
+          .recover { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+  }
+
+  // We can handle `renameList` in a similar fashion
+  private fun renameList(request: Request): Response {
+      val user = request.extractUser()
+          .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+      val listName = request.extractListName()
+          .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+      val newListName = request.extractListNameFromForm("newListName")
+          .onFailure { return Response(BAD_REQUEST).body(it.msg) }
+      return hub.handle(RenameToDoList(user, listName, newListName))
+          .transform { Response(SEE_OTHER) 
+              .header("Location", todoListPath(user, newListName)) }
+          .recover { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+  }
+  ```
+
+- So this is good but a little noisy and repetitive with all the
+  `onFailure` calls. 
+
+  ```kotlin
+  // This has less repetition, but we can do better!
+  fun <ERR : OutcomeError, A, B, C, R> transform3(
+      first: Outcome<ERR, A>,
+      second: Outcome<ERR, B>,
+      third: Outcome<ERR, C>,
+      f: (A, B, C) -> R
+  ): Outcome<ERR, R> =
+      transform2(first,
+          transform2(second, third) { b, c -> f.partial(c).partial(b) })
+              { a: A, fa: (A) -> R -> fa(a) }
+
+  private fun renameList(request: Request): Response =
+      transform3(
+          request.extractUser(),
+          request.extractListName(),
+          request.extractListNameFromForm("newListName"),
+          ::RenameToDoList
+      ).bind { cmd ->
+          hub.handle(cmd)
+              .transform { Response(SEE_OTHER)
+                  .header("Location", todoListPath(cmd.user, cmd.newName)) }
+      }.recover { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+  ```
+
+- An *applicative functor* can do transformations using functions with
+  multiple parameters. Mapping a collection of validation functions over
+  the same input and collecting the errors into a single success or combination
+  of failures is called *traverse*. We started with a collection of functor
+  builders and traversed it to produce a single functor with a collection
+  inside. Type that support traverse are called traversables.
+
+  ```kotlin
+  // traverse
+  fun <A, B> Iterable<A>.traverse(f: (A) -> Functor<B>): Functor<List<B>>
+  // similar to map where the target type is Functor<B>
+  fun <A, B> Iterable<A>.map(f: (A) -> Functor<B>): List<Functor<B>>
+
+  // So let's define transform2 for Holder then use it to write traverse
+  data class Holder<T>(private val value: T) {
+      fun <U> transform(f: (T) -> U): Holder<U> = Holder(f(value))
+
+      companion object {
+          fun <A, B, R> transform2(
+              first: Holder<A>,
+              second: Holder<B>,
+              f: (A, B) -> R
+          ): Holder<R> =
+              Holder(f(first.value, second.value))
+      }
+
+      fun <A, B> Iterable<A>.traverse(f: (A) -> Holder<B>): Holder<List<B>> =
+          fold(Holder(emptyList())) { acc, e ->
+              transform2(acc, f(e)) { list, el -> list + el }
+          }
+  
+      // swapWithList, known as sequence in Haskell, Swaps a List of Functors
+      // for a Functor of a List: (List<Functor<A>>) -> Functor<List<A>>
+      fun <A> Iterable<Holder<A>>.swapWithList(): Holder<List<A>> =
+          traverse { it }
+  }
+
+  // So back to Outcome
+  fun <T, ERR: OutcomeError, U> Iterable<T>.foldOutcome(
+      initial: U,
+      operation: (acc: U, T) -> Outcome<ERR, U>
+  ): Outcome<ERR, U> =
+      fold(initial.asSuccess() as Outcome<ERR, U>)
+          { acc, el -> acc.bind { operation(it, el) } }
+
+  fun <E: OutcomeError, T, U> Iterable<T>.traverseOutcome(
+      f: (T) -> Outcome<E, U>
+  ): Outcome<E, List<U>> =
+
+      foldOutcome(mutableListOf()) { list, e ->
+          f(e).transform { list.add(it) }
+      }
+
+  fun <E: OutcomeError, T> Iterable<Outcome<E, T>>.swapWithList(
+  ): Outcome<E, List<T>> =
+      traverseOutcome {it}
+
+  typealias sequentialApplication<A, B> =
+      (Applicative<(A)->B>) -> (Applicative<A>) -> Applicative<B>
+  // apply is taken in Kotlin, so we will call this andApply
+  fun <A, B> List<(A)->B>.andApply(a: List<A>): List<B> = flatMap { a.map(it) }
+  // We could rewrite this without the it for clarity to point out that 
+  // the function is what is being mapped over the value, since andApply
+  // reverses positions of receiver/argument, and that is why you would end
+  // up with a list of lists if you weren't flattening with flatMap:
+  fun <A, B> List<(A)->B>.andApply(vals: List<A>): List<B> = 
+      flatMap { f -> vals.map(f) }
+  val l = listOf(Int::toString)
+          .andApply( listOf(1,1,2,3,5,8) )
+  println(l.joinToString()) // 1, 1, 2, 3, 5, 8
+
+  // It doesn't look all that useful above, but it works. We're going to try
+  // a function that takes two parameters, but we need to curry it first.
+  fun <A, B, R> ((A, B) -> R).curry()): (A) -> (B) -> R =
+          { a -> { b -> invoke(a, b) } }
+  fun <A, B, C, R> ((A, B, C) -> R).curry(): (A) -> (B) -> (C) -> R =
+          { a -> { b -> { c -> invoke(a, b, c) } } }
+  // etc. It''s seldom worth currying more than five or six argument functions.
+  val l = listOf( String::plus.curry() )
+          .andApply( listOf("hmm", "ouch", "wow") )
+          .andApply( listOf("?", "!") )
+  println(l.joinToString()) // hmm?, hmm!, ouch?, ouch!, wow?, wow!
+  // applying a list of 3 to a list of 2 gives us 6 combinations.
+  // Rather than put our function in a list, we can start with a list of
+  // strings and partially apply the function with a regular map,
+  // then `andApply` the result list of partially applied functions:
+  val l = listOf("hmm", "ouch", "wow")
+          .andApply(String::plus.curry())
+          .andApply( listOf("?", "!") )
+  println(l.joinToString()) // hmm?, hmm!, ouch?, ouch!, wow?, wow!
+  // The code was more contrived but also more clear with a list of functions,
+  // so we are going to define a `transformAndCurry` function that starts with
+  // the function and both curries it and maps it over a list of values.
+  fun <A, B, R> ((A, B) -> R)
+          .transformAndCurry(other: List<A>): List<(B) -> R> =
+      other.map { curry()(it) }
+  // We could make this a bit more clear with `this`. But you get the idea.
+  // `curry` is being called on the receiver, the function we called
+  // `transformAndCurry` from. It returns a curried version of the same function,
+  // the the `map` supplies it's first argument from the values of `other`.
+  fun <A, B, R> ((A, B) -> R)
+          .transformAndCurry(other: List<A>): List<(B) -> R> =
+      other.map { valA -> this.curry()(valA) }
+  // Let's define some others.
+  fun <A, B, C, R> ((A, B, C) -> R)
+          .transformAndCurry(other: List<A>): List<(B) -> (C) -> R> =
+      other.map { curry()(it) }
+  fun <A, B, C, D, R> ((A, B, C, D) -> R)
+          .transformAndCurry(other: List<A>): List<(B) -> (C) -> (D)-> R> =
+      other.map { curry()(it) }
+  val l = String::plus
+          .transformAndCurry( listOf("hmm", "ouch", "wow") )
+          .andApply( listOf("?", "!") )
+  println(l.joinToString()) // hmm?, hmm!, ouch?, ouch!, wow?, wow!
+  // To make this even more convenient, we are going to define shorthand
+  // operators. These correspond to the Haskell `fmap` or `<$>` operator
+  // which takes a plain function and wraps it to act on a contextual first
+  // argument (it's already curried because Haskell), and the `ap` or `<*>`
+  // operator that takes a wrapped function and applies it to a wrapped
+  // argument returning a wrapped result.
+  infix fun <A, B, C, R>
+          ((A, B, C) -> R).`!`(other: List<A>): List<(B) -> (C) -> R> =
+      transformAndCurry(other)
+  infix fun <A, B> List<(A) -> B>.`*`(a: List<A>): List<B> =
+      andApply(a)
+  val l = String::plus `!` listOf("hmm", "ouch", "wow") `*` listOf("?", "!")
+  println(l.joinToString()) // hmm?, hmm!, ouch?, ouch!, wow?, wow!
+  ```
+
+- So to define an applicative functor, we need a type constructor to create
+  the applicative from any type and an implementation of `andApply` or
+  `transform2`. You can always write `transform` in terms of `transform2`
+  or `andApply`, but not vice versa. All applicatives are functors, but
+  not all functors are applicatives. Applicatives must obey four laws.
+  The first two are the identity law and the homomorphism law. The identity law
+  says if we apply an applicative with the identity function to another
+  applicative, the result is equal to the second applicative alone. The
+  homomorphism law says that if you apply the applicative of a function to
+  the applicative of a value, the result must be equal to the applicative
+  of the function applied to the value. The last two laws are the interchange
+  and composition law. They are enforcing the same idea that the sequential
+  application must be entirely transparent. The book doesn't explain them, but
+  I have copied the tests that verify them from the repository for completeness.
+
+  ```kotlin
+  val x = randomString(text, 1, 10)
+  val id: (String) -> String = { it }
+
+  @Test
+  fun `Identity law`() {
+      expectThat(listOf(id) `*` listOf(x)).isEqualTo(listOf(x))
+  }
+
+  @Test
+  fun `Identity law verbose`() {
+      expectThat(
+          listOf(id).flatMap { f -> listOf(x).map(f) }
+      ).isEqualTo(listOf(x))
+  }
+
+  val f: (String) -> Int = { it.length }
+
+  @Test
+  fun `Homomorphism law`() {
+      expectThat(listOf(f) `*` listOf(x)).isEqualTo(listOf(f(x)))
+  }
+
+  @Test
+  fun `Interchange law`() {
+
+      expectThat(
+         listOf(f) `*` listOf(x)
+      ).isEqualTo(
+         listOf({ fx: (String) -> Int -> fx(x) }) `*` (listOf(f))
+      )
+  }
+
+
+  @Test
+  fun `Composition law`() {
+
+      fun <A, B, C> composeFn(f: (B) -> C): ((A) -> B) -> (A) -> C =
+          { fab -> { a -> f(fab(a)) } }
+
+      val g: (LocalDate) -> String = { it.toString() }
+      val d = LocalDate.now()
+
+      expectThat(
+          listOf({ fx: (String) -> Int -> composeFn<LocalDate, String, Int>(fx) })
+          `*` listOf(f) `*` listOf(g) `*` listOf(d)
+      ).isEqualTo(
+          listOf(f) `*` (listOf(g) `*` listOf(d))
+      )
+  }
+  ```
+
+- You'll notice in Interchange the initial function is a closure that closes over
+  the `x` value and waits for a function to apply to `x`.  the law is saying
+  it doesn't matter whether you treat f as "the function side" and x as
+  "the value side," or flip it around by packaging "apply to x" as its own
+  function and treating f as the value being applied to that. The composition
+  law simple states composing two functions and applying the composition
+  should equal applying each function in sequence.
+- With monads we set up a chain of operations where each can influence the
+  next. With applicatives we cna execute the operations independently and then
+  combine the results. Applicatives are in a sense less power, but with monads
+  the first failure would have prevented the others, so applicatives allow us
+  to do something we cannot with monads. Not all applicatives are monads, but
+  all monads are applicatives, because you can implement `andApply` and
+  `transform2` with `bind`. However, when you define these via `bind` the
+  applicative inherits the monad's first failure semantics rather than
+  collecting errors. Consider this for `bind` of `Outcome`. This defines a
+  perfectly good applicative, but it fails to collect multiple errors.
+
+  ```kotlin
+  fun <E, A, B> Outcome<E, A>.bind(f: (A) -> Outcome<E, B>): Outcome<E, B> =
+      when (this) {
+          is Success -> f(value)
+          is Failure -> this
+      }
+
+  fun <E, A, B> Outcome<E, (A) -> B>.andApply(a: Outcome<E, A>): Outcome<E, B> =
+      bind { fn -> a.transform(fn) }
+
+  fun <E, A, B, R> transform2(first: Outcome<E, A>, second: Outcome<E, B>,
+          f: (A, B) -> R): Outcome<E, R> =
+      first.bind { a -> second.transform { b -> f(a, b) } }
+  ```
+
+- So all theory aside, let's get back to our application. How would we rewrite
+  `renameList` with our new applicative infix operators.
+
+  ```kotlin
+  fun renameList(request: Request): Response =
+      ( :: RenameToDoList `!` request.extractUser()
+                          `*` request.extractListName()
+                          `*` request.extractNewListName())
+          .bind { cmd ->
+              hub.handle(cmd)
+                  .transform { Response(SEE_OTHER)
+                  .header("Location", toDoListPath(cmd.user, cmd.newName)) }
+          }.recover { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+  ```
+
+- We actually have to do this for a lot of our requests, so we can extract a
+  function to make it more convenient. And an `errorToResponse` function.
+
+  ```kotlin
+  fun <C: ToDoListCommand>
+      executeCommand(command: ZettaiOutcome<C>): ZettaiOutcome<C> =
+          command.bind(hub::handle)
+
+  // This is not quite up to the repo version yet. We plan to handle
+  // `ValidationError` by displaying the error list.
+  fun errorToResponse(referrer: String?): ZettaiError.() -> Response = {
+      when (this) {
+          is ValidationError -> Response(BAD_REQUEST).body(msg)
+          is InvalidRequestError -> Response(NOT_FOUND).body(msg)
+          is ZettaiParsingError -> Response(BAD_REQUEST).body(msg)
+          is QueryError, is ToDoListCommandError,
+          is InconsistentStateError, is ZettaiRenderError ->
+              Response(UNPROCESSABLE_ENTITY).body(msg)
+      }
+  }
+
+  // And with this, we finally reach our repo version of `renameList`
+  private fun renameList(request: Request): Response =
+      executeCommand(
+          ::RenameToDoList
+                  `!` request.extractUser()
+                  `*` request.extractListName()
+                  `*` request.extractListNameFromForm("newListName")
+      )
+          .transform { Response(SEE_OTHER).header(
+              "Location", todoListPath(it.user, it.newName)) }
+          .recover(errorToResponse(request.referer))
+
+  // And we can rewrite some of our other commands this way too
+  private fun createNewList(request: Request): Response =
+      executeCommand(
+          ::CreateToDoList
+                  `!` request.extractUser()
+                  `*` request.extractListNameFromForm("listname")
+      ).transform { allListsPath(it.user) }
+          .transform { Response(SEE_OTHER).header("Location", it) }
+          .recover(errorToResponse(request.referer))
+  ```
+
+- It's been a while since we've looked at our UI, and we need to add list
+  renaming to it to complete the story. At this time we're going to branch
+  out from large HTML strings to include static content like CSS files, fonts,
+  and scripts. We will also support HTML templates to generate dynamic content.
+
+  ```kotlin
+  // It all starts with a place for static assets.
+  val httpHandler = routes(
+      "/" bind GET to ::homePage,
+      "/todo/{user}" bind GET to ::getAllLists,
+      "/todo/{user}" bind POST to ::createNewList,
+      "/todo/{user}/{listname}" bind GET to ::getTodoList,
+      "/todo/{user}/{listname}" bind POST to ::addNewItem,
+      "/todo/{user}/{listname}/rename" bin POST to ::renameList,
+      "/whatsnext/{user}" bind GET to ::whatsNext,
+      "/static" bind static(ClassPath("/static"))
+  )
+  ```
+
+- The advantage of putting static content in our resources folder is that it
+  will always be deployed together with our application, making deployment
+  simpler. The disadvantage is that static content can't change independently
+  of our application. For this small project it is worth the trade off.
+- So we are going to define our own template engine rather than use an overly
+  complicated off the shelf library. The main function is `renderTemplate`,
+  which takes the template string and a map of tags that will substitute the
+  special markers in the template with the correct values. We need three types
+  of tag: `StringTag` for simple string replacement, `ListTag` to handle
+  collections, and `BooleanTag` to show or hide a block of text:
+
+  ```kotlin
+  typealias Template = CharSequence
+  typealias TagMap = Map<String, TemplateTag>
+
+  sealed class TemplateTag
+  data class StringTag(val text: String?) : TemplateTag()
+  data class ListTag(val tagMaps: List<TagMap>) : TemplateTag()
+  data class BooleanTag(val bool: Boolean) : TemplateTag()
+
+  infix fun String.tag(value: String?): Pair<String, TemplateTag> =
+      this to StringTag(value)
+  infix fun String.tag(value: List<TagMap): Pair<String, TemplateTag> =
+      this to ListTag(value)
+  infix fun String.tag(value: Boolean): Pair<String, TemplateTag> =
+      this to BooleanTag(value)
+
+  fun Template.renderTemplate(data: TagMap): TemplateOutcome =
+      applyAllTags(data).checkForUnappliedTags()
+
+  fun renderTemplatefromResource( fileName: String,
+                                  data: TagMap): ZettaiOutcome<Template> =
+      TemplateTag::class.java.getResource(fileName)
+          .failIfNull( TemplateError("Template not found $fileName"))
+          .transform(URL::readText)
+          .bind { it.renderTemplate(data) }
+          .transformFailure { ZettaiRenderError(it) }
+
+  // So now let's update our functions that render HTML.
+  // The repository has similar functions for `renderListsPage` and
+  // `renderWhatsNextPage` along with changes to HTML parsing in the DDTs.
+  fun renderListPage(
+      user: User,
+      toDoList: ToDoList,
+      errors: String? = null
+  ): ZettaiOutcome<HtmlPage> =
+      mapOf(
+          "user" tag user.name,
+          "listname" tag toDoList.listName.name,
+          "items" tag toDoList.items.toTagMaps(),
+          "errors" tag errors,
+          "if_error" tag (errors != null)
+      ).renderHtml("/html/single_list_page.xhtml")
+
+  fun TagMap.renderHtml(fileName: String): ZettaiOutcome<HtmlPage> =
+      renderTemplatefromResources(fileName, this)
+          .transform(Template::toString)
+          .transform(::HtmlPage)
+
+  private fun List<ToDoItem>.toTagMaps(): List<TagMap> =
+      map {
+          mapOf(
+              "description" tag it.description,
+              "dueDate" tag it.dueDate?.toIsoString().orEmpty(),
+              "status" tag it.status.toString()
+          )
+      }
+  ```
+
+- Flash attributes let us display a one-time notification and would be perfect
+  to communicate our validation errors. We only need a `FlashAttributesFilter`
+  in front of routes and a `withFlash` to our error handler:
+
+  ```kotlin
+  // webserver.Routes.kt
+  val httpHandler = FlashAttributesFilter.then(
+      routes( /* routes definition here */ ))
+
+  fun errorToResponse(referrer: String?): ZettaiError.() -> Response = {
+      when (this) {
+          is ValidationError -> Response(SEE_OTHER)
+                  .header("Location", referrer)
+                  .withFlash("Validation error: $msg")
+          // rest of the errors...
+      }
+  }
+  ```
+
+- The main exercise in this chapter were actually pretty simple. Implement a
+  `bind` for `Outcome` that combines successes and use it in `reduce`, and
+  implement the applicative operators for `ContextReader`. There were too other
+  bigger exercises to implement `EditListItems` and `DeleteListItems`. They
+  are done in `zettai_step7_monitoring` of the code repository.
+
+  ```kotlin
+  fun <E : OutcomeError, T, U> Outcome<E, T>.bind(
+            f: (T) -> Outcome<E, U>): Outcome<E, U> =
+
+      when (this) {
+          is Success -> f(value)
+          is Failure -> this
+      }
+
+  fun <E : OutcomeError, S, T : S> List<Outcome<E, T>>.reduceSuccess(
+          f: (S, T) -> T): Outcome<E, S> =
+
+      reduce { acc, r ->
+          acc.bind { a: T ->
+              r.transform { b ->
+                  f(a, b)
+              }
+          }
+      }
+
+  @Suppress("DANGEROUS_CHARACTERS")
+  infix fun <CTX, A, B> ContextReader<CTX, (A) -> B>.`*`(
+          a: ContextReader<CTX, A>): ContextReader<CTX, B> =
+      bind { a.transform(it) }
+
+
+  fun <CTX, A, B, C> ((A, B) -> C).transformAndCurry(
+          other: ContextReader<CTX, A>): ContextReader<CTX, (B) -> C> =
+      other.transform { curry()(it) }
+
+  infix fun <CTX, A, B, C> ((A, B) -> C).`!`(
+          other: ContextReader<CTX, A>): ContextReader<CTX, (B) -> C> =
+      transformAndCurry(other)
+
+
+  infix fun <CTX, A, B, C, D> ((A, B, C) -> D).transformAndCurry(
+          other: ContextReader<CTX, A>): ContextReader<CTX, (B) -> (C) -> D> =
+      other.transform { curry()(it) }
+
+
+  infix fun <CTX, A, B, C, D> ((A, B, C) -> D).`!`(
+          other: ContextReader<CTX, A>): ContextReader<CTX, (B) -> (C) -> D> =
+      transformAndCurry(other)
+  ```
+
+## Chapter 12 - Monitoring and Functional JSON
+
+- Most modern day logging is done with aggregator platforms, but we aren't a 
+  logging platform book, so we will assume someone else set all that up and
+  just write to a local file that will somehow be aggregated.
+
+  > Log as much as you can when things go wrong, log as little as you dare when
+  > things go well.
+  >
+  > --Kirk Pepperdine
+
+- There are two possible things to log: what we did if everything went well
+  so we can collect metrics, and exactly what went wrong with errors so we
+  can fix them.
+- If logging is an important characteristic of our application, which it is,
+  it should be covered by tests. They can also guide us how to best design the
+  logging functionality. Assuming we design our logger functionally, it should
+  be as easy to test as everything else.
+
+  ```kotlin
+  internal class LoggerTest {
+
+      val failingHub = TODO()
+      val logger = TODO()
+      val logs: List<String> = emptyList()
+
+      @Test
+      fun `commands log when there is a failure`() {
+          Zettai(failingHub, logger)
+              .httpHandler(Request(Method.POST, "/todo/AUser"))
+
+          expect {
+              that(logs.size).isEqualTo(1)
+              that(logs[0]).startsWith("error!")
+          }
+      }
+  }
+  ```
+
+- Logging isn't a business domain concern. No user cares if your website has
+  good monitoring. Since it's a non-functional requirement, it shouldn't enter
+  our domain, so should not be passed to the hub. Since the hub methods will
+  always return the outcome with all the error information, it is safe to log
+  from the outside.
+- What to log? Typically, pure functions need little to no logging. A basic
+  calculation isn't worth logging. We are usually interested in things at the
+  edges of the system: where we received a command from a user, sent a
+  notification to an external system, or stored or retrieved something from
+  a database. Basically, what is done by adapters needs logging. Not domain
+  actions.
+- Our logger will be a function of course. It takes an Outcome and returns Unit.
+  It is impoosible to avoid an impure operation with a Logger, but we will
+  minimize the opaque bits.
+
+  ```kotlin
+  // We need a typealias for our logger and to provide it to Zettai:
+  typealias ZettaiLogger = (Outcome<*, *>) -> Unit
+
+  class Zettai(val hub: ZettaiHub, val logger: ZettaiLogger) : HttpHandler {
+      // ...
+
+  // And we need a failingHub for tests that always fails.
+  val failingHub = object : ZettaiHub {
+      override fun <C : ToDoListCommand> handle(command: C) =
+          InvalidRequestError("failing test").asFailure()
+
+      override fun getList(userListName: UserListName) =
+          InvalidRequestError("failing test").asFailure()
+
+      override fun getLists(user: User) = 
+          InvalidRequestError("failing test").asFailure()
+
+      override fun whatsNext(user: User) =
+          InvalidRequestError("failing test").asFailure()
+  }
+
+  // And a minimal implementation that passes the tests.
+  val logs = mutableListOf<String>()
+
+  val logger: ZettaiLogger = {
+      val msg = when(it) {
+          is Failure -> "error! $it"
+          is Success -> "success! $it"
+      }
+      logs.add(msg)
+  }
+
+  // Our test is still failing, so we need to use the logger in Zettai
+  class Zettai(val hub: ZettaiHub, val logger: ZettaiLogger): HttpHandler {
+
+      // other methods...
+
+      fun <C: ToDoListCommand> executeCommand(command: ZettaiOutcome<C>) =
+          command.bind(hub::handle)
+              .logIt()
+
+      fun <QP, QR> executeQuery(
+          queryParams: ZettaiOutcome<QP>,
+          query: (QP) _> ZettaiOutcome<QR>
+      ): ZettaiOutcome<Pair<QP, QR>> =
+          queryParams.bind { qp -> query(qp).transform { qp to it } }
+              .logIt()
+
+      private fun <T> ZettaiOutcome<T>.logIt(): ZettaiOutcome<T> =
+          also { logger(it) }
+  }
+
+  // So we have ways to log success and failure; so we need tests for logging
+  // of success and failure. Rather than complex mocks, we already have a
+  // `failingHub` that always fails, and we'll add a `happyHub` that always
+  // succeeds:
+  val happyHub = object : ZettaiHub {
+      override fun <C : ToDoListCommand> handle(command: C) =
+          command.asSuccess()
+
+      override fun getList(userListName: UserListName) =
+          randomToDoList().asSuccess()
+
+      override fun getLists(user: User) =
+          listOf(randomListName()).asSuccess()
+
+      override fun whatsNext(user: User) =
+          randomToDoList().items.asSuccess()
+  }
+
+  // So now we need more tests
+  internal class LoggerTest {
+      // declarations...
+
+      @Test
+      fun `commands log when there is a failure`() {
+          Zettai(failingHub, logger)
+              .httpHandler(Request(Method.POST, "/todo/AUser"))
+
+          expect {
+              that(logs.size).isEqualTo(1)
+              that(logs[0]).startsWith("error!")
+          }
+      }
+
+      @Test
+      fun `commands always log successful calls`() {
+          val times = Random.nextInt(5, 10)
+          val zettai = Zettai(happyHub, logger)
+          repeat(times) {
+              zettai.httpHandler(
+                  Request(Method.POST, "/todo/AUser")
+                      .form("listname", "newList")
+              )
+          }
+          expect {
+              that(logs.size).isEqualTo(times)
+              that(logs[0]).startsWith("success!")
+          }
+      }
+
+      @Test
+      fun `queries log when there is a failure`() {
+          Zettai(failingHub, logger)
+              .httpHandler(Request(Method.GET, "/todo/AUser"))
+
+          expect {
+              that(logs.size).isEqualTo(1)
+              that(logs[0]).startsWith("error!")
+          }
+      }
+
+      @Test
+      fun `queries always log successful calls`() {
+          val times = Random.nextInt(5, 20)
+          val zettai = Zettai(happyHub, logger)
+          repeat(times) {
+              zettai
+                  .httpHandler(Request(Method.GET, "/todo/AUser"))
+          }
+          expect {
+              that(logs.size).isEqualTo(times)
+              logs.forEach {
+                  that(it).startsWith("success!")
+              }
+          }
+      }
+  }
+
+  // So let's start with a StreamLogger that can write to a file or StdOut
+  data class StreamLogger(val stream: OutputStream): ZettaiLogger {
+  
+      val writer = PrintWriter(stream, true)
+
+      override fun invoke(outcome: Outcome<*, *>) {
+          when (outcome) {
+              is Success -> "success! ${outcome.value}"
+              is Failure -> "error! ${outcome.error.msg}"
+          }.let(writer::println)
+      }
+  }
+
+  fun stdOutLogger() = StreamLogger(System.out)
+
+  // Let's also modify logIt on ZettaiOutcome to include additional info
+  fun <T> ZettaiOutcome<T>.logIt(request: Request): ZettaiOutcome<T> =
+      also {
+          logger(
+              transformFailure {
+                  LoggerError(it. request) // we log request on failure
+              }
+          )
+  }
+
+  // Since executeCommand lacks the Request, we need to move the logIt calls
+  // to every route, but that has other advantages.
+  class Zettai(val hub: ZettaiHub, val logger: ZettaiLogger) : HttpHandler {
+      // ...
+      private fun createNewList(request: Request): Response =
+          executeCommand(
+              ::CreateToDoList
+                      `!` request.extractUser()
+                      `*` request.extractListNameFromForm("listname")
+                  .logIt(request)
+          ).transform { allListsPath(it.user) }
+              .transform { Response(SEE_OTHER).header("Location", it) }
+              .recover(errorToResponse(request.referer))
+      // ...
+
+  // Now let's wire out logger into the main application:
+  fun main() {
+      // ... setup
+      val zettai = Zettai(hub, stdOutLogger())
+
+      zettai.asServer(Jetty(8080)).start()
+
+      println("Server started at http://localhost:8080/todo/username")
+  }
+  ```
+
+- Our logs are simple but enough for many purposes. Logging levels are a
+  commonly seen feature that overcomplicates things. However, we would like
+  more structure so we are going to support JSON logging.
+
+  ```kotlin
+  // This is a sealed interface and make it easy to share some fields in
+  // all sealed classes.
+  // logger.LogEntry.kt
+  sealed interface LogEntry {
+      val time: Instant
+      val hostname: String
+      val msg: String
+      val logContext: LogContext
+  }
+
+  data class LogSuccess(
+      override val time: Instant,
+      override val hostname: String,
+      override val msg: String,
+      override val logContext: LogContext
+  ) : LogEntry
+
+  data class LogFailure(
+      override val time: Instant,
+      override val hostname: String,
+      override val msg: String,
+      override val logContext: LogContext
+  ) : LogEntry
+
+  // logger.LogContext.kt
+  data class LogContext(
+      val desc: String,
+      val kind: OperationKind,
+      val user: User?,
+      val listName: ListName?)
+  )
+
+  enum class OperationKind { Command, Query }
+
+  // logger.JsonLogger.kt
+  // We're going to go back to our StreamLogger and make it abstract and
+  // add some methods:
+  abstract class StreamLogger(stream: OutputStream) : ZettaiLogger {
+
+      abstract fun onSuccess(value: Any?, logContext: LogContext): String
+      abstract fun onFailure(error: OutcomeError, logContext: LogContext): String
+
+      val writer = PrintWriter(stream, true)
+
+      override fun invoke(outcome: Outcome<*, *>, logContext: LogContext) {
+          outcome.transform { onSuccess(it, logContext) }
+              .recover { onFailure(it, logContext) }
+              .let(writer::println)
+      }
+  }
+
+  // Then define our JSON Logger extending that.
+  data class JsonLogger(
+      private val stream: OutputStream,
+      private val clock: Clock,
+      private val hostName: String
+  ) : StreamLogger(stream) {
+
+      override fun onSuccess(value: Any?, logContext: LogContext) =
+          LogSuccess(
+              clock.instant(),
+              hostName,
+              value.toString(),
+              logContext
+          ).toJson()
+
+      override fun onFailure(error: OutcomeError, logContext: LogContext) =
+          LogFailure(
+              clock.instant(),
+              hostName,
+              error.toString(),
+              logContext
+          ).toJson()
+
+      // We don't know how to do JSON yet, so punting on this...
+      private fun LogEntry.toJson(): String = this.toString
+  }
+
+  // So how would we define a FileLogger now?
+  fun fileLogger(fileName: String) =
+      JsonLogger(
+          FileOutputStream(fileName),
+          Clock.systemUTC(),
+          getLocalHost().hostName
+      )
+
+  // But now we need some more parameters for LogIt
+  private fun<T> ZettaiOutcome<T>.logIt(
+      kind: OperationKind,
+      description: String,
+      request: Requst,
+      describeSuccess: (T) -> String
+  ): ZettaiOutcome<T> =
+      also {
+          logger(
+              transform(describeSuccess)
+                  .transformFailure {
+                      LoggerError(it, request)
+                  },
+              LogContext(
+                  description,
+                  kind,
+                  request.extractUser().orNull(),
+                  request.extractListName().orNull(),
+              )
+          )
+      }
+
+  // Here's some examples of using our new logger
+  private fun getAllLists(request: Request): Response =
+      executeQuery(
+          request.extractUser(),
+          hub::getLists,
+      ).logIt(Query, "getAllLists", request) { "Found ${it.second.size} lists" }
+
+  private fun addNewItem(request: Request): Response =
+      executeCommand(
+          ::AddToDoItem
+                  `!` request.extractUser()
+                  `*` request.extractListName()
+                  `*` request.extractItem()
+      ).logIt(Command, "addNewItem", request) { "Item added ${it.item}" }
+          .transform { Response(SEE_OTHER).header(
+                          "Location", todoListPath(it.user, it.name))
+          }.recover(errorToResponse(request.referer))
+  ```
+
+- That's all for logging, but we do need to handle the JSON.
+
+  ```kotlin
+  // Let's start with the simplest functions
+  fun toJson(value: T): String
+  fun fromJson(json: String): Outcome<JsonError, T>
+
+  // So we want these in interfaces and more generic
+  interface ToJson<T, S> {
+      fun toJson(value: T): S
+  }
+
+  interface FromJson<T, S> {
+      fun fromJson(json: S): JsonOutcome<T>
+  }
+
+  // So a JSON converter needs to implement these two interfaces
+  interface JsonConverter<T> : ToJson<T, String>, FromJson<T, String>
+
+  // So, we have a JSON library. Something homegrown and half-baked.
+  // Kondor JSON. You define a type for each class we plan to serialize,
+  // usually an object. Consider serializing User and ListName. They are
+  // just String values with a wrapper, so we don't want a JSON object.
+  // logger.JLogEntry.kt
+  object JUser : JStringRepresentable<User>() {
+      override val cons: (String) -> User = :: User
+      override val render: (User) -> String = User::name
+  }
+
+  object JListName : JStringRepresentable<ListName>() {
+      override val cons = ::ListName
+      override val render = ListName::name
+  }
+
+  // What about for a normal data class like LogContext
+  object JLogContext: JAny<LogContext>() {
+
+      private val kind by str(LogContext::kind)
+      private val description by str(LogContext::desc)
+      private val user by str(JUser, LogContext::user)
+      private val list_name by str(JListName, LogContext::listName)
+
+      override fun JsonNodeObject.deserializeOrThrow() =
+          LogContext(
+              description = +desc,
+              kind = +kind,
+              user = +user,
+              listName = +list_name,
+          )
+    }
+
+  // Sealed classes are usually hard to convert in JSON, but we have a 
+  // discriminator field to know which class to use.
+  object JLogEntry : JSealed<LogEntry>() {
+
+      override val discriminatorFieldName: String = "outcome"
+
+      override val subConverters = mapOf(
+          "success" to JLogSuccess,
+          "failure" to JLogFailure
+      )
+
+      override fun extractTypeName(obj: LogEntry): String =
+          when (obj) {
+              is LogSuccess -> "success"
+              is LogFailure -> "failure"
+          }
+
+  }
+
+  object JLogSuccess : JAny<LogSuccess>() {
+
+      private val hostname by str(LogSuccess::hostname)
+      private val time by str(LogSuccess::time)
+      private val log_context by flatten(JLogContext, LogSuccess::logContext)
+      private val log_message by str(LogSuccess::msg)
+
+      override fun JsonNodeObject.deserializeOrThrow(): LogSuccess =
+          LogSuccess(
+              hostname = +hostname,
+              logContext = +log_context,
+              msg = +log_message,
+              time = +time
+          )
+  }
+
+
+  object JLogFailure : JAny<LogFailure>() {
+
+      private val hostname by str(LogFailure::hostname)
+      private val time by str(LogFailure::time)
+      private val log_context by flatten(JLogContext, LogFailure::logContext)
+      private val error by str(LogFailure::msg)
+
+      override fun JsonNodeObject.deserializeOrThrow(): LogFailure =
+          LogFailure(
+              msg = +error,
+              hostname = +hostname,
+              logContext = +log_context,
+              time = +time
+          )
+  }
+
+  // Now we go back and fix our `toJson` function in `JsonLogger`
+  // logger.JsonLogger.kt
+  private fun LogEntry.toJson(): String = JLogEntry.toJson(this)
+  ```
+
+- `FromJsonF<T>`'s parse: `(String) -> JsonOutcome<T>` produces a `T`.
+  `transform` is covariant in `T`: it uses a forward-facing `(T) -> U` to turn
+  a `FromJsonF<T>` into a `FromJsonF<U>`, composing `f` onto the output side
+  after parsing. This is ordinary `map`. The input side, `String`, is fixed in
+  `FromJsonF` — there's nothing to vary there, so this specific type can't
+  demonstrate contravariance itself, even though the underlying interface
+  it implements is written generically enough to support it.
+
+  ```kotlin
+  data class FromJsonF<T>(
+        val parse: (String) -> JsonOutcome<T>): FromJson<T> {
+
+    override fun fromJson(json: String): JsonOutcome<T> = parse(json)
+
+    fun <U> transform(f: (T) -> U): FromJson<U> =
+        FromJsonF { fromJson(it).transform(f) }
+  ```
+
+- We can't do the same type of `transform` on `f: (T) -> U` with `ToJsonF`,
+  because it consumes a `T` and produces a `String`. So we can't run `f` on the
+  result of it's operation. If we had an `f: (U) -> T` though, we could apply
+  it and then call `toJson: T -> String` on the result to serialize it. This is
+  a contravariant functor.
+
+  ```kotlin
+  data class ToJsonF<T>(val toJson: (T) -> String) : ToJson<T> {
+
+      fun toJson(value: T): String = toJson(value)
+
+      fun <U> contraTransform(f: (U) -> T): ToJson<U> = 
+          ToJsonF { toJson(f(it)) }
+  }
+  ```
+
+- Intuitively, a covariant functor contains or produces another type. `Outcome`
+  contains a result and `ContextReader` produces the read value and you can
+  transform it with a forward facing function `f: (T) -> U`. A contravariant
+  functor consumes an arbitrary type to produce a given type. You give it a 
+  backwards pointing function `f: (U) -> T` to adapt it to take a U and still
+  produce the given type. For our serializer,
+  it consumes a type to produce a String. Predicates are another example. They
+  consume a type to produce a Boolean. To adapt a `Predicate<T>`  into a
+  `Predicate<U>` you would need an `f: (U) -> T` and it would still produce a
+  `Boolean`.
+- Couples of covarniant and contravariant functors are quite common and called
+  *profunctors*. So the full profunctor picture, now with both halves
+  concretely demonstrated:
+  - `FromJsonF<T>` — covariant in the output. `transform(f: (T) -> U)` composes
+    `f` after parsing, same direction as the data flow.
+  - `ToJsonF<T>` — contravariant in the input. `contraTransform(f: (U) -> T)`
+    composes `f` before serializing, reversed direction, adapting the new
+    input type into the old one first.
+- By definition, a profunctor comes with two types, here `A` and `B`, and it's
+  contravariant on `A` and covariant in `B`. A profunctor has a `dimap`
+  function and in Kondor JSON is defined by the following interface:
+
+  ```kotlin
+  interface Profunctor<A, B> {
+  
+      fun <S, T> dimap(contraMap: (S) -> A, coMap: (B) -> T): Profunctor<S, T>
+
+      fun <S> lmap(f: (S) -> A): Profunctor<S, B> =
+          dimap(contraMap = f, coMap = { it })
+      fun <T> rmap(g: (B) -> T): Profunctor<A, T> =
+          dimap(contraMap = { it }, coMap = g)
+  }
+  ```
+
+- `{ it }` is the identity function. `lmap'`s implementation calls `dimap `with
+  your `f` as `contraMap` and identity as `coMap` — meaning the output side
+  `(B -> T)` is left untouched, since `lmap` only wants to change the input
+  type. These interface methods (`dimap/lmap/rmap`) don't do any actual work
+  themselves — they build and return a new profunctor whose internal logic
+  composes your supplied function(s) around the original operation. The
+  mapping only actually runs later, when you call something like
+  `toJson/fromJson` on the result. So:
+  `existingSerializer.lmap { wrapped -> wrapped.unwrap() }` builds
+  `newSerializer`, a `ToJson<WrappedDomainClass>`. Nothing happens yet. Only
+  when you later call `newSerializer.toJson(someWrapped)` does the chain
+  actually run: `wrapped.unwrap()` first converts it to a `DomainClass`,
+  then the original serializer's `toJson` runs on that, producing the `String`
+  with `coMap`'s identity meaning that `String` is returned as-is. Note if
+  we defined our serialize with `lmap` it could serialize the
+  `WrappedDomainClass` but not deserialize it without us setting `rmap`.
+- To define a concrete instance of this, we must define the `dimap` function
+  that accepts two mapping functions and returns a new profunctor with the
+  new types, in this case `S` and `T`.
+- In our JSON converters, `A` and `B` are the same type - the domain class, and
+  `S` and `T` are the same type - the string representation of JSON.
+- Intuitively, a profunctor creates a relation between two types, converting
+  from one to the other an back.
+- So far all our logging has been at the HTTP layer. We also need to log other
+  external adapters such as the database adapter. We used the stdout logger that
+  is part of the Exposed library previously. Fortunately, Exposed has a nice
+  `SqlLogger` interface. First let's add a kind.
+
+  ```kotlin
+  enum class OperationKind { Command, Query, SqlStatement }
+
+  // logger.SqlJsonLogger - SqlLogger is defined in Exposed
+  data class SqlJsonLogger(val logger: ZettaiLogger) : SqlLogger {
+      override fun log(context: StatementContext, transaction: Transaction) {
+          logger(
+              context.expandArgs(transaction).asSuccess(),
+              LogContext(
+                  "txId: ${transaction.id} duration: ${transaction.duration}",
+                  OperationKind.SqlStatement,
+                  null,
+                  null
+              )
+          )
+      }
+  }
+
+  // So we'll pass our logger to the TransactionProvider
+  // db.jdbc.TransactionProvider.kt
+  data class TransactionProvider(
+      private val dataSource: DataSource,
+      private val logger: SqlLogger,
+      val isolationLevel: TransactionIsolationLevel,
+      val maxAttempts: Int = 10
+  ) : ContextProvider<Transaction> {
+      override fun <T> tryRun(reader: TxReader<T>): Outcome<ContextError, T> =
+          inTopLevelTransaction(
+              db = Database.connect(dataSource),
+              transactionIsolation = isolationLevel.jdbcLevel,
+              repetitionAttempts = maxAttempts
+          ) {
+              addLogger(logger)
+        // rest of the method.
+
+  // And we can wire it into the main method.
+  // webserver.Main.kt
+  fun main() {
+
+      val logger = fileLogger("zettai-${System.currentTimeMillis()}.log")
+
+      val dataSource = prepareProductionDatabase()
+
+      val streamer = createToDoListEventStreamerOnPg()
+      val eventStore = ToDoListEventStore(streamer)
+      val txProvider = TransactionProvider(
+          dataSource = dataSource,
+          logger = SqlJsonLogger(logger),
+          isolationLevel = TransactionIsolationLevel.Serializable
+      )
+      // more of main
+      val zettai = Zettai(hub, logger)
+
+      zettai.asServer(Jetty(8080)).start()
+
+      println("Server started at http://localhost:8080/todo/username")
+
+  }
+  ```
+
+## Chapter 13 - Designing a Functional Architecture
+
+- The real challenge isn't to design a system that works perfectly with the
+  current requirements, but to design it in a way that can be easily changed
+  when necessary.
 
 ## Appendices
 
@@ -4008,3 +6537,23 @@ enum class Pins(val number: Int) {
 
 - A fairly good but brief review of Kotlin. I especially liked the infix 
   operator examples.
+
+### A3 - A Pinch of Theory
+
+- A category is a mathematical construct onsisting of some dots, which are
+  called objects, and some arrows connecting them, call morphisms. These
+  morphisms must satisfy certain properties, include the existence of an
+  identity morphism for each object, and the ability to compose morphisms in a
+  way that's associative. We can consider a category as something similar to a
+  set, but instead of being interested in its elements, we're mostly interested
+  in how those elements relate to each other.
+- It is possible to create a category with all the types in a programming
+  language: the object are the different types, and the morphisms are pure
+  total functions between two types, one as input and one as output. Most
+  static-type computer languages form a Cartesian Closed-Category (CCC), which
+  means they have terminal objects, binary products, and exponentiation. When
+  we talk about functors in functional programming, we always mean
+  endofunctors, functors from a category to the same category. As we know,
+  List is a functor. List is also an endofunctor. It takes elements of our
+  language (Ints, Strings, functions from Int to String, List\<String\>, etc) 
+  and maps them to a subset of elements of our language (to Lists).
