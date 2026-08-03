@@ -62,25 +62,25 @@ cc_list = '''Ezra Koenig <ekoenig@vpwk.com>,
 Rostam Batmanglij <rostam@vpwk.com>,
 Chris Tomson <ctomson@vpwk.com,
 Bobbi Baio <bbaio@vpwk.com'''
-matched = re.finditer("(?P<name>\w+)\@(?P<SLC>\w+)\.(?<TLD>\w+)", cc_list)
+matched = re.finditer("(?P<name>\w+)\@(?P<SLD>\w+)\.(?P<TLD>\w+)", cc_list)
 for m in matched:
     print(m.groupdict())
 Out:
 {'name': 'ekoenig', 'SLD': 'vpwk', 'TLD': 'com'}
 {'name': 'rostam', 'SLD': 'vpwk', 'TLD': 'com'}
 {'name': 'ctomson', 'SLD': 'vpwk', 'TLD': 'com'}
-{'name': 'cbaio', 'SLD': 'vpwk', 'TLD': 'com'}
+{'name': 'bbaio', 'SLD': 'vpwk', 'TLD': 'com'}
 
 >>> re.sub("\d", "#", "The pass you entered was 09876")
-'The passcode you entered was #####'
+'The pass you entered was #####'
 >>> users = re.sub("(?P<name>\w+)\@(?P<SLD>\w+)\.(?P<TLD>\w+)",
 ...                 "\g<TLD>.\g<SLD>.\g<name>", cc_list)
->>> print users
+>>> print(users)
 Out:
 Ezra Koenig <com.vpwk.ekoenig>,
 Rostam Batmanglij <com.vpwk.rostam>,
 Chris Tomson <com.vpwk.ctomson,
-Chris Baio <com.vpwk.cbaio
+Bobbi Baio <com.vpwk.bbaio
 ```
 
 - There was also a bit on IPython (installable via pip). IPython can run shell
@@ -89,7 +89,7 @@ Chris Baio <com.vpwk.cbaio
 
 ```python
 In  [3]: var_ls = !ls -l
-In  [4]: type(var)
+In  [4]: type(var_ls)
 Out [4]: IPython.utils.text.SList
 ```
 
@@ -108,18 +108,18 @@ Out [9]:
  '-rwxr-xr-x   1 root   wheel     30512 Mar 20 23:10 pkill']
 ```
 
-- You can also use IPython magic commands. `%%bash` let's you input and run a
+- You can also use IPython magic commands. `%%bash` lets you input and run a
   bash script. `%%writefile` will let you write a file, and `%who` will show
   you what is loaded into memory.
 
 ## Chapter 2 - Automating Files and the Filesystem
 
 - You open a file like `open_file = open(file_path)`, an optional second
-  paramter is for mode ('r'/'w'/'a' with a 'b' appended for binary, but this
-  defaults to 'r'. and then read the files with either `text = open_file.read()`
+  parameter is for mode ('r'/'w'/'a' with a 'b' appended for binary, but this
+  defaults to 'r'), and then read the files with either `text = open_file.read()`
   or `text = open_file.readlines()` which splits the contents into a list of
   lines. Close the file with `open_file.close()` when finished.
-- You do not need ot close if you open with a `with` statement:
+- You do not need to close if you open with a `with` statement:
 
 ```python
 with open(file_path, 'r') as open_file:
@@ -141,11 +141,11 @@ assert(open_file.closed == True)
 
 ```python
 import csv
-filepath = '/Users/Lewis/testdata.csv'
-with_open(file_path, newline='') as csv_file:
-    off reader = csv.read(csv_file, delimeter=',')
+file_path = '/Users/Lewis/testdata.csv'
+with open(file_path, newline='') as csv_file:
+    reader = csv.reader(csv_file, delimiter=',')
     for _ in range(5):
-        print(next(off_reader))
+        print(next(reader))
 ```
 
 - `csv` can also load a file with headers as keys while parsing a line at a time:
@@ -175,11 +175,11 @@ secret = "This is the password or document text"
 bsecret = secret.encode()   # to convert secret to binary string for hashing
 m = hashlib.md5()
 m.update(bsecret)
-print(m.digest)     # b'\xf5\x06\xe6...\x0f5E'
+print(m.digest())   # b'\xf5\x06\xe6...\x0f5E'
 ```
 
 - Checking filehashes is especially easy with `hashlib` (Note: this example
-  requirequires Python 3.11 or later - see Google for an earlier example if
+  requires Python 3.11 or later - see Google for an earlier example if
   needed):
 
 ```python
@@ -250,7 +250,7 @@ else:
 
       # Check the current working directory
       config_path = os.path.join(os.getcwd(), rc_name)
-      if os.path.exists(cofnig_path):
+      if os.path.exists(config_path):
           return config_path
 
       # Check user home directory
@@ -263,7 +263,7 @@ else:
       file_path = os.path.abspath(__file__)
       parent_path = os.path.dirname(file_path)
       config_path = os.path.join(parent_path, rc_name)
-      if os.path.exists(config_path:
+      if os.path.exists(config_path):
           return config_path
 
       print(f"File {rc_name} has not been found")
@@ -296,7 +296,7 @@ from pathlib import Path    # Standard to import path since that's all we need
 
 def find_rc(rc_name=".examplerc"):
     # Check for Env variable
-    var_name = "EXAMPLERC_DIR
+    var_name = "EXAMPLERC_DIR"
     example_dir = os.environ.get(var_name)
     if example_dir:
         dir_path = Path(example_dir)
@@ -310,7 +310,7 @@ def find_rc(rc_name=".examplerc"):
         return str(config_path)
 
     # Check user home directory
-    config_path = pathlib.Path.home() / rc_name
+    config_path = Path.home() / rc_name
     if config_path.exists():
         return str(config_path)
 
@@ -326,7 +326,7 @@ def find_rc(rc_name=".examplerc"):
 
 ## Chapter 3 - Working with the Command Line
 
-- The `sys` module ofers access to variales and methods closely tied to the
+- The `sys` module offers access to variables and methods closely tied to the
   Python interpreter.
   - `sys.byteorder` shows the byteorder of your architecture, 'little'/'big'
   - `sys.getsizeof(var)` display the size of Python objects
@@ -343,7 +343,7 @@ def find_rc(rc_name=".examplerc"):
 - The `subprocess` module can run applications outside Python from within code.
   - `cp = subprocess.run(['ls', '-l'],
       capture_output=True, universal_newlines=True)`  
-    will run `ls -l` and capture it's output to a `stdout` attribute of the cp
+    will run `ls -l` and capture its output to a `stdout` attribute of the cp
     object.
     - `subprocess.run()` returns a `CompletedProcess` instance when the process
       completes.
@@ -402,7 +402,7 @@ def find_rc(rc_name=".examplerc"):
         greet()
     ```
 
-  - The `fire` library uses introspection to create interfaces automatically. To explose a simple function, you call `fire.Fire` with it as an argument.
+  - The `fire` library uses introspection to create interfaces automatically. To expose a simple function, you call `fire.Fire` with it as an argument.
 
   ```python
   import fire
@@ -501,7 +501,7 @@ def find_rc(rc_name=".examplerc"):
   import uuid
 
   helpers = types.ModuleType('helpers')
-  helpers.uuid64 = uuid.uuid64()
+  helpers.uuid64 = uuid.uuid4()
   ```
 
   - `ssh -L 8080:localhost:80 lcawthorne@server.com -N` # to link remote
@@ -555,8 +555,8 @@ def find_rc(rc_name=".examplerc"):
       MODULE_DIRECTORY=`python -c "
     exec('''
     try:
-      import os.path as _, ${1}
-      print(_.dirname(_.realpath(${1}.__file__)))
+      import os.path as _, ${module}
+      print(_.dirname(_.realpath(${module}.__file__)))
     except Exception as e:
       print(e)
     ''')"`

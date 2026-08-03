@@ -26,11 +26,11 @@
 - The default setting on most IDE's is to disable implicit casting. Use a
   type-casting method to convert such as `toByte()`, `toInt()`, `toLong()`,
   `toShort()`, `toDouble()`, `toFloat()`, `toChar()`, or `toString()`.
-- `"Hello world!".toInt()` throws a `NumberFormatException`. `"42".toInt()`is
+- `"Hello world!".toInt()` throws a `NumberFormatException`. `"42".toInt()` is
   fine.
 - Arithmetic operators are `+`, `-`, `*`, `/`, and `%`.
 - When you divide to `Int` the result is `Int`. The fraction is discarded.
-  So call `toDouble()` or`toFloat()` on atleast one for a decimal.
+  So call `toDouble()` or `toFloat()` on at least one for a decimal.
 - Assignment operators are `=`, `+=`, `-=`, `*=`, and `/=`.
 - `+` and `+=` work with `String`s, as does `==` and `>`/`<`. Strings are compared
   lexicographically, character by character, based on their Unicode values.
@@ -93,7 +93,7 @@
       x > 0 -> println("x is positive")
       x == 0 -> println("x is zero")
       x < 0 -> println("x is negative")
-      else -> println("x is not a real number")`
+      else -> println("x is not a real number")
   }
   ```
 
@@ -130,7 +130,7 @@
   ```
 
 - `sqrt` and `pow` are in `kotlin.math` and must be `import`'ed.
-- *function parameters* are treated as implicity read-only within the function.
+- *function parameters* are treated as implicitly read-only within the function.
 
   ```kotlin
   fun functionName(parameter1: Type,
@@ -166,9 +166,9 @@
   Or: `val greet = {name: String -> "Hello, $name"}`  
   Or even: `val greet = {name -> "Hello, $name"}`
 - If a lambda body is a single expression, that expression will be returned.
-- If a lambda has a single parameter, you can omit it's declaration and use
+- If a lambda has a single parameter, you can omit its declaration and use
   the implicit `it` keyword to stand-in for the parameter. Ex: \
-  Instead of `val square: (Int) -> Int = a -> a * a` you can use
+  Instead of `val square: (Int) -> Int = { a -> a * a }` you can use
   `val square: (Int) -> Int = {it * it}`
 - `readln()` gets input until ENTER. All input is treated as text.
 
@@ -237,7 +237,7 @@
 - A Kotlin *array* is a collection of elements in a contiguous block of memory.
   The size of the array is determined when the array is created. You create
   arrays with `arrayOf`. An `Array<Any>` can hold any non-nullable types.
-  You can also create arrays with `val num = Array4, { i -> i * 2 }`
+  You can also create arrays with `val num = Array(4) { i -> i * 2 }`
   for `[0, 2, 4, 6]`.
   The 4 is the size and the function determines elements based on index.
 - Primitive arrays are good for perfomance critical operations and created via

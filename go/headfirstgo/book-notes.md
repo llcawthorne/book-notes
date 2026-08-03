@@ -5,9 +5,9 @@
 * The three parts of a program are package definition, imports, code
 * A running program will have a package `main` and function `main`
 * A **package** is a group of related functions and other code
-* You need to **import** a package to use it's functions
+* You need to **import** a package to use its functions
 * The most common numeric types are *int* and *float64*
-* An unassigned variable has the *zero value* for it's type
+* An unassigned variable has the *zero value* for its type
 * Declare a variable and assign it at the same time with :=
 * A variable, function, or type is only exported if it starts with a cap
 * `go fmt` will reformat your source files
@@ -22,7 +22,7 @@
 * `if` statements don't use parentheses, neither does `for`
 * Both use braces {}
 * The `for` statement is the only looping construct (no `while`) but you can
-  write a `for condition { //body }`in place of a while loop
+  write a `for condition { //body }` in place of a while loop
 * Go allows multiple return values from functions and methods
 * Often we return the main result and a second value indicating errors
 * You can use `_` (the **blank identifier**) to discard a value
@@ -189,13 +189,13 @@ myVar3 := myType{"value", 0}        // structs can also be initialized positiona
 
 ```go
 type Gallons float64
-type Millileters float64
+type Milliliters float64
 type Liters float64
 func (l Liters) ToGallons() Gallons {
-    return Gallons(1 * 0.264)
+    return Gallons(l * 0.264)
 }
-func (l Liters) ToMillileters() Millileters {
-    return Milliliters(1 * 1000)
+func (l Liters) ToMilliliters() Milliliters {
+    return Milliliters(l * 1000)
 }
 ```
 
@@ -259,7 +259,7 @@ type myInterface interface {
 * The empty interface `interface{}` or `any` in Modern Go accepts any type and
   you will see it constantly in older Go code
 
-## Chapter 12 - Recoverying from Failure
+## Chapter 12 - Recovering from Failure
 
 * The `defer` keyword postpones a call until the current function exits
 * `defer` calls are often used for cleanup that needs to be run after error
@@ -306,7 +306,7 @@ type myInterface interface {
 * The handler function should write a response using the ResponseWriter
 * You write a slice of bytes to a `http.ResponseWriter` so be prepared to typecast
 * Functions can be passed as arguments and assigned to variables in Go
-* The `net/http` packakge's ListenAndServe function starts a web server
+* The `net/http` package's ListenAndServe function starts a web server
 * The `http.HandleFunc` function takes a path string and a handler function
 * Variables that can hold a function have a function type
 * A function type includes number and type of parameters and return values
@@ -328,9 +328,9 @@ type myInterface interface {
 * When using `OpenFile` the second argument is flags and you often need more than one (ie. os.O_WRONLY and os.O_APPEND)
 * You combine flags with bitwise OR operator: `|` 
     * Ex: `options := os.O_WRONLY | os.O_APPEND`
-* The third argument to `OpenFile` is the file permisions. Ex: `os.FileMode(0600)`
+* The third argument to `OpenFile` is the file permissions. Ex: `os.FileMode(0600)`
 * The permissions argument is ignored in Windows, and only used in Linux when creating files
-* You can check permissions with `fmt.Println(os.FileMode(0700)` to get a summary like that offered from the command prompt `-rwx------`
+* You can check permissions with `fmt.Println(os.FileMode(0700))` to get a summary like that offered from the command prompt `-rwx------`
 * Any digits preceded by 0 in Go are treated as octal notation
 
 ```go
@@ -357,7 +357,7 @@ if err := saveString("english.txt", "Hello"); err != nil {
 }
 ```
 
-* Initializing an `err` in an `if` like above let's you create multiple `err`
+* Initializing an `err` in an `if` like above lets you create multiple `err`
 * The `switch` statement saves code over big if-else blocks
 
 ```go

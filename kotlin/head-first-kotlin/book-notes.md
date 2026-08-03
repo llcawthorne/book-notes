@@ -141,7 +141,7 @@
 - An interface lets you define common behavior outside a superclass
   hierarchy so that independent classes can still benefit from polymorphism.
 - Interfaces can have abstract or non-abstract functions.
-- Interfaces properties can be abstract, or they can have getters and setters.
+- Interface properties can be abstract, or they can have getters and setters.
   They can't be initialized, and they don't have access to a backing field.
 - A class can implement multiple interfaces.
 - If a subclass inherits from a superclass or implements an interface named A,
@@ -340,7 +340,7 @@ fun <T> listPet(): List<T> {
 
 #### Packages
 
-- Packages help your organize code and prevent name conflicts.
+- Packages help you organize code and prevent name conflicts.
 - Package declarations are like `package com.hfkotlin.mypackage`.
 - From another package use `import com.hfkotlin.mypackage.Duck` to use Duck.
 
@@ -377,7 +377,7 @@ class MessageFailure(var msg: String, var e: Exception) : MessageType()
   so cannot access its members.
 - An *inner class* can access outer class members and is defined as:  
   `inner class Inner`
-- You create and instance of the `Outer` class to access the `Inner`:  
+- You create an instance of the `Outer` class to access the `Inner`:  
   `val inner = Outer().Inner()`  
   or by instantiating a property of the Outer class with the Inner class.
 - An inner class is always tied to a specific instance of the outer class.

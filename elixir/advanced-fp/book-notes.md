@@ -430,7 +430,7 @@
 
   # lib/fun_park/fast_pass.ex
   # FastPass is special because it defines `Ord` by a `DateTime`, which is 
-  # just another struct which needs it's own implementation of the protocol.
+  # just another struct which needs its own implementation of the protocol.
   # `DateTime.compare/2` is already a library function that understand time.
   # We just have to deal with its return values of `:gt/:lt/:eq`.
   defimpl FunPark.Ord, for: FunPark.FastPass do
@@ -454,7 +454,7 @@
 - Note that the match clause would be easier to express without `match` as:
   `DateTime.compare(a, b) in [:lt, :eq]`, but this displays that you can
   match on x (which matches anything) and then in a when clause make sure that
-  it is in the list `[:lt, :gt]`.
+  it is in the list `[:lt, :eq]`.
 - Again we see *projection*, mapping a complex structure to a simpler one
   before applying logic.
 - Just so you know, Elixir's default comparison operators compare structs
@@ -747,7 +747,7 @@
 ## Chapter 4 - Combine with Monoids
 
 - Many simple comparison problems are actually combination problems. Who is
-  first out of omeone with a FastPass, a VIP, and a rider with accessibility
+  first out of someone with a FastPass, a VIP, and a rider with accessibility
   needs. With *monoids* we get a reusable abstraction to explicitly combine.
 - A *semigroup* defines how elements combine and satisfies two rules:
   - Associativity: `a + (b + c) = (a + b) + c`. Grouping doesn't change result.
@@ -2299,14 +2299,14 @@
   defimpl FunPark.Ord, for: FunPark.Monad.Maybe.Nothing do
     alias FunPark.Monad.Maybe.{Just, Nothing}
 
-    def lt?(%Nothing{}, %Nothing{}), do: true
-    def lt?(%Nothing{}, %Just{}), do: false
+    def lt?(%Nothing{}, %Nothing{}), do: false
+    def lt?(%Nothing{}, %Just{}), do: true
     def le?(%Nothing{}, %Nothing{}), do: true
     def le?(%Nothing{}, %Just{}), do: true
     def gt?(%Nothing{}, %Nothing{}), do: false
     def gt?(%Nothing{}, %Just{}), do: false
-    def ge?(%Nothing{}, %Nothing{}), do: false
-    def ge?(%Nothing{}, %Just{}), do: true
+    def ge?(%Nothing{}, %Nothing{}), do: true
+    def ge?(%Nothing{}, %Just{}), do: false
   end
 
   # We need to lift `Eq` and `Ord` to work in our context in order to 
@@ -2323,7 +2323,7 @@
         %Just{}, %Nothing{} -> false
       end,
       not_eq?: fn
-        %Just{value: v1}, %Just{value: v2} -> custom_eq.not_eq?(v1, v2)
+        %Just{value: v1}, %Just{value: v2} -> custom_eq.not_eq?.(v1, v2)
         %Nothing{}, %Nothing{} -> false
         %Nothing{}, %Just{} -> true
         %Just{}, %Nothing{} -> true
@@ -2350,14 +2350,14 @@
       gt?: fn
         %Just{value: v1}, %Just{value: v2} -> custom_ord.gt?.(v1, v2)
         %Nothing{}, %Nothing{} -> false
-        %Nothing{}, %Just{} -> true
-        %Just{}, %Nothing{} -> false
+        %Nothing{}, %Just{} -> false
+        %Just{}, %Nothing{} -> true
       end,
       ge?: fn
         %Just{value: v1}, %Just{value: v2} -> custom_ord.ge?.(v1, v2)
         %Nothing{}, %Nothing{} -> true
-        %Nothing{}, %Just{} -> true
-        %Just{}, %Nothing{} -> false
+        %Nothing{}, %Just{} -> false
+        %Just{}, %Nothing{} -> true
       end,
     }
   end

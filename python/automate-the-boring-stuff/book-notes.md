@@ -27,7 +27,7 @@ logging.critical("The program is unable to recover!")
 ```
 
 * As the book points out, using `logging` is superior to debugging with print. For one, when you are done with print debugging you have to go back and remove the print statements for debugging while keeping those for necessary program output. With `logging` messages, you just disable logging (or store it to a log) and leave program output alone.
-* Remember, `logging` messages are intended more for the programmer than the user. For error messages that the user should see, use a `print()` call. Also, you can disable all logging with `logging.disable(logging.CRITICAL`, and you can do it right after the `basicConfig` line to be program wide.
+* Remember, `logging` messages are intended more for the programmer than the user. For error messages that the user should see, use a `print()` call. Also, you can disable all logging with `logging.disable(logging.CRITICAL)`, and you can do it right after the `basicConfig` line to be program wide.
 
 ## Chapter 9 - Text Pattern Match with Regular Expressions
 
@@ -38,8 +38,7 @@ logging.critical("The program is unable to recover!")
 ```python
 import re
 from humre import *
-phone_regex_nonverbose = 
-r'((\d{3}|\(\d{3}\))?(\s|-|\.)?(\d{3})(\s|-|\.)(\d{4})(\s*(ext|x|ext\.)\s*(\d{2,5}))?)
+phone_regex_nonverbose = r'((\d{3}|\(\d{3}\))?(\s|-|\.)?(\d{3})(\s|-|\.)(\d{4})(\s*(ext|x|ext\.)\s*(\d{2,5}))?)'
 phone_regex = re.compile(r'''(
     (\d{3}|\(\d{3}\))?  # Area code
     (\s|-|\.)?  # Separator
@@ -61,6 +60,7 @@ phone_humre = group(
       zero_or_more(WHITESPACE),
       group(between(2, 5, DIGIT))
       )
+)
 ```
 
 - [Regex Review and Humre Introduction](./ch09/regex_review_and_humre.md)
@@ -72,7 +72,7 @@ phone_humre = group(
 - As long as one of the first two values in an expression are a Path object, you can use `/` to join paths or string folder names to paths.
 - `Path.cwd()` returns current working directory and `os.chdir()` changes directory.
 - `Path.home()` returns the home directory.
-- Use `os.makedirs('/Users/Lewis/git/books/python/new_dir'` to make a directory and all intermediate directories.
+- Use `os.makedirs('/Users/Lewis/git/books/python/new_dir')` to make a directory and all intermediate directories.
 - Instead us the `mkdir` method on a `Path` object to make a directory from a `Path` object. It only makes one directory unless you pass it `parents=True`.
 - The `is_absolute` method of a `Path` object tells you if a `Path` is absolute and the `absolute` method returns an absolute version of the `Path`.
 - A `Path` has various attributes representing parts of the filepath including `anchor`, `parent`, `name`, `stem`, and `suffix` plus `drive` on Windows. These are all strings except `parent` which is a path.
@@ -115,7 +115,7 @@ import zipfile
 with open('file1.txt', 'w', encoding='utf-8') as file_obj:
     file_obj.write('Hello' * 10000)
 with zipfile.ZipFile('example.zip', 'w') as example_zip:
-    example.zip.write('file1.txt', compress_type=zipfile.ZIP_DEFLATED, 
+    example_zip.write('file1.txt', compress_type=zipfile.ZIP_DEFLATED, 
                       compresslevel=9)
 ```
 
@@ -129,9 +129,9 @@ with zipfile.ZipFile('example.zip', 'w') as example_zip:
 - To upgrade to the latest version run `python -m pip install -U package_name` or to install a particular version use `python -m pip install package_name==1.17.4` for version 1.17.4.
 - Uninstall a package with `python -m pip uninstall package_name` and access help with `python -m pip --help`.
 - There are several useful variables that give your program information about itself.
-    - `__file__` contains the .py file''s path as a string and `Path(__file__)` will give you an object referring to your script.
+    - `__file__` contains the .py file's path as a string and `Path(__file__)` will give you an object referring to your script.
     - `sys.executable` contains the full path to the Python interpreter.
-    - `sys.version` contains the Python interpreter version and `sys.version_info.major`/`sys.version_info.minor` contain the major and minor version numbers of the Python interpreter (ex: For Python 3.13.1, major is 3 and minor is 13). Also `list(sys.version_info)` returns `[3, 13, 1 'final', 0].
+    - `sys.version` contains the Python interpreter version and `sys.version_info.major`/`sys.version_info.minor` contain the major and minor version numbers of the Python interpreter (ex: For Python 3.13.1, major is 3 and minor is 13). Also `list(sys.version_info)` returns `[3, 13, 1, 'final', 0]`.
     - `os.name` contains `nt` on Windows as `posix` on Mac/Linux.
     - `sys.platform` is more specific and contains `win32`, `darwin`, or `linux`.
     - The [platform module](https://docs.python.org/3/library/platform.html) contains highly specific OS version and CPU type information.
@@ -148,14 +148,14 @@ with zipfile.ZipFile('example.zip', 'w') as example_zip:
 - If you call `python3 yourScript.py hello world` then `sys.argv` contains `['yourScript.py', 'hello world']`.
 - If you are going to handle a lot of command line arguments, use `argparse` [documentation](https://docs.python.org/3/library/argparse.html). It's equivalent to `Flag` in Go. For something more like Cobra, use either [Click](https://click.palletsprojects.com/en/stable/) which is decorator based or [Typer]() which uses type hints.
 - There isn't a universal Python equivalent to Viper, but [Dynaconf](https://www.dynaconf.com) handles multilayered configuration and [python-dotenv](https://pypi.org/project/python-dotenv/) is good for simpler cases.
-- `pyperclip.copy()` puts a string on the clipboard and `pyperclip.pase()` fetches the clipboard contents as a string. It needs to be installed via `pip` and requires `xclip` on Linux.
+- `pyperclip.copy()` puts a string on the clipboard and `pyperclip.paste()` fetches the clipboard contents as a string. It needs to be installed via `pip` and requires `xclip` on Linux.
 - You can produce colorful terminal output with `Bext` (installed via pip). It only works in terminal windows and gives you `bext.fg('red')` and `bext.bg('green')` commands to set foreground and background colors of the next print. `bext.bg('reset')` makes text normal again. It contains other features: `bext.clear()` to clear the screen, `bext.width()` and `bext.height()` to return current width (in columns) and height (in rows) of the terminal window, `bext.hide()` and `bext.show()` to show and hide the cursor, `bext.title(text)` to set the title bar to a text string, `bext.goto(x, y)` to move the cursor where 0, 0 is the top-left, and `bext.get_key()` which waits for any key and returns the key pressed like a single-key version of `input()`.
 - You can clear the screen without Bext with this one-liner:
 
 ```python
 import os
 def clear():
-    os.system('cls' if os.name == 'n' else 'clear')
+    os.system('cls' if os.name == 'nt' else 'clear')
 ```
 
 - `playsound3.playsound('hello.mp3')` will play an audiofile if you install `playsound3` via pip.
@@ -196,14 +196,14 @@ def clear():
         #!/path/to/your/project/.venv/bin/python
         ```
 
-- `pyinstaller` (installed via pip) let's you turn a .py script into a standalone executable with `python -m PyInstaller --onefile yourScript.py`, but you must run PyInteraller on the OS you want the executable to run on. [PyInstaller Documentation](https://pyinstaller.org/en/stable/).
+- `pyinstaller` (installed via pip) lets you turn a .py script into a standalone executable with `python -m PyInstaller --onefile yourScript.py`, but you must run PyInteraller on the OS you want the executable to run on. [PyInstaller Documentation](https://pyinstaller.org/en/stable/).
 
 ## Chapter 13 - Web Scraping
 
-- The `webbrowser` module in the standard library does one thing, `webbrowser.open('https://inventwithpython.com/'` will open the site in a new tab.
+- The `webbrowser` module in the standard library does one thing, `webbrowser.open('https://inventwithpython.com/')` will open the site in a new tab.
 - The `requests` module (installed with pip) lets you download files from the web
-- `requests.get(url)` returns a `response` object with fiels such as `response.status.code` which you can compare to `requests.codes.ok` and `response.text` which contains the entire response body.
-- Rather than checking the response code, you can call `response.raise_for_status()` to raise an `HTTPEerror` exception if the connection failed. It does nothing if the download was successful.
+- `requests.get(url)` returns a `response` object with fields such as `response.status_code` which you can compare to `requests.codes.ok` and `response.text` which contains the entire response body.
+- Rather than checking the response code, you can call `response.raise_for_status()` to raise an `HTTPError` exception if the connection failed. It does nothing if the download was successful.
 
 ```python
 import requests
@@ -216,7 +216,7 @@ except Exception as exc:
     print(f'There was a problem: {exc}')
 ```
 
-- When saving a web page to a file, you should `open` it in `wb` (write binary) mode so preserve encoding. You can also use the `Response` object's `iter_content() method to work a line at a time.
+- When saving a web page to a file, you should `open` it in `wb` (write binary) mode to preserve encoding. You can also use the `Response` object's `iter_content()` method to work a line at a time.
 
 ```python
 import requests
@@ -231,7 +231,7 @@ with open('RomeoAndJuliet.txt', 'wb') as play_file:
 - Don't use regex's to parse html; use an HTML modules such as `bs4`.
 - You can right click or Ctrl+click to Inspect Element to see a webpage element source, then right click on the element in the developer console and select `Copy -> CSS Selector` to get the CSS Selector to pass to Beautiful Soup's `select()` method or Selenium's `find_element()` method.
 - Use `beautifulsoup4` to install Beautiful Soup via `pip` but `import bs4`.
-- The `bs4.BeautifulSoup()` function takes a string containing HTML and returns a a `BeautifulSoup` object.
+- The `bs4.BeautifulSoup()` function takes a string containing HTML and returns a `BeautifulSoup` object.
 - You can use `requests` to fetch a `response.text` or open a file on your hard drive.
 - `bs4.select()` takes a CSS selector and returns a list of `Tag` object which represent HTML elements.
 
@@ -240,10 +240,10 @@ import bs4
 example_file = open('example3.html')
 example_soup = bs4.BeautifulSoup(example_file.read(), 'html.parser')
 elems = example_soup.select('#author')  # elems is a list of Tag objects
-print(elems[0].gettext())               # elems[0] is a Tag with gettext method
+print(elems[0].get_text())              # elems[0] is a Tag with get_text method
 ```
 
-- `Tag` elements have `gettext` to get the text value and `attrs` with all HTML attributes as a dictionary. They can be passed to `str` to show the HTML tags they represent. The `get` method allows you to pass an attribute to access values.
+- `Tag` elements have `get_text` to get the text value and `attrs` with all HTML attributes as a dictionary. They can be passed to `str` to show the HTML tags they represent. The `get` method allows you to pass an attribute to access values.
 
 ```python
 # searchpypi.py - Opens several search results on pypi.org
@@ -255,8 +255,8 @@ res = requests.get('https://pypi.org/search/?1=' + ' '.join(sys.argv[1:]))
 res.raise_for_status()
 
 # Retrieve top search result links.
-soup = bs4.BeautifulSoup(res.text, "parser.html")
-# Open a browser tab for reach result.
+soup = bs4.BeautifulSoup(res.text, "html.parser")
+# Open a browser tab for each result.
 link_elems = soup.select('.package-snippet') 
 num_open = min(5, len(link_elems))
 for i in range(num_open):
@@ -291,7 +291,7 @@ for i in range(num_open):
     - `is_enabled()` - For input elements, returns `True` if the element is enabled.
     - `is_selected()` - For checkbox or radio button elements, returns `True` if the element is selected.
     - `location` - A dictionary with 'x' and 'y' keys for the position of the element on the page.
-    - `size` - A dictionary with 'width' and 'height' keys for the size of the element o the page.
+    - `size` - A dictionary with 'width' and 'height' keys for the size of the element on the page.
 
 ```python
 from selenium import webdriver
@@ -314,7 +314,7 @@ password_elem.submit()
 - If you `from selenium.webdriver.common.keys import Keys` you can use a variety of key presses with `send_keys`:
     - `Keys.ENTER, Keys.PAGE_UP, Keys.DOWN, Keys.RETURN, Keys.ESCAPE, Keys.LEFT`
     - `Keys.HOME, Keys.BACK_SPACE, Keys.RIGHT, Keys.END, Keys.DELETE, Keys.TAB`
-    - `Keys.PAGE_DOWN, Keys.Up, Keys.F1 to Keys.F12`
+    - `Keys.PAGE_DOWN, Keys.UP, Keys.F1 to Keys.F12`
 
 ### Playwright
 
@@ -324,28 +324,28 @@ password_elem.submit()
 ```python
 from playwright.sync_api import sync_playwright
 with sync_playwright() as playwright:
-    browser = playwright.figrefox.launch()
+    browser = playwright.firefox.launch()
     page = browser.new_page()
-    page.goto('https://autbor.com/example3.html')
+    page.goto('https://author.com/example3.html')
     print(page.title())
     browser.close()
 ```
 
-- Use `playwright.chromium.launch()` or `playwright.webkit.launch()` to use Chrome of Safari instead.
+- Use `playwright.chromium.launch()` or `playwright.webkit.launch()` to use Chrome or Safari instead.
 - Playwright is harder to debug since it uses headless mode and works in a with block, but you can interact with it at a REPL like:
 
 ```python
 from playwright.sync_api import sync_playwright
-playwright = sync_platwright().start()
+playwright = sync_playwright().start()
 browser = playwright.firefox.launch(headless=False, slow_mo=50)
 page = browser.new_page()
-page.goto('https://autbor.com/example3.html')
+page.goto('https://author.com/example3.html')
 browser.close()
 playwright.stop()
 ```
 
 - The `Page` object returned by `browser.new_page()` has a number of methods for basic browser functions in addition to `goto` such as `page.go_back()`, `page.go_forward()`, `page.reload()`, and `page.close()`.
-- The `Page` object also has ways to find elements on the page called *locators* which return `Locator` objects. If the element you specified doesn't exist, Playwright pauses for 30 seconds while it waits for the element to appear. To force it to check immediately instead of timing out, you can call `is_visible()` on the `Locator`. You can also call `page.query_selector('selector')` where *selector* is a string of the element's CSS of XPath selector and it immediately returns, returning `None` if it found no matches.
+- The `Page` object also has ways to find elements on the page called *locators* which return `Locator` objects. If the element you specified doesn't exist, Playwright pauses for 30 seconds while it waits for the element to appear. To force it to check immediately instead of timing out, you can call `is_visible()` on the `Locator`. You can also call `page.query_selector('selector')` where *selector* is a string of the element's CSS or XPath selector and it immediately returns, returning `None` if it found no matches.
     - `page.get_by_role(role,name=label)`- elements by their role and optionally their *label*.
     - `page.get_by_text(text)` - elements that contain *text* as part of their inner text.
     - `page.get_by_label(label)`- elements with matching \<label\> text as *label*.
@@ -355,12 +355,12 @@ playwright.stop()
 - `Locator` objects have a variety of methods.
     - `get_attribute(name)` - returns the value of an element's *name* attribute, such as 'https://nostarch.com' for the `href` attribute in an a element.
     - `count()` - returns an integer of the number of matching elements in this `Locator`.
-    - `nth(index)` - returns a `Locator` of the matching element by index. For example `nth(3)` returns the four matching element.
+    - `nth(index)` - returns a `Locator` of the matching element by index. For example `nth(3)` returns the fourth matching element.
     - `first` - returns the `Locator` of the first matching element.
     - `last` - returns the `Locator` of the last matching element.
     - `all()` - returns a list of `Locator` objects for each matching element.
     - `inner_text()` - returns the text within the element, such as `'hello'` in `<b>hello</b>`.
-    - `inner_html()` - returns the html source within the element, such as `'<b>hello</b>' in `<b>hello</b>.
+    - `inner_html()` - returns the html source within the element, such as `'<b>hello</b>'` in `<b>hello</b>`.
     - `click()` - simulates a click on the element.
     - `is_visible()` - returns `True` if the element is visible.
     - `is_enabled()` - for input elements, returns `True` if the element is enabled.
@@ -373,7 +373,7 @@ from playwright.sync_api import sync_playwright
 with sync_playwright() as playwright:
     browser = playwright.firefox.launch(headless=False, slow_mo=50)
     page = browser.new_page()
-    page.goto('https://autbor.com/example3.html')
+    page.goto('https://author.com/example3.html')
     elems = page.locator('p')
     print(elems.nth(0).inner_text())
     print(elems.nth(0).inner_html())
@@ -386,7 +386,7 @@ from playwright.sync_api import sync_playwright
 playwright = sync_playwright().start()
 browser = playwright.firefox.launch(headless=False, slow_mo=50)
 page = browser.new_page()
-page.goto('https://autbor.com/example3.html')
+page.goto('https://author.com/example3.html')
 page.click('input[type=checkbox]')  # Checks the checkbox
 page.click('input[type=checkbox]')  # Unchecks the checkbox
 page.click('a')     # Clicks the link
@@ -408,7 +408,7 @@ from playwright.sync_api import sync_playwright
 playwright = sync_playwright().start()
 browser = playwright.firefox.launch(headless=False, slow_mo=50)
 page = browser.new_page()
-page.goto('https://autbor.com/example3.html')
+page.goto('https://author.com/example3.html')
 page.locator('#login_user').fill('your_username_here')
 page.locator('#login_pass').fill('your_password_here')
 page.locator('input[type=submit]').click()
@@ -423,7 +423,7 @@ from playwright.sync_api import sync_playwright
 playwright = sync_playwright().start()
 browser = playwright.firefox.launch(headless=False, slow_mo=50)
 page = browser.new_page()
-page.goto('https://autbor.com/example3.html')
+page.goto('https://author.com/example3.html')
 page.locator('html').press('End')   # Scrolls to bottom
 page.locator('html').press('Home')  # Scrolls to top
 browser.close()
@@ -444,14 +444,14 @@ playwright.stop()
 
 ## Chapter 14 - Excel Spreadsheets
 
-- The `openpxyl` module (available from pip) let's you read and modify Excel spreadsheet files. [Openpxl Documentation](https://openpyxl.readthedocs.io/en/stable/).
-- Open a file with `wb = openpxl.load_workbook('example3.xlsx')`, get a lists of sheets with `wb.sheetnames`, access a sheet with `sheet = wb['Sheet1']` or `sheet = wb.active` for the active sheet, then access cells with `sheet['A1'].value`. You can find the row, column, and value of a cell with `c = sheet['B1']`: `print(f'Row {c.row}, Column {c.column} is {c.value}`. There is also a `c.coordinate` that tells you it is cell 'B1'. You can also get a cell with `c = sheet.cell(row=1, column=2)` instead of 'B1' which works well with `range`. Note that `cell` takes the integer 2 for column and not the letter 'B'.
+- The `openpyxl` module (available from pip) lets you read and modify Excel spreadsheet files. [openpyxl Documentation](https://openpyxl.readthedocs.io/en/stable/).
+- Open a file with `wb = openpyxl.load_workbook('example3.xlsx')`, get a lists of sheets with `wb.sheetnames`, access a sheet with `sheet = wb['Sheet1']` or `sheet = wb.active` for the active sheet, then access cells with `sheet['A1'].value`. You can find the row, column, and value of a cell with `c = sheet['B1']`: `print(f'Row {c.row}, Column {c.column} is {c.value}`. There is also a `c.coordinate` that tells you it is cell 'B1'. You can also get a cell with `c = sheet.cell(row=1, column=2)` instead of 'B1' which works well with `range`. Note that `cell` takes the integer 2 for column and not the letter 'B'.
 - A worksheet object has a `max_row` and `max_column` attribute. Both are numeric.
-- You can use `openpxyl.utils.get_column_letter(num)` to convert numbers to letters and `openpxyl.utils.column_index_from_string('letter')` for vice versa:w
+- You can use `openpyxl.utils.get_column_letter(num)` to convert numbers to letters and `openpyxl.utils.column_index_from_string('letter')` for vice versa:
 - You can takes slices of sheets like `sheet['A1':'C3']` and interate over them:
 
 ```python
-import openpxyl
+import openpyxl
 wb = openpyxl.load_workbook('example3.xlsx')
 for row_of_cell_objects in sheet['A1':'C3']:
     for cell_obj in row_of_cell_objects:
@@ -460,11 +460,11 @@ for row_of_cell_objects in sheet['A1':'C3']:
 ```
 
 - The above will print a row at a time: A1-C1, then A2-C2, then A3-C3
-- You can also loop over all the cell objects in a column with `for cell_obj in list(sheet.columns)[1]:`. A sheet also has `sheet.rows` which is list-like and can be forced into a `list`. The `rows` and `columns` attribute is only indexable when passed to list(), and they both give us a list of tuples containing `Cell` objects. `list(sheet.rows) would give us all seven rows of three columns each for our example spreadsheet.
+- You can also loop over all the cell objects in a column with `for cell_obj in list(sheet.columns)[1]:`. A sheet also has `sheet.rows` which is list-like and can be forced into a `list`. The `rows` and `columns` attribute is only indexable when passed to list(), and they both give us a list of tuples containing `Cell` objects. `list(sheet.rows)` would give us all seven rows of three columns each for our example spreadsheet.
 
 ```python
 #!/usr/bin/env python
-# readCensusExcel.py - Tabulates county populatation and cenus tracks
+# readCensusExcel.py - Tabulates county population and census tracks
 
 import pprint
 
@@ -530,11 +530,11 @@ for row_num in range(2, sheet.max_row + 1):  # Skip the first row.
 wb.save("updatedProduceSales3.xlsx")
 ```
 
-- To customize font sytles in cells, `from openpyxl.styles import Font`, then you can set `sheet['A1'].font = Font(size=24, italic=True)`. Font takes `name`(string), `size` (int), `bold`, and `italic` (both boolean). You can assign your `Font` object to a variable and then assign the variable to any cell `font` attribute.
+- To customize font styles in cells, `from openpyxl.styles import Font`, then you can set `sheet['A1'].font = Font(size=24, italic=True)`. Font takes `name` (string), `size` (int), `bold`, and `italic` (both boolean). You can assign your `Font` object to a variable and then assign the variable to any cell `font` attribute.
 - You can assign formulas to cells like `sheet['B9'] = '=SUM(B1:B8)'`
 - A worksheet has `row_dimensions` and `col_dimensions` that control row heights and column widths. You access values by numerically indexing into the `row_dimensions` and using a column letter to index into `col_dimensions`.
 - A worksheet has `merge_cells` and `unmerge_cells` methods that take a range of cells
-- A workrsheet also has a `freeze_panes` attribute that you can set to a `Cell` object or a string of a cell's coordinates to freeze all rows above this cell and all columns to the left of it, but not the row and column of the cell itself. `sheet.freeze_panes = 'A2'` freezes Row 1 and no columns. Very useful with headers. 'B1' would freeze column A and no rows. Frozen columns and rows always are visible as you scroll through the data.
+- A worksheet also has a `freeze_panes` attribute that you can set to a `Cell` object or a string of a cell's coordinates to freeze all rows above this cell and all columns to the left of it, but not the row and column of the cell itself. `sheet.freeze_panes = 'A2'` freezes Row 1 and no columns. Very useful with headers. 'B1' would freeze column A and no rows. Frozen columns and rows always are visible as you scroll through the data.
 - `openpyxl` also supports creating `BarChart`, `LineChart`, `ScatterChart`, and `PieChart` objects. The book gives some quick details. It's a five step process. 
 
 ## Chapter 15 - Google Sheets
@@ -545,12 +545,12 @@ wb.save("updatedProduceSales3.xlsx")
 
 ## Chapter 16 - Sqlite Databases
 
-- SQLite is a full SQL relational database that can handle even TBs of data and multiple simultaneous read operations. It's primary drawback is that it can't efficiently handle hundreds or thousands of simultaenous write operations (for example, from a social media app). It also lacks permission settings and user roles; no GRANT or REVOKE statements. While columns do have data types, it's also of note that it doesn't strictly enforce column data types.
+- SQLite is a full SQL relational database that can handle even TBs of data and multiple simultaneous read operations. Its primary drawback is that it can't efficiently handle hundreds or thousands of simultaneous write operations (for example, from a social media app). It also lacks permission settings and user roles; no GRANT or REVOKE statements. While columns do have data types, it's also of note that it doesn't strictly enforce column data types.
 - You can name a sqlite file anything, but by convention we user the .db ending. The extension .sqlite is also common. The entire database lives in one file.
 - The first step is to connect: `conn = sqlite3.connect('example.db', isolation_level=None`. When you call `connect` it will create the file given if it does not exist or throw a `sqlite3.DatabaseError` if the file exists but is not a database. `isolation_level=None` is a second parameter to `connect` that tells it to autocommit. When you are finished with the `Connection` call `conn.close()`.
 - It is an unenforced convention that SQL keywords be all uppercases and identifiers such as table and column names be lowercase and separate multiple words with underscores.
 - If you try to run `CREATE TABLE` without `IF NOT EXISTS` and the table exists, the statement raises an `sqlite3.OperationalError`.
-- There are six SQLite datatypes: `NULL`, `INT` or `INTEGER`, `REAL`, `TEXT`, and `BLOB`. The datatypes aren't strictly enforced, but SQLite will try to cast data to the columns datatype if possible. However, if you create the table with the `STRICT` keyword at the end, SQlite will raise `sqlite3.IntegrityError` if you try to insert data of the wrong type within the table. A '42' in an 'INT' will be inserted as numeric 42, but a 'Hello' will raise an exception. `STRICT` was added in SQLite 3.37.0 which is used by Python 3.11 and later.
+- There are five SQLite datatypes: `NULL`, `INT` or `INTEGER`, `REAL`, `TEXT`, and `BLOB`. The datatypes aren't strictly enforced, but SQLite will try to cast data to the columns datatype if possible. However, if you create the table with the `STRICT` keyword at the end, SQLite will raise `sqlite3.IntegrityError` if you try to insert data of the wrong type within the table. A '42' in an 'INT' will be inserted as numeric 42, but a 'Hello' will raise an exception. `STRICT` was added in SQLite 3.37.0 which is used by Python 3.11 and later.
 - Notably missing are Boolean and date/time/datetime datatypes. Use an `INTEGER` for Boolean and store 1 or 0 and use a TEXT field for dates and store like `YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DD HH:MM:SS.SSS`, `HH:MM:SS`, or `HH:MM:SS.SSS`.
 - SQLite tables automatically create a `rowid` column contains a unique primary key integer.
 - The `sqlite_schema` table includes metadata about the database. You can get a list of tables with `conn.execute('SELECT name FROM sqlite_schema WHERE type="table"').fetchall()`. To obtain information about the columns in the 'cats' table run `conn.execute('PRAGMA TABLE_INFO(cats)').fetchall()`. The column information tuple lists column position (1 would be the second column in the table), name, datatype, whether or not the column is NOT NULL (0 is False, 1 is True), default value, and whether the column is the primary key (0 is False, 1 is True). These `fetchall()` examples assume we are at a REPL and just want to view a Tuple of results. In code you would store it or loop over the resulting rows.
@@ -558,10 +558,9 @@ wb.save("updatedProduceSales3.xlsx")
 - You can use `fetchall()` from the returned `Cursor` to fetch all the results of a query, or you can loop over rows returns in a `for` statement
 
 ```python
-import sqlite
+import sqlite3
 conn = sqlite3.connect('example.db', isolation_level=None)
-conn.execute('CREATE TABLE IF NOT EXISTS cats (name TEXT NOT NULL,
-    birthdate TEXT, fur TEXT, weight_kg REAL) STRICT')
+conn.execute('CREATE TABLE IF NOT EXISTS cats (name TEXT NOT NULL, birthdate TEXT, fur TEXT, weight_kg REAL) STRICT')
 conn.execute('INSERT INTO cats VALUES ("Zophie", "2021-01-24", "black", 5.6)')
 conn.execute('INSERT INTO cats VALUES ("Toby", "2021-05-07", "black", 6.8)')
 conn.execute('UPDATE cats SET fur = "gray tabby" WHERE name="Zophie"')
@@ -581,7 +580,7 @@ for row in conn.execute('SELECT * FROM cats'):
 - To avoid SQL injection, parameterize queries with `?` instead of concatenated strings or using Python format strings.
 - Always include a `WHERE` clause in your `UPDATE` queries to help avoid global updates. If you intend to do a global update, use `WHERE 1`.
 - In autocommit mode, a new transaction normally starts and commits everytime you run `execute()`, but you can instead run `conn.execute('BEGIN')` to start a new transaction and it will continue until you call `conn.commit()` or `conn.rollback()`.
-- To backup a database not in use, just copy the file or even programmatically `shutil.copy('example.db', 'backup.db')`. But if your database is always in use, you can connect to another database file (Ex: `backup_conn = sqlite3.connect('backup.db', isolatoin_level=None)`) and use `conn.backup(backup_conn)`
+- To backup a database not in use, just copy the file or even programmatically `shutil.copy('example.db', 'backup.db')`. But if your database is always in use, you can connect to another database file (Ex: `backup_conn = sqlite3.connect('backup.db', isolation_level=None)`) and use `conn.backup(backup_conn)`
 - SQLite supports all the standard SQL operations I haven't mentioned: `DELETE`, `ALTER`, `DROP`; all through `conn.execute`. `ALTER` however is somewhat limited, and it is common to create/copy/drop/rename:
 
 ```sql
@@ -594,12 +593,12 @@ ALTER TABLE new_table RENAME TO old_table;
 - To use foreign keys, you need to `conn.execute('PRAGMA foreign_keys = ON')` then you could `conn.execute('CREATE TABLE IF NOT EXISTS vaccinations (vaccine TEXT, date_administered TEXT, administered_by TEXT, cat_id INTEGER, FOREIGN KEY(cat_id) REFERENCES cats(rowid)) STRICT')`. The `PRAGMA` enforces not being able to insert for a non-existent foreign key value and not being able to delete a row in the foreign table while rows exists in the keyed table (you have to delete `vaccinations` before deleting a `cat`. You need to run the `PRAGMA` after calling `sqlite3.connect()` to get these safeties enforced for the session.
 - It is a good practice to always run `conn.execute('PRAGMA foreign_keys = ON')` after you call `sqlite3.connect()` and you could easily combine the two in a helper function.
 - You can create an in memory database with `memory_db_conn = sqlite3.connect(':memory:', isolation_level=None)` but you will still need a `file_db_conn` pointing at a file so you can save your in memory database with `memory_db_conn.backup(file_db_conn)`. It can be an amazing performance boost. However, if your program crashes without calling `backup()` you lose data, so you need to be careful to backup the db in your exception handling.
-- You can call `iterdump()` on your `Connection` object to generate the text of t he SQLite queries needed to re-create the database.
+- You can call `iterdump()` on your `Connection` object to generate the text of the SQLite queries needed to re-create the database.
 
 ```python
 import sqlite3
 conn = sqlite3.connect('sweigartcats.db', isolation_level=None)
-with open('sweigartcats-queriestxt', 'w', encoding='utf-8') as fileObj:
+with open('sweigartcats-queries.txt', 'w', encoding='utf-8') as fileObj:
     for line in conn.iterdump():
         fileObj.write(line + '\n')
 ```
@@ -643,8 +642,8 @@ with open(TEXT_FILENAME, "w", encoding="utf-8") as file_obj:
 
 - You can clean up text by feeding it through an LLM with a prompt such as: "The following is text extracted from several pages of a PDF of a book on recursive algorithms. Clean up this text. By this, I mean put paragraphs on a single, separate line. Also remove the footer and header text from each page. Also get rid of the hyphens at the end of each line for words split up across the line. Do not make any spelling, grammar corrections, or rewording. Here is the text:"
 - If you don't want to use an LLM, there are [pypdf Post-processing Tips](https://pypdf.readthedocs.io/en/latest/user/post-processing-in-text-extraction.html).
-- In addition to `PdfReader`, `pypdf` has `PdfWriter`. However, `PdfWriter` is limited to copying, merging, cropping, and transforming pages f rom other PDFs into new ones.
-- `append()` method adds pages to the end of the new pdf, where `merge()` has an additional integer as the first argument that specifies where to insert the pages. `writer.merge(2, 'Recursion_Chapter1.pdf', (0, 5))` copies pages 0-4 and inserts them at index 2(after the third page). The original page at index 2 and all pages afterwards get shifted back.
+- In addition to `PdfReader`, `pypdf` has `PdfWriter`. However, `PdfWriter` is limited to copying, merging, cropping, and transforming pages from other PDFs into new ones.
+- `append()` method adds pages to the end of the new pdf, where `merge()` has an additional integer as the first argument that specifies where to insert the pages. `writer.merge(2, 'Recursion_Chapter1.pdf', (0, 5))` copies pages 0-4 and inserts them at index 2 (after the third page). The original page at index 2 and all pages afterwards get shifted back.
 - `Page` objects have a `rotate()` method that you pass either 90, 180, or 270 to rotate clockwise or -90, -180, or -270 to rotate counterclockwise.
 - You can also append pages, add watermarks and overlays, encrypt and decrypt pdf's, and combine select pages from many pdfs into a single document. Review the chapter in the book or lookup `pypdf` documentation if you need to do more complex pdf tasks.
 
@@ -697,7 +696,7 @@ for row in example_dict_reader:
 
 ### XML
 
-- Python has `xml.dom`, `xml.sac`, and `xml.etree.ElementTree` modules for handling XML text. DOM and ElementTree modules read the entire file into memory at once where SAX reads the XML file as a stream of elements and is more suitable for larger files.
+- Python has `xml.dom`, `xml.sax`, and `xml.etree.ElementTree` modules for handling XML text. DOM and ElementTree modules read the entire file into memory at once where SAX reads the XML file as a stream of elements and is more suitable for larger files.
 
 ```python
 import xml.etree.ElementTree as ET
@@ -708,7 +707,7 @@ for elem in root.iter():
 ```
 
 - [ElementTree Documentation](https://docs.python.org/3/library/xml.etree.elementtree.html)
-- There is also an `xmltodict` module to convert xml to a Python dictionary. See [G
+- There is also an `xmltodict` module to convert xml to a Python dictionary.
 
 - `Element` objects have `tag` and `text` attributes
 
@@ -751,21 +750,21 @@ with open("pyproject.toml", "rb") as f:
 ### Date and Time
 
 - `time.time()` returns the epoch timestamp, and `time.sleep(seconds)` which pauses a program.
-- `time.c_time()` gives a human readable string of time, and `time.c_time(timestamp)` gives  human readable string of any Unix timestamp.
+- `time.ctime()` gives a human readable string of time, and `time.ctime(timestamp)` gives a human readable string of any Unix timestamp.
 - For more general use of time, use the `datetime` library. `datetime.datetime.now()` returns a `datetime.datetime`. You can assign it to `dt` and access `dt.year`, `dt.month`, and `dt.day` along with `dt.hour`, `dt.minute`, and `dt.second`. You can create a `datetime.datetime` for any moment by passing it the year, month, day, hour, and second like `datetime.datetime(2026, 10, 21, 16, 29, 0)`. You can convert a epoch timestamp with `datetime.datetime.fromtimestamp(timestamp)`. Time will be in the local timezone. `datetime.datetime` objects can be compared with comparison operators and the greater value comes after the lesser.
 - `datetime` also provides a `timedelta` method so you can calculate `delta = datetime.timedelta(days=11, hours=10, minutes=9, seconds=8)`. A timedelta has `days`, `seconds`, `microseconds` attributes and a `total_seconds()` method. `str(delta)` will return "11 days, 10:09:08". You can use arithmetic operators between `datetime` values and `timedelta` objects and between two `timedelta`. A `timedelta` does not include `months` and `years` arguments since these vary in duration.
 - Use the `strftime()` method to display a `datetime` object as a string. For example `datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')` will format now like YYYY/MM/DD HH:mm:ss. For more formatting options, see [strftime.org](https://www.bairesdev.com/tools/strftime/). The f is for format.
-- You can convert a string to a datetime with `datetime.datetime.strptime('Octobr 21, 2026', '%B %d, %Y')`. The p is for Python.
+- You can convert a string to a datetime with `datetime.datetime.strptime('October 21, 2026', '%B %d, %Y')`. The p is for Python.
 
 ### Launching Programs
 
-- `subprocess.run(['C:\\Windows\\System32\\calc.exe'])` will run launch a calculator on Windows, blocking until Calc exits
+- `subprocess.run(['C:\\Windows\\System32\\calc.exe'])` will launch a calculator on Windows, blocking until Calc exits
 - `subprocess.run(['/usr/bin/gnome-calculator'])` will do the same in Ubuntu
 - `subprocess.run(['open', '/System/Applications/Calculator.app'])` will in Mac OS X
 - `subprocess.Popen(cmd_list)` works like `run` but doesn't wait on the program to exit
 - `subprocess.Popen(cmd_list)` returns a `Popen` object with `poll()` and `wait()` methods. `poll()` returns `None` if the process is still running and the exit code if it has terminated. `wait()` does likewise but blocks until the process has terminated rather than returning `None`. You can call the `kill()` method of the `Popen` object to kill the process.
 - `run(cmd_list)` and `Popen(cmd_list)` take a list where the first value is the executable and any other values are command line arguments to the program you want to launch.
-- `proc = subprocess.run['ping', '-c', '4', 'nostarch.com'], capture_output=True, text=True` will capture the output of `ping` in `proc.stdout`
+- `proc = subprocess.run(['ping', '-c', '4', 'nostarch.com'], capture_output=True, text=True)` will capture the output of `ping` in `proc.stdout`
 - You can open files in their default application by launching `start` on Windows with the file as argument and `open` on MacOS or Linux with the file as argument. On windows you also need to pass `shell=True`
 - To run a program at a specific time, you are best off using Task Scheduler on Windows, launchd on MacOS, or cron on Linux.
 
@@ -781,7 +780,7 @@ requests.post('https://ntfy.sh/YourTopicHere', 'Hello, world!')
 time.sleep(1)
 requests.post('https://ntfy.sh/YourTopicHere', 'The rent is too high!',
               headers={'Title':'Important: Read this!', 
-                       'Tags': 'warning,nuetraol-face', 'Priority':'5'})
+                       'Tags': 'warning,neutral_face', 'Priority':'5'})
 ```
 
 - It is also possible to poll a ntfy topic for new messages with a Python app

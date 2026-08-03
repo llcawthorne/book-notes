@@ -202,7 +202,7 @@ end
 
 - On success, `Integer.parse` returns `{parsed_number, remaining_text}`. On
   failure, it returns `:error`.
-- `= `is the match operator - it only does pattern matching, but matching a
+- `=` is the match operator - it only does pattern matching, but matching a
   bare variable against a value looks like assignment.
   `true` when arguments are equivalent and have the same type.
 - In Elixir, lists are *linked lists*. The last item is an empty list (`[]`).

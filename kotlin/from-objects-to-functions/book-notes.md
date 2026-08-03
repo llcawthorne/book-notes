@@ -545,7 +545,7 @@ You lose a lot of context without the intermediate steps.
 
       val app = startTheApplication(list)
       app.runScenario {
-          frank.cannotSeeTheList("gardening", it),
+          frank.cannotSeeTheList("gardening", it)
           bob.cannotSeeTheList("shopping", it)
       }
   }
@@ -593,7 +593,7 @@ You lose a lot of context without the intermediate steps.
     fun `List owners can see their lists`() {
         val app = startTheApplication(lists)
         app.runScenario(
-            frank.canSeeTheList("shopping", shoppingItems)
+            frank.canSeeTheList("shopping", shoppingItems),
             bob.canSeeTheList("gardening", gardenItems)
         )
     }
@@ -602,7 +602,7 @@ You lose a lot of context without the intermediate steps.
     fun `Only owners can see their lists`() {
         val app = startTheApplication(lists)
         app.runScenario(
-            frank.cannotSeeTheList("gardening")
+            frank.cannotSeeTheList("gardening"),
             bob.cannotSeeTheList("shopping")
         )
     }
@@ -1096,16 +1096,16 @@ You lose a lot of context without the intermediate steps.
   ```kotlin
   class ModifyAToDoListDDT: ZettaiDDT(allActions()) {
 
-      val ann by NamedActor(::ZettaiDDT(allActions()))
+      val ann by NamedActor(::ToDoListOwner)
 
       @DDT
       fun `The list owner can add new items`() = ddtScenario {
           setUp {
               ann.`starts with a list`("diy", emptyList())
           }.thenPlay(
-              ann.`can add #item to #listname`("paint the shelf", "diy")
-              ann.`can add #item to #listname`("fix the gate", "diy")
-              ann.`can add #item to #listname`("change the lock", "diy")
+              ann.`can add #item to #listname`("paint the shelf", "diy"),
+              ann.`can add #item to #listname`("fix the gate", "diy"),
+              ann.`can add #item to #listname`("change the lock", "diy"),
               ann.`can see #listname with #itemnames`("diy", listOf(
                   "fix the gate", "paint the shelf", "change the lock"))
           ).wip(LocalDate.of(2026, 7, 12), "Not implemented yet")
@@ -1815,7 +1815,7 @@ data class ListName internal constructor(val name: String) {
   2. The ability to collect all the audit data.
   3. The ability to reconstruct the state at a certain time in the past.
   4. The ability to easily create multiple different views of the same data.
-- The downsides of Event Sourcing are it's complexity and learning curve.
+- The downsides of Event Sourcing are its complexity and learning curve.
   Its complexity can also be a drawback where performance is critical,
   and it doesn't bring much benefit in domains where there is little business
   logic or we don't care much about the business logic.
@@ -1964,8 +1964,16 @@ data class ListName internal constructor(val name: String) {
   }
   ```
 
-- *Monoid* structure explains why DoorEvents compose cleanly and hints at a
-  fold-with-identity-seed pattern coming later.
+- All `DoorEvent`s share the same signature, `(Door) -> Door`, so they can be
+  composed with `andThen` into one bigger `DoorEvent`, and there's a do-nothing
+  `DoorEvent` — the identity function, `{ door -> door }` — that changes
+  nothing when composed in, exactly like the `else` branch above that just
+  hands back `aDoor` unchanged. A set of things with a combining operation
+  (`andThen`) and an identity element that operation leaves unchanged is a
+  *monoid*. That's exactly the shape `fold` needs: seed the accumulator with
+  the identity `DoorEvent`, then compose each event from a list onto it in
+  turn, and you end up with a single `DoorEvent` representing the whole
+  sequence, ready to apply to a `Door` once at the end.
 - Today's exercise that uses `fold` is a lot more straightforward, but a
   chance to see another sealed class. It's good preparation for folding
   up a list of events.
@@ -2586,7 +2594,7 @@ data class ListName internal constructor(val name: String) {
   a frozen image in time instead of an actually mutable piece of reality.
 - In Event Sourcing applications, it is a good practice to have events to
   revert other events so users can solve errors by themselves. If this is not
-  possible, we made want a special "reset" event that allows us to change the
+  possible, we may want a special "reset" event that allows us to change the
   state of the system. We want to avoid changing the data directly.
 - There are no good examples of fold in this chapter's exercises, so here
   is a finite state machine of an elevator that can break down.
@@ -2685,8 +2693,8 @@ data class ListName internal constructor(val name: String) {
 - We could be like GoLang and return pairs of (string, result) where string
   is empty when there's no error, but this leads to verbose and error prone
   code plus we still need to check for nullability before using the result.
-  It also forces us to represent all errors as strings when we migth want
-  to include a faulty `Reqeust`.
+  It also forces us to represent all errors as strings when we might want
+  to include a faulty `Request`.
 - The problem with exceptions is it removes the totality of our functions.
   We are declaring a function that returns say an `Email` but our code might
   give you an email or might throw an exception, failing its contract.
@@ -2726,14 +2734,14 @@ data class ListName internal constructor(val name: String) {
   // Rule 1: We can always combine two arrows.
   val anyString = randomString
   expectThat(identity(anyString)).isEqualTo(anyString)
-  // Rule 2: the order in which we combine arrows isn't import.
-  val l = anyString.length()
+  // Rule 2: the order in which we combine arrows isn't important.
+  val l = anyString.length
   val h = half(l) // divide by 2
-  val halfLength = ::length andThen ::half
+  val halfLength = String::length andThen ::half
   expectThat(halfLength(anyString)).isEqualTo(h)
   // Rule 3: there is always an identity arrow from a dot to itself
-  val halfLengthStr1 = (::length andThen ::half) andThen toString
-  val halfLengthStr2 = ::length andThen (::half andThen toString)
+  val halfLengthStr1 = (String::length andThen ::half) andThen ::toString
+  val halfLengthStr2 = String::length andThen (::half andThen ::toString)
   expectThat(halfLengthStr1(anyString)).isEqualTo(halfLengthStr2(anyString))
   ```
 
@@ -2748,7 +2756,7 @@ data class ListName internal constructor(val name: String) {
 
   ```kotlin
   data class Holder<T>(private val value: T)
-  ``````
+  ```
 
   It is helpful to think of `Holder<T>` not as a generic type but as
   a *type builder*. Basically, `Holder<Int>` and `Holder<String>` are both
@@ -2900,6 +2908,8 @@ data class ListName internal constructor(val name: String) {
           Person.parse(resp.bodyString()).asSuccess()
       else if (resp.status == NOT_FOUND)
           "$nickname not found!".asFailure()
+      else
+          resp.bodyString().asFailure()
   }
   ```
 
@@ -2933,7 +2943,7 @@ data class ListName internal constructor(val name: String) {
       val msg: String
   }
 
-  sealed class Outcome<out E : Outcome Error, out T> {
+  sealed class Outcome<out E : OutcomeError, out T> {
   
       fun <U> transform(f: (T) -> U): Outcome<E, U> =
           when (this) {
@@ -2943,11 +2953,11 @@ data class ListName internal constructor(val name: String) {
   }
 
   data class Success<T> internal constructor(val value: T):
-      Outcome<Nothing T>()
+      Outcome<Nothing, T>()
   data class Failure<E : OutcomeError> internal constructor(val error: E):
       Outcome<E, Nothing>()
 
-  fun <E : OutcomeError> T.asFailure: Outcome<E, Nothing> = Failure(this)
+  fun <T, E : OutcomeError> T.asFailure(): Outcome<E, Nothing> = Failure(this)
   fun <T> T.asSuccess(): Outcome<Nothing, T> = Success(this)
   fun <T:Any, E:OutcomeError> T?.failIfNull(error: E): Outcome<E, T>
       = this?.asSuccess() ?: error.asFailure()
@@ -2958,7 +2968,7 @@ data class ListName internal constructor(val name: String) {
   fun <T,E:OutcomeError> Outcome<E,T>.recover(recoverError: (E)->T): T =
       when (this) {
           is Success -> value
-          if Failure -> recoverError(error)
+          is Failure -> recoverError(error)
       }
   ```
 
@@ -2966,7 +2976,7 @@ data class ListName internal constructor(val name: String) {
 
   ```kotlin
   val template = readTextFile("MyTemplate.txt")
-      .recover { "hello {user_name}!" }`
+      .recover { "hello {user_name}!" }
 
   fun generatePage(request: Request): Response =
       request.parseJsonRequest()
@@ -3009,7 +3019,7 @@ data class ListName internal constructor(val name: String) {
   // So our ToDoListCommandHandler needs to return an `Outcome`.
   typealias ToDoListCommandOutcome = ZettaiOutcome<List<ToDoListEvent>>
 
-  class ToDoListCommandHandler(...): (ToDoListCommand) _> ToDoListCommandOutcome =
+  class ToDoListCommandHandler(...): (ToDoListCommand) -> ToDoListCommandOutcome {
   //...
       override fun invoke(command: ToDoListCommand): ToDoListCommandOutcome =
           when (command) {
@@ -3017,7 +3027,7 @@ data class ListName internal constructor(val name: String) {
   //...
       private fun CreateToDoList.execute(): ToDoListCommandOutcome {
 
-          val listState = entityRetriever.retrievByName(user, name) ?: InitialState
+          val listState = entityRetriever.retrieveByName(user, name) ?: InitialState
 
           return when (listState) {
               InitialState ->
@@ -3154,7 +3164,7 @@ data class ListName internal constructor(val name: String) {
   ```
 
 - The `RowId` can just be the `EntityId` or can be something more complicated.
-- Now we can cmomplete our `update` method:
+- Now we can complete our `update` method:
 
   ```kotlin
   typealias FetchStoredEvents<E> = (EventSeq) -> Sequence<StoredEvent<E>>
@@ -3359,7 +3369,7 @@ data class ListName internal constructor(val name: String) {
   named `ProjectionQuery` that wraps a function of type `(QueryRunner) -> T`.
   A functor gives us control over when the query is executed. We only want
   to run it when it's correct and at minimum the projections are up-to-date.
-  Functors allow us to separate technical infrastructure concerts from the
+  Functors allow us to separate technical infrastructure concerns from the
   business requirements.
 
   ```kotlin
@@ -3499,7 +3509,7 @@ data class ListName internal constructor(val name: String) {
 
 - The basic idea behind CQRS (what we just implemented) is to keep the
   read data model (query) separate from the write data model (command).
-  Event Sourcing and CQRS are often used together, but can appear apart.?
+  Event Sourcing and CQRS are often used together, but can appear apart.
 - And we're back with the elevators. That was a fun state machine, so here
   we are making projections.
 
@@ -3910,7 +3920,7 @@ data class ListName internal constructor(val name: String) {
   The `ContextProvider` doesn't require much elaboration, but the
   `ContextReader` has grown to 50 lines. So let's move back to our domain.
   We want our functor to store projections. We'll start with the types.
-  Note that we're reaturing a ContextReader with a Row inside and returning
+  Note that we're returning a ContextReader with a Row inside and returning
   Unit inside a ContextReader.
 
   ```kotlin
@@ -4037,7 +4047,7 @@ data class ListName internal constructor(val name: String) {
 
 ## Chapter 10 - Read Context to Handle Commands
 
-- Now that our ContextReader is a monad, we can combile read and write in the
+- Now that our ContextReader is a monad, we can combine read and write in the
   same transaction.
 
   ```kotlin
@@ -4050,7 +4060,7 @@ data class ListName internal constructor(val name: String) {
 
 - It is worth pointing out explicitly that all the database changes take place
   in the last line above. Until we run the ContextReader in a transaction, it is
-  simply maintaining a record of oepration we intend to carry out on the
+  simply maintaining a record of operation we intend to carry out on the
   database. We do still need to implement `readRow` and `writeRow`.
 
   ```kotlin
@@ -4127,7 +4137,7 @@ data class ListName internal constructor(val name: String) {
       fun fetchByEntity(entityId: EntityId): List<E>?
       fun fetchAfter(eventSeq: EventSeq): Sequence<StoredEvent<E>>
       fun retrieveIdFromNaturalKey(key: NK): EntityId?
-      fun store(newEvents: Iterable<E>): List<storedEvent <E>>
+      fun store(newEvents: Iterable<E>): List<StoredEvent<E>>
   }
 
   // After - ContextReader
@@ -4154,7 +4164,6 @@ data class ListName internal constructor(val name: String) {
               ToDoListEventsError("Operation failed: ${e.message}", e)
                   .asFailure()
           }
-      }
   }
 
   class EventStreamerInMemory : ToDoListEventStreamer<ToDoListInMemoryRef> {
@@ -4168,7 +4177,7 @@ data class ListName internal constructor(val name: String) {
   }
   ```
 
-- Next we implement `EventStreamerTx`, an implementation of the `EventStramer`
+- Next we implement `EventStreamerTx`, an implementation of the `EventStreamer`
   working with the database and transactions. Start with tests!
 
   ```kotlin
@@ -4229,7 +4238,6 @@ data class ListName internal constructor(val name: String) {
       TxReader { tx ->
           selectWhere(tx, condition, id).map(::rowToPgEvent)
       }
-  )
 
   class EventStreamerTx<E : EntityEvent, NK : Any>(
       private val table: PgEventTable,
@@ -4240,7 +4248,7 @@ data class ListName internal constructor(val name: String) {
       private fun pgEventsToEvents(pgEvents: List<StoredEvent<PgEvent>>) =
           pgEvents.map {
               StoredEvent(it.eventSeq, it.storedAt,
-                  eventParser.parseOfThrow(it.event))
+                  eventParser.parseOrThrow(it.event))
           }
 
       override fun fetchByEntity(entityId: EntityId): TxReader<List<E>> =
@@ -4263,7 +4271,7 @@ data class ListName internal constructor(val name: String) {
   }
 
   typealias ToDoListEventStreamerTx =
-          EventStramer<Transaction, ToDoListEvent, UserListName>
+          EventStreamer<Transaction, ToDoListEvent, UserListName>
 
   fun createToDoListEventStreamerOnPg(): ToDoListEventStreamerTx =
       EventStreamerTx(toDoListEventsTable, toDoListEventParser()) { natKey ->
@@ -4271,9 +4279,9 @@ data class ListName internal constructor(val name: String) {
       SELECT    entity_id
       FROM      todo_list_events
       WHERE     event_type = 'ListCreated'
-                and json_date ->> 'owner' = '${natKey.user.name}'
-                and json_data ->> 'name' = ${natKey.listName.name}'
-      """.trimIdent()
+                and json_data ->> 'owner' = '${natKey.user.name}'
+                and json_data ->> 'name' = '${natKey.listName.name}'
+      """.trimIndent()
   }
   ```
 
@@ -4406,8 +4414,8 @@ data class ListName internal constructor(val name: String) {
 
           val projection = buildListProjection(
               listOf(
-                  ListCreated(ToDoListId.mint(), user, listName1)
-                  ListCreated(ToDoListId.mint(), user, listName2)
+                  ListCreated(ToDoListId.mint(), user, listName1),
+                  ListCreated(ToDoListId.mint(), user, listName2),
                   ListCreated(ToDoListId.mint(), randomUser(), randomListName())
               )
           )
@@ -4508,9 +4516,8 @@ data class ListName internal constructor(val name: String) {
                               .runWith(ctx)
                       }
                   }
-              }.recover {
-                  println("Error during update! $it")
-              }
+          }.recover {
+              println("Error during update! $it")
           }
       }
 
@@ -4565,7 +4572,7 @@ data class ListName internal constructor(val name: String) {
                   }
               }
       }.recover {
-          println("Erro during update! $it")
+          println("Error during update! $it")
       }
   }
   ```
@@ -4659,7 +4666,7 @@ data class ListName internal constructor(val name: String) {
 - Events should be versioned with the version stored in the database. Read
   *Versioning in an Event Sourced System* by Greg Young for more on that.
   If an event can't be migrated to the new version, it's better to consider
-  the new event a completely new even type and stop using the old event. The
+  the new event a completely new event type and stop using the old event. The
   old event would be kept only for compatibility purposes.
 - Rather than migrating stored projections, it is easier to recreate them using
   events from the start and create a new table for the updated projection.
@@ -4800,7 +4807,7 @@ data class ListName internal constructor(val name: String) {
   // tooling.ZettaiActions.kt
   interface ZettaiActions : DomainActions<DdtProtocol> {
       // other methods...
-      fun renameList(user: User, oldName: ListName, newName: listName)
+      fun renameList(user: User, oldName: ListName, newName: ListName)
   }
 
   // commands.ToDoListCommand.kt
@@ -4824,7 +4831,7 @@ data class ListName internal constructor(val name: String) {
   data class HttpActions(val env: String = "local") : ZettaiActions {
       // other methods....
       private fun renameListForm(newName: ListName): Form =
-          listOf("newListName" to newList.name)
+          listOf("newListName" to newName.name)
 
       override fun renameList(
               user: User,
@@ -4834,7 +4841,7 @@ data class ListName internal constructor(val name: String) {
                   renameListUrl(user, oldName), renameListForm(newName))
           expectThat(response.status).isEqualTo(Status.SEE_OTHER)
       }
-  )
+  }
 
   // webserver.Routes.ks
   "/todo/{user}/{listname}/rename" bind POST to ::renameList
@@ -4852,7 +4859,8 @@ data class ListName internal constructor(val name: String) {
       return hub.handle(RenameToDoList(user, listName, newListName))
               .transform { Response(SEE_OTHER)
                             .header("Location", todoListPath(user, newListName)) }
-              .recovery { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+              .recover { Response(UNPROCESSABLE_ENTITY).body(it.msg) }
+  }
 
   // commands.ToDoListCommandHandler.kt
   class ToDoListCommandHandler<CTX>(
@@ -5234,7 +5242,7 @@ data class ListName internal constructor(val name: String) {
 
   fun nameTooShort(name: String): Outcome<ValidationError, String> =
       name.discardUnless { length >= 3 }
-          .failIfNull(ValidtaionError("Name is too short!"))
+          .failIfNull(ValidationError("Name is too short!"))
 
   fun nameTooLong(name: String): Outcome<ValidationError, String> =
       name.discardUnless { length <= 40 }
@@ -5264,7 +5272,6 @@ data class ListName internal constructor(val name: String) {
               is Failure<E> -> ??? a failure with first.error + other error
           }
       }
-  )
 
   // We would like to be able to pass a combining function to put the errors
   // together as one. But looking at this and the signature, it looks like
@@ -5461,7 +5468,7 @@ data class ListName internal constructor(val name: String) {
 
   // It doesn't look all that useful above, but it works. We're going to try
   // a function that takes two parameters, but we need to curry it first.
-  fun <A, B, R> ((A, B) -> R).curry()): (A) -> (B) -> R =
+  fun <A, B, R> ((A, B) -> R).curry(): (A) -> (B) -> R =
           { a -> { b -> invoke(a, b) } }
   fun <A, B, C, R> ((A, B, C) -> R).curry(): (A) -> (B) -> (C) -> R =
           { a -> { b -> { c -> invoke(a, b, c) } } }
@@ -5592,8 +5599,8 @@ data class ListName internal constructor(val name: String) {
   law simple states composing two functions and applying the composition
   should equal applying each function in sequence.
 - With monads we set up a chain of operations where each can influence the
-  next. With applicatives we cna execute the operations independently and then
-  combine the results. Applicatives are in a sense less power, but with monads
+  next. With applicatives we can execute the operations independently and then
+  combine the results. Applicatives are in a sense less powerful, but with monads
   the first failure would have prevented the others, so applicatives allow us
   to do something we cannot with monads. Not all applicatives are monads, but
   all monads are applicatives, because you can implement `andApply` and
@@ -5717,7 +5724,7 @@ data class ListName internal constructor(val name: String) {
 
   infix fun String.tag(value: String?): Pair<String, TemplateTag> =
       this to StringTag(value)
-  infix fun String.tag(value: List<TagMap): Pair<String, TemplateTag> =
+  infix fun String.tag(value: List<TagMap>): Pair<String, TemplateTag> =
       this to ListTag(value)
   infix fun String.tag(value: Boolean): Pair<String, TemplateTag> =
       this to BooleanTag(value)
@@ -5750,7 +5757,7 @@ data class ListName internal constructor(val name: String) {
       ).renderHtml("/html/single_list_page.xhtml")
 
   fun TagMap.renderHtml(fileName: String): ZettaiOutcome<HtmlPage> =
-      renderTemplatefromResources(fileName, this)
+      renderTemplatefromResource(fileName, this)
           .transform(Template::toString)
           .transform(::HtmlPage)
 
@@ -5932,7 +5939,7 @@ data class ListName internal constructor(val name: String) {
 
       fun <QP, QR> executeQuery(
           queryParams: ZettaiOutcome<QP>,
-          query: (QP) _> ZettaiOutcome<QR>
+          query: (QP) -> ZettaiOutcome<QR>
       ): ZettaiOutcome<Pair<QP, QR>> =
           queryParams.bind { qp -> query(qp).transform { qp to it } }
               .logIt()
@@ -6038,7 +6045,7 @@ data class ListName internal constructor(val name: String) {
       also {
           logger(
               transformFailure {
-                  LoggerError(it. request) // we log request on failure
+                  LoggerError(it, request) // we log request on failure
               }
           )
   }
@@ -6103,7 +6110,7 @@ data class ListName internal constructor(val name: String) {
       val desc: String,
       val kind: OperationKind,
       val user: User?,
-      val listName: ListName?)
+      val listName: ListName?
   )
 
   enum class OperationKind { Command, Query }
@@ -6149,7 +6156,7 @@ data class ListName internal constructor(val name: String) {
           ).toJson()
 
       // We don't know how to do JSON yet, so punting on this...
-      private fun LogEntry.toJson(): String = this.toString
+      private fun LogEntry.toJson(): String = this.toString()
   }
 
   // So how would we define a FileLogger now?
@@ -6164,7 +6171,7 @@ data class ListName internal constructor(val name: String) {
   private fun<T> ZettaiOutcome<T>.logIt(
       kind: OperationKind,
       description: String,
-      request: Requst,
+      request: Request,
       describeSuccess: (T) -> String
   ): ZettaiOutcome<T> =
       also {
@@ -6245,7 +6252,7 @@ data class ListName internal constructor(val name: String) {
 
       override fun JsonNodeObject.deserializeOrThrow() =
           LogContext(
-              description = +desc,
+              desc = +description,
               kind = +kind,
               user = +user,
               listName = +list_name,
@@ -6540,15 +6547,15 @@ enum class Pins(val number: Int) {
 
 ### A3 - A Pinch of Theory
 
-- A category is a mathematical construct onsisting of some dots, which are
-  called objects, and some arrows connecting them, call morphisms. These
-  morphisms must satisfy certain properties, include the existence of an
+- A category is a mathematical construct consisting of some dots, which are
+  called objects, and some arrows connecting them, called morphisms. These
+  morphisms must satisfy certain properties, including the existence of an
   identity morphism for each object, and the ability to compose morphisms in a
   way that's associative. We can consider a category as something similar to a
   set, but instead of being interested in its elements, we're mostly interested
   in how those elements relate to each other.
 - It is possible to create a category with all the types in a programming
-  language: the object are the different types, and the morphisms are pure
+  language: the objects are the different types, and the morphisms are pure
   total functions between two types, one as input and one as output. Most
   static-type computer languages form a Cartesian Closed-Category (CCC), which
   means they have terminal objects, binary products, and exponentiation. When

@@ -1,16 +1,16 @@
-module Exercises
-  ( lines',
-    words',
-    unlines',
-    unwords',
-    pad',
-    zip',
-    zipWith',
-    zip'',
-    sequence',
-    mapM',
-    mapM_',
-  )
+module Exercises (
+  lines',
+  words',
+  unlines',
+  unwords',
+  pad',
+  zip',
+  zipWith',
+  zip'',
+  sequence',
+  mapM',
+  mapM_',
+)
 where
 
 {-

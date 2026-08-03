@@ -50,8 +50,8 @@ if err := build.Run(); err != nil {
     os.Exit(1)
 }
 dir, err := os.Getwd() // check for err and t.Fatal if it's not nil
-cmdPath := filepath.Join (dir, binName)  // filepath is import "path/filepath"
-cmd := exec.Command(cmdPath, args, moreArgs) // exec is import "os/exec"
+cmdPath := filepath.Join (dir, binName)  // filepath is imported from "path/filepath"
+cmd := exec.Command(cmdPath, args, moreArgs) // exec is imported from "os/exec"
 if err := cmd.Run(); err != nil {
     t.Fatal(err)
 }
@@ -97,10 +97,10 @@ func getTask(r io.Reader, args ...string) (string, error) {
 * `ioutil.Readfile(inputFile string)` can read a file and returns `input, err` where `input` is returned as an array of bytes
 * `os.Remove(resultFile)` can be used to cleanup output files
 * Use `defer` with `os.Remove` to ensure cleanup on function completion
-* `ioutil.TempFile(dir, pattern)` can be used to create tempfiles  with Close() and Name() methods. Ex: `temp, err := ioutil.TempFile("", "mdp*.html")
+* `ioutil.TempFile(dir, pattern)` can be used to create tempfiles  with Close() and Name() methods. Ex: `temp, err := ioutil.TempFile("", "mdp*.html")`
 * You can pass in `bytes.Buffer` to capture output that would've gone to STDOUT if you define your parameter by the `io.Writer` interface
 * Use `Fprintln(out, "output")` when writing to an `io.Writer`
-* You get the value out of a buffer with it's `String` method
+* You get the value out of a buffer with its `String` method
 * You can `switch` on `runtime.GOOS` to provide OS specific functionality
 * `exec.LookPath(cmdName)` looks up `cmdName` on PATH
 * `exec.Command(cmdPath, cmdParams...).Run()` executes a command
@@ -122,10 +122,14 @@ type config struct {
 }
 ```
 
+* Note: `config` gains more fields as the chapter goes on — the test cases
+  below already assume a `del bool` field ("delete files") that isn't shown
+  in the snapshot above.
+
 * `filepath.Walk` will walk a path and execute a `walkFn` on each file
 * `walkFn` has type `func(path string, info os.FileInfo, err error)`
 * *table-driven testing* can be done by defining your test cases as a `slice`
-  of anonyous `struct` containing the data required to run your tests and the
+  of anonymous `struct` containing the data required to run your tests and the
   expected results. You then iterate over the `slice` using loops to execute
   all test cases without repeating code
 
@@ -216,7 +220,7 @@ func createTempDir(t *testing.T,
 
 * `os.RemoveAll` is useful to remove a tempDir and its contents
 * `log` contains logging functions that by default write to STDERR
-* `log.New`can be used to write to a different destination. Ex:
+* `log.New` can be used to write to a different destination. Ex:
 
 ```go
 // log.New(out io.Writer, prefix string, flag int) *Logger
@@ -300,11 +304,11 @@ allData, err := cr.ReadAll()    // returns data as [][]string
 * `exec.Cmd` from `os/exec` provides ways to execute commands
 
 ```go
-args := []string{"build", ".", "errors}
+args := []string{"build", ".", "errors"}
 cmd := exec.Command("go", args...)
 cmd.Dir = proj
 if err := cmd.Run(); err != nil {
-    return fmt.Errorf("'go build failed: %s", err)
+    return fmt.Errorf("'go build' failed: %s", err)
 }
 ```
 
@@ -352,7 +356,7 @@ if err := cmd.Run(); err != nil {
 * You can assign `exec.Command` or `exec.CommandContext` to a `var` to later mock the command in tests
 * You use `os/signal` to handle signals
 * Signals come in on channels: `sig := make(chan os.Signal, 1)`
-* `signal.Notify` relays signals on a channel. To relay `SIGINT` and `SIGTERM` just `signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM`
+* `signal.Notify` relays signals on a channel. To relay `SIGINT` and `SIGTERM` just `signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)`
 
 ## Chapter 7 - Using the Cobra CLI Framework
 
@@ -374,7 +378,7 @@ rootCmd.SetVersionTemplate(versionTemplate)
 * You can use viper from `github.com/spf13/viper` for config management
 * Viper can bind to flag, load environment variables, or use a config file
 * `cobra add completion` will generate a completion command for bash completion
-* `cobra add docs` will add a ocmmand to generate docs for your app, but you'll need to import `github.com/spf13/cobra/doc`
+* `cobra add docs` will add a command to generate docs for your app, but you'll need to import `github.com/spf13/cobra/doc`
 
 ## Chapter 8 - Talking to REST APIs
 
@@ -389,7 +393,7 @@ go mod edit -replace=pragprog.com/rggo/ch2/todo=../../../ch2/todo
 go list -m all
 ```
 
-* `net.http` contains an `http.Server` that you can use but its good to set some options
+* `net/http` contains an `http.Server` that you can use but it's good to set some options
 
 ```go
 s := &http.Server{
@@ -441,7 +445,7 @@ func setupAPI(t *testing.T) (string, func()) {
 r, err := http.Get(url)
 // handle err
 defer r.Body.Close()
-body, err = ioutil.ReadAll(r.Body); err != nil {
+if body, err := ioutil.ReadAll(r.Body); err != nil {
     t.Error(err)
 }
 ```
@@ -472,7 +476,7 @@ func TestMain(m *testing.M) {
 * You can bind a command-line argument to an environment variable with viper
 
 ```go
-rootCmd.PersistentFlags().string("api-root",
+rootCmd.PersistentFlags().String("api-root",
     "http://localhost:8080", "Todo API URL")
 replacer := strings.NewReplacer("-", "_")
 viper.SetEnvKeyReplacer(replacer)
@@ -485,7 +489,7 @@ apiRoot := viper.GetString("api-root")
 * The default http client is alright but never times out, create your own:
 
 ```go
-func newClient *http.Client {
+func newClient() *http.Client {
     c := &http.Client{
         Timeout: 10 * time.Second,
     }
@@ -534,7 +538,7 @@ func NewInMemoryRepo() *inMemoryRepo {
 }
 
 func (r *inMemoryRepo) Create(i pomodoro.Interval) (int64, error) {
-    r.lock
+    r.Lock()
     defer r.Unlock()
 
     i.ID = int64(len(r.intervals)) + 1
@@ -544,7 +548,7 @@ func (r *inMemoryRepo) Create(i pomodoro.Interval) (int64, error) {
     return i.ID, nil
 }
 
-func (r *inMemoryRepo) Update(i pomodor.Interval) error {
+func (r *inMemoryRepo) Update(i pomodoro.Interval) error {
     r.Lock()
     defer r.Unlock()
     if i.ID == 0 {
@@ -581,7 +585,7 @@ func (r *inMemoryRepo) ByID(id int64) (pomodoro.Interval, error) {
 func newText(ctx context.Context, updateText <-chan string,
     errorCh chan<- error) (*text.Text, error) {
 
-    txt, err := text.New
+    txt, err := text.New()
     if err != nil {
         return nil, err
     }
@@ -594,7 +598,7 @@ func newText(ctx context.Context, updateText <-chan string,
         for {
             select {
             case t := <-updateText:
-                txt.Rest()
+                txt.Reset()
                 errorCh <- txt.Write(t)
             case <-ctx.Done():
                 return
@@ -639,6 +643,7 @@ func getUserName(db *sql.DB, id int) (string, error) {
 		// If the timeout triggered, this returns context.DeadlineExceeded
 		return "", err
 	}
+	return name, nil
 }
 ```
 
@@ -703,10 +708,10 @@ if ds.Valid {
 * You can access the platform you are running on through `runtime.GOOS`
 * It is possible to make build constraints like `// +build linux`
 * When using multiple build constrains those separated by commas are AND'ed together and those separate by spaces are treated as OR, so `// +build containers disable_notifications` turns off notifications if you build with the `containers` or `disable_notifications` tags and `// +build !containers, !disable_notifications` turns the feature on if built without `containers` AND without `disable_notifications`
-* `go list -f '{{ .GoFiles }}' ./...` will list all the Go files included in your build. It accepts the `-tag` parameter so you can see what files are included with specific tags
+* `go list -f '{{ .GoFiles }}' ./...` will list all the Go files included in your build. It accepts the `-tags` parameter so you can see what files are included with specific tags
 * To get a statically compiled small binary, specify `CGO_ENABLED=0 go build`
 * You can build for another platform with `GOOS=windows GOARCH=amd64 go build`
-* Run `go tool dist list` to get a list of different platform and architecture combinations and run `go env GOOS` and `go end GOARCH` to see what GOOS and GOARCH are naturally set to
+* Run `go tool dist list` to get a list of different platform and architecture combinations and run `go env GOOS` and `go env GOARCH` to see what GOOS and GOARCH are naturally set to
 * Here is a useful script to cross compile static binaries for a variety of platforms:
 
 ```bash
@@ -726,7 +731,7 @@ for os in ${OSLIST}; do
 done
 ```
 
-* To cross compile binaries that use external C libraries like sqlite, you need a compiler available for that target such as MINGW for Windows using a command like `CGO_ENABLED=1 CC=x86_64-w64-mindgw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build`, but you will still need sqlite installed on the target operating system
+* To cross compile binaries that use external C libraries like sqlite, you need a compiler available for that target such as MINGW for Windows using a command like `CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build`, but you will still need sqlite installed on the target operating system
 * To create an especially stripped down application for containers build with `CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -tags=containers` assuming you have a `containers` tag
 * You can also choose to build in a container then run in another container
 
