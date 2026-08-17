@@ -14,6 +14,11 @@ module Exercises (
   myPadLeft,
   myPadRight,
   myPadCenter,
+  myZip,
+  myZipWith,
+  myZip',
+  myMapM,
+  myMapM_,
 )
 where
 
@@ -110,6 +115,7 @@ myUnlines'' lines =
    in go lines []
 
 -- eta reduction was done in ch02 folder, changing the original caesar project.
+
 data MyPadMode = PadLeft | PadRight | PadCenter
 
 myPad :: MyPadMode -> Int -> String -> String
@@ -130,3 +136,31 @@ myPadRight = myPad PadRight 10
 
 myPadCenter :: String -> String
 myPadCenter = myPad PadCenter 10
+
+myZip :: [a] -> [b] -> [(a, b)]
+myZip [] [] = []
+myZip [] _ = []
+myZip _ [] = []
+myZip (x : xs) (y : ys) = (x, y) : myZip xs ys
+
+myZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+myZipWith _ [] [] = []
+myZipWith _ [] _ = []
+myZipWith _ _ [] = []
+myZipWith f (x : xs) (y : ys) = f x y : myZipWith f xs ys
+
+myZip' :: [a] -> [b] -> [(a, b)]
+myZip' = myZipWith (\x y -> (x, y))
+
+myMapM :: (a -> IO b) -> [a] -> IO [b]
+myMapM _ [] = return []
+myMapM f (x : xs) = do
+  res <- f x
+  rest <- myMapM f xs
+  return (res : rest)
+
+myMapM_ :: (a -> IO b) -> [a] -> IO ()
+myMapM_ _ [] = return ()
+myMapM_ f (x : xs) = do
+  _ <- f x
+  myMapM_ f xs

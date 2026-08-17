@@ -7,6 +7,9 @@ module Lib (
   numberAndIncrementNonEmptyLines,
   PadMode (..),
   pad,
+  padRight,
+  padLeft,
+  prettyNumberedLines,
 ) where
 
 import Data.Char (isPrint, isSeparator)
@@ -73,3 +76,11 @@ padLeft = pad PadLeft
 
 padRight :: Int -> String -> String
 padRight = pad PadRight
+
+prettyNumberedLines :: PadMode -> NumberedLines -> [String]
+prettyNumberedLines mode lineNums =
+  let (numbers, text) = unzip lineNums
+      numberStrings = map (maybe "" show) numbers
+      maxLength = maximum (map length numberStrings)
+      paddedNumbers = map (pad mode maxLength) numberStrings
+   in zipWith (\n l -> n ++ " " ++ l) paddedNumbers text
