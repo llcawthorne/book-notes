@@ -1107,7 +1107,7 @@
   `a` to have meaning it must be introduce through the type constructor.
 
   ```hs
-  import Date.Maybe
+  import Data.Maybe
 
   notThe :: String -> Maybe String
   notThe "the" = Nothing
@@ -1118,4 +1118,79 @@
 
   ghci> replaceThe "the cow loves us"
   "a cow loves us"
+
+  lefts' :: [Either a b] -> [a]
+  lefts' [] = []
+  lefts' (x:xs) = case x of
+    Left y -> y : lefts' xs
+    Right y -> lefts' xs
+
+  ghci> lefts' [Left "bad", Right 10, Left "news", Left "bears", Right 5]
+  ["bad","news","bears"]
+
+  lefts'' :: [Either a b] -> [a]
+  lefts'' = foldr go []
+    where
+      go x acc = case x of
+        Left x -> x : acc
+        Right x -> acc
+
+  myIterate :: (a -> a) -> a -> [a]
+  myIterate f x = x : myIterate f (f x)
+
+  myUnfoldr :: (b -> Maybe (a, b)) -> b -> [a]
+  myUnfoldr f x = case f x of
+    Nothing      -> []
+    Just (a, b)  -> a : myUnfoldr f b
+
+  f :: (Num b) => b -> Maybe (b, b)
+  f x = Just (x, x + 1)
+  betterIterate x = myUnfoldr f x
+
+  ghci> take 10 $ betterIterate 0
+  [0,1,2,3,4,5,6,7,8,9]
+
+  data BinaryTree a = Leaf | Node (BinaryTree a) a (BinaryTree a)
+    deriving (Eq, Ord, Show)
+
+  unfold :: (a -> Maybe (a,b,a)) -> a -> BinaryTree b
+  unfold f x = case (f x) of
+    Nothing  -> Leaf
+    Just (a', b', a'') -> Node (unfold f a') b' (unfold f a'')
+
+  treeBuild :: Integer -> BinaryTree Integer
+  treeBuild n = unfold f n
+   where f 0 = Nothing
+         f x = Just (x-1, x-1, x-1)
+
+  ghci> treeBuild 0
+  Leaf
+  ghci> treeBuild 1
+  Node Leaf 0 Leaf
+  ghci> treeBuild 2
+  Node (Node Leaf 0 Leaf) 1 (Node Leaf 0 Leaf)
+  ghci> treeBuild 3
+  Node (Node (Node Leaf 0 Leaf) 1 (Node Leaf 0 Leaf)) 2 (Node (Node Leaf 0 Leaf) 1 (Node Leaf 0 Leaf))
   ```
+
+- A *higher-kinded type* type is any type whos kind has a function arrow in it
+  and which can be described as a type constructor rather than as a type
+  constant. The following types are of a higher kind than `*`:
+
+  ```hs
+  Maybe  :: * -> *
+  []     :: * -> *
+  Either :: * -> * -> *
+  (->)   :: * -> * -> *
+  ```
+
+- The following are not *higher-kinded types*:
+
+  ```hs
+  Int    :: *
+  Char   :: *
+  String :: *
+  [Char] :: *
+  ```
+
+## Chapter 13 - Building Projects

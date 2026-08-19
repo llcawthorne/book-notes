@@ -661,3 +661,93 @@
   children :: (Eq a) => a -> DiGraph a -> [a]
   children = M.findWithDefault []
   ```
+
+- So, we do want to have to lookup the permutations of each word at every
+  step. Instead we will make a map keyed by the sorted letters of each
+  word mapped to their permutations called the `PermutationMap.`
+
+  ```hs
+  type PermutationMap = M.AssocMap String [String]:W
+
+  -- we made wrappers of the AssocMap function to sort the String key
+
+  createPermutationMap :: [String] -> PermutationMap
+  createPermutationMap = go empty
+   where
+    go permMap [] = permMap
+    go permMap (x : xs) = go (insertPermutation x permMap)
+
+    insertPermutation word = alter (insertList word) word
+
+    insertList word Nothing = Just [word]
+    insertList word (Just words) = Just (word : words)
+
+  ghci> words = ["traces", "reacts", "crates", "caster", "tool", "loot", "cat"]
+  ghci> pm = createPermutationMap words
+  ghci> pm
+  AssocMap [("acerst", ["caster","crates","reacts","traces"]
+           ,("loot",["loot","tool"]),("act",["cat"])]
+  ghci> PermutationMap.lookup "tool" pm
+  Just ["loot","tool"]
+  ghci> PermutationMap.lookup "reacts" pm
+  Just ["caster","crates","reacts","traces"]
+  ```
+
+- A `PermutatonMap` is just an `AssocMap` where all the keys are their letters
+  passed through `L.sort`.
+- List comprehensions are an easy way to build lists. Note that a failing
+  pattern match in a generator counts as a skipped value, so you could define
+  `catMaybes xs = [ x | Just x <- xs ]` and any non-Maybe values would be
+  ignored. We use list comprehension below:
+
+  ```hs
+  module Ladder (
+    Dictionary,
+    readDictionary,
+  )
+  where
+
+  import qualified Data.List as L
+  import qualified Graph as G
+  import qualified PermutationMap as PM
+
+  type Dictionary = [String]
+
+  readDictionary :: FilePath -> IO Dictionary
+  readDictionary filepath = do
+    dictionaryContent <- readFile filepath
+    let
+      lines = L.lines dictionaryContent
+      words = L.map (L.filter (`L.elem` ['a' .. 'z'])) lines
+    return (L.nub words)
+
+  mkLadderGraph :: Dictionary -> G.DiGraph String
+  mkLadderGraph dict = G.buildDiGraph nodes
+   where
+    map = PM.createPermutationMap dict
+    nodes =
+      L.map (\w -> (w, computeCandidates map w)) dict
+
+  -- function to compute valid candidates for the game's next step
+  computeCandidates :: PM.PermutationMap -> String -> [String]
+  computeCandidates map word =
+    -- a candidate is one letter added, one removed, or one modified
+    let candidates = modified ++ removed ++ added ++ [word]
+        -- sort all possible candidates and remove duplicates
+        uniques = L.nub [L.sort w | w <- candidates]
+        -- compute all valid permutations for each possible candidate
+        perms = L.concatMap (\x -> PM.findWithDefault [] x map) uniques
+     in -- remove the original word from the valid candidates
+        L.delete word perms
+   where
+    added = [x : word | x <- ['a' .. 'z']]
+    removed = [L.delete x word | x <- word]
+    modified =
+      [x : L.delete y word | x <- ['a' .. 'z'], y <- word, x /= y]
+
+  ghci> mkLadderGraph ["cat", "cats", "act", "dog"]
+  AssocMap [("dog",[],("act",["cat","cats"]),("cats",["act","cat"]),
+            ("cat",["act","cats"])]
+  ```
+
+## Chapter 6 - Solving the ladder game
