@@ -1,0 +1,45 @@
+cabal-version:       2.4
+
+name:                name should match with <name>.cabal
+version:             version should use PvP
+synopsis:            Synopsis will appear in the hackage package listing and search
+description:         The description will appear at the top of a library
+homepage:            Homepage url
+bug-reports:         issue-tracker url
+license:             License name
+license-file:        License file
+author:              Author name
+maintainer:          Maintainer email
+category:            Hackage categories, separated by commas
+extra-doc-files:
+  README.md
+
+common common-settings
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+
+library
+  import: common-settings
+  hs-source-dirs: src
+  build-depends:
+      base
+    , directory
+  exposed-modules:
+    HsBlog
+      HsBlog.Convert
+      HsBlog.Html
+        HsBlog.Html.Internal
+      HsBlog.Markup
+  -- other-modules:
+
+executable hs-blog-gen
+  import: common-settings
+  hs-source-dirs: app
+  main-is: Main.hs
+  build-depends:
+      base
+    , <package-name>
+  ghc-options:
+    -O
+
