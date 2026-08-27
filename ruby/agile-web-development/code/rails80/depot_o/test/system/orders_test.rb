@@ -1,0 +1,55 @@
+#---
+# Excerpted from "Agile Web Development with Rails 8",
+# published by The Pragmatic Bookshelf.
+# Copyrights apply to this code. It may not be used to create training material,
+# courses, books, articles, and the like. Contact us if you are in doubt.
+# We make no guarantees that this code is fit for any purpose.
+# Visit https://pragprog.com/titles/rails8 for more book information.
+#---
+require "application_system_test_case"
+
+class OrdersTest < ApplicationSystemTestCase
+  setup do
+    @order = orders(:one)
+  end
+
+  test "visiting the index" do
+    visit orders_url
+    assert_selector "h1", text: "Orders"
+  end
+
+  test "should create order" do
+    visit orders_url
+    click_on "New order"
+
+    fill_in "Address", with: @order.address
+    fill_in "Email", with: @order.email
+    fill_in "Name", with: @order.name
+    fill_in "Pay type", with: @order.pay_type
+    click_on "Create Order"
+
+    assert_text "Order was successfully created"
+    click_on "Back"
+  end
+
+  test "should update Order" do
+    visit order_url(@order)
+    click_on "Edit this order", match: :first
+
+    fill_in "Address", with: @order.address
+    fill_in "Email", with: @order.email
+    fill_in "Name", with: @order.name
+    fill_in "Pay type", with: @order.pay_type
+    click_on "Update Order"
+
+    assert_text "Order was successfully updated"
+    click_on "Back"
+  end
+
+  test "should destroy Order" do
+    visit order_url(@order)
+    accept_confirm { click_on "Destroy this order", match: :first }
+
+    assert_text "Order was successfully destroyed"
+  end
+end

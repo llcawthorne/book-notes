@@ -1,0 +1,20 @@
+#---
+# Excerpted from "Agile Web Development with Rails 8",
+# published by The Pragmatic Bookshelf.
+# Copyrights apply to this code. It may not be used to create training material,
+# courses, books, articles, and the like. Contact us if you are in doubt.
+# We make no guarantees that this code is fit for any purpose.
+# Visit https://pragprog.com/titles/rails8 for more book information.
+#---
+# Preview all emails at http://localhost:3000/rails/mailers/order_mailer
+class OrderMailerPreview < ActionMailer::Preview
+  # Preview this email at http://localhost:3000/rails/mailers/order_mailer/received
+  def received
+    OrderMailer.received
+  end
+
+  # Preview this email at http://localhost:3000/rails/mailers/order_mailer/shipped
+  def shipped
+    OrderMailer.shipped
+  end
+end

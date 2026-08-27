@@ -1,0 +1,92 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.39.6.
+--
+-- see: https://github.com/sol/hpack
+
+name:           csview
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/csview#readme>
+homepage:       https://github.com/githubuser/csview#readme
+bug-reports:    https://github.com/githubuser/csview/issues
+author:         Lewis Cawthorne
+maintainer:     llcawthorne@gmail.com
+copyright:      2026 Lewis Cawthorne
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/csview
+
+library
+  exposed-modules:
+      Csv
+      Csv.Conversion
+      Csv.Operations
+      Csv.Parsing
+      Csv.Print
+      Csv.Types
+      Data.Sliceable
+      Exercises
+      Lib
+      Util.Arguments
+      Util.Text
+  other-modules:
+      Paths_csview
+  autogen-modules:
+      Paths_csview
+  hs-source-dirs:
+      src
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      NamedFieldPuns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , text
+  default-language: Haskell2010
+
+executable csview
+  main-is: Main.hs
+  other-modules:
+      Paths_csview
+  autogen-modules:
+      Paths_csview
+  hs-source-dirs:
+      app
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      NamedFieldPuns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , csview
+    , text
+  default-language: Haskell2010
+
+test-suite csview-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_csview
+  autogen-modules:
+      Paths_csview
+  hs-source-dirs:
+      test
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      NamedFieldPuns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , csview
+    , text
+  default-language: Haskell2010

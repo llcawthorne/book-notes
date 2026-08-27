@@ -519,16 +519,16 @@
 
 - It is standard practice to name the constructor in a `newtype` definition
   the same as the type itself. If we export `AssocMap` but not `AssocMap (..)`, 
-  the constructor will be exported but not the type. There are two ways we
+  the type will be exported but not the constructor. There are two ways we
   could handle the new type for our functions:
 
-  1. Add the new constructor to every expressions that deals with associative
+  1. Add the new constructor to every expression that deals with associative
      lists.
   2. Construct a wrapper for each function for the new type using the old
      functions on lists.
 
   It is more canonical to do the first since we want to define functions for
-  this type, but the second option allows us to construct functoins for the
+  this type, but the second option allows us to construct functions for the
   type from any function on lists of tuples, so we will choose the latter which
   also makes our code easier to read. We will also use the `where` keyword to
   define internal definitions within functions like `let` except the definitions
@@ -609,9 +609,9 @@
   ``````
 
 - It's generally possible to derive `Show` anytime the underlying types are
-  in `Show`. Likewise, you can derive `Eq` if you want `(--)` to be defined
-  as *structural equivalent. Two values are equal if their constructors and
-  fields are equivlaent.
+  in `Show`. Likewise, you can derive `Eq` if you want `(==)` to be defined
+  as *structurally equivalent*. Two values are equal if their constructors and
+  fields are equivalent.
 - We are going to define our own `lookup` so we will 
   `import Prelude hiding (lookup)`. Otherwise we would have `Prelude.lookup`
   and `Data.AssocMap.lookup`. We are also going to define `findWithDefault`
@@ -662,14 +662,31 @@
   children = M.findWithDefault []
   ```
 
-- So, we do want to have to lookup the permutations of each word at every
+- So, we don't want to have to lookup the permutations of each word at every
   step. Instead we will make a map keyed by the sorted letters of each
   word mapped to their permutations called the `PermutationMap.`
 
   ```hs
-  type PermutationMap = M.AssocMap String [String]:W
+  type PermutationMap = M.AssocMap String [String]
 
   -- we made wrappers of the AssocMap function to sort the String key
+
+  alter ::
+    ( Maybe [String] ->
+      Maybe [String]
+    ) ->
+    String ->
+    PermutationMap ->
+    PermutationMap
+  alter f key = M.alter f (L.sort key)
+
+  delete :: String -> PermutationMap -> PermutationMap
+  delete key = M.delete (L.sort key)
+
+  lookup :: String -> PermutationMap -> Maybe [String]
+  lookup key = M.lookup (L.sort key)
+
+  -- etc
 
   createPermutationMap :: [String] -> PermutationMap
   createPermutationMap = go empty
@@ -751,3 +768,670 @@
   ```
 
 ## Chapter 6 - Solving the ladder game
+
+- In our actual search we need to perform the actual search and update state 
+  then backtrack the predecessors to get the searched path.
+
+  ```hs
+  {-# LANGUAGE ScopedTypeVariables #-}
+  -- ...
+  type SearchState a = ([a], Digraph a, DiGraph a)
+  data SearchResult a = Unsuccessful | Successful (DiGraph a)
+
+  bfsSearch :: forall a. Eq a => DiGraph a -> a -> a -> Maybe [a]
+  bfsSearch graph start end
+    | start == end = Just [start]
+    | otherwise =
+      case bfsSearch' ([start], graph, empty) of
+        Successful preds -> Just (findSolution preds)
+        Unsuccessful -> Nothing
+    where
+      findSolution :: DiGraph a -> [a]
+      findSolution g = L.reverse (go end)
+        where
+          go x =
+            case children x g of
+              [] -> [x]
+              (v : _) -> x : go v
+
+      addMultiplePredecessors :: Eq a => [(a, [a])] -> DiGraph a -> DiGraph a
+      addMultiplePredecessors [] g = g
+      addMultiplePredecessors ((n, ch) : xs) g =
+        addMultiplePredecessors xs (go n ch g)
+        where
+          go n [] g = g
+          go n (x :xs) g = go n xs (addEdge (x, n) g)
+
+      bfsSearch' :: Eq a => Search State a -> SearchResult a
+      bfsSearch' ([], _, preds) = Unsuccessful
+      bfsSearch' (frontier, g, preds) =
+        let g' = deleteNodes frontier g
+            ch =
+              L.map
+                (\n -> (n, L.filter (`M.member` g') (children n g)))
+                frontier
+            frontier' = L.concatMap snd ch
+            preds' = addMultiplePredecessors ch preds
+         in if end `L.elem` frontier`
+             then Successful preds'
+             else bfsSearch' (frontier', g', preds')
+  ```
+
+- Note above how we're using a in our function definition and in a function
+  definition in our `where` clause. For them to be the same a, we need 
+  `{-# LANGUAGE ScopedTypeVariables #-}` (it goes above the module declaration).
+  It goes with the explicit `forall` in our type signature.
+- Note that the predecessor graph is purposely built in reverse, and then we
+  follow it to a backwards solution which we then reverse.
+- `ladderSolve` just pulls the pieces together. And `main` is simple too.
+
+  ```hs
+  ladderSolve :: Dictionary -> String -> String -> Maybe [String]
+  ladderSolve dict start end =
+    let g = mkLadderGraph dict
+     in G.bfsSearch g start end
+
+  -- app/Main.hs
+
+  module Main (main) where
+
+  import Ladder
+  import System.Environment
+
+  printHelpText :: String -> IO ()
+  printHelpText msg = do
+    printStrLn (msg ++ "\n")
+    progName <- getProgName
+    putStrLn ("Usage: " ++ progName ++ " <filename> <start> <end>")
+
+  main :: IO ()
+  main = do
+    args <- getArgs
+    case args of
+      [dictFile, start, end] -> do
+        dict <- readDictionary dictfile
+        case ladderSolve dict start end of
+          Nothing -> putStrLn "No solution"
+          Just sol -> do
+            print sol
+            putStrLn ("Length: " ++ show (length sol))
+      _ -> printHelpText "Wrong number of arguments!"
+  ```
+
+- To build with profiling enabled, you run `stack run --profile` and then to
+  do basic time and memory profiling pass the arguments `+RTS -p -RTS`. The
+  RTS arguments act as bookends for arguments ot the Haskell run-time system.
+  Then the run will create a file called `ladder.prof` with profiling info.
+
+  ```hs
+  $ stack run --profile -- \
+        ../dictionaries/small_dictionary.txt dog book +RTS -p -RTS
+  ```
+
+- We see from our profiling output most of the execution time is swamped by
+  `lookup` in `AssocMap`. It isn't the best data structure for this.
+- To use a real hashmap, we add `unordered-containers` and `hashable` to our
+  dependencies and change the `Data.AssocMap` import to `Data.HashMap.Lazy` as
+  well as changing our types from `M.AssocMap` to `M.HashMap`. We have to
+  change our signatures to support `Eq a, Hashable a` after importing
+  `Data.Hashable (Hashable)` for our keys.
+- When performance is important, don't use `String`. Instead use `Text` from
+  the `text` package or `ByteString` from the `bytestring` package.
+- When designing programs for performance, the algorithm and data structure
+  choices have the most impact, so switching types should be a last resort.
+
+## Chapter 7 - Working with CSV files
+
+- Since the primary goal of this project is working with text, we will use a 
+  more appropriate format than `String`. We add `text` to our dependencies in
+  `package.yaml` and while we're at it, remove the `-exe` from the name of our
+  executable. `Data.Text` is more efficient for working with textual data.
+  It contains `pack` and `unpack` to convert `String` to text and vice versa
+  and other functions we are used to from `Data.List` like `null` and `length`
+  for the new `Text` type.
+  [Data.Text Documentation](https://hackage-content.haskell.org/package/text-2.1.4/docs/Data-Text.html).
+- Haskell's record syntax enables us to give names to the fields of data
+  constructors. We will use a type synonym for `Column` to `[DataField]` and
+  define a `DataField` ADT for fields.
+
+  ```hs
+  module Csv.Types where
+
+  import qualified Data.Text as T
+
+  type Column = [DataField]
+
+  data Csv = Csv
+    { csvHeader :: Maybe [T.Text]
+    , csvColumns :: [Column]
+    }
+    deriving Show
+
+  data DataFile
+    = IntValue Int
+    | TextValue T.Text
+    | NullValue
+    deriving (Eq, Show)
+  ```
+
+- Record field accessors are prone to have name clashes. The common practice is
+  to prefix the field names with some identifying abbreviation, and we are
+  using `csv`.
+- Sometimes we want to specify properties for our types that cannot be ensured
+  by the type system itself. For this project, we want the number of fields in
+  the header to be equal to the number of columns, and each column also needs
+  to have the same number of elements. We can ensure these properties by only
+  allowing `Csv` values to be built by a dedicated function that checks the
+  arguments for their validatity; a *smart constructor*. It is common for this
+  function to simply crash the program if something goes wrong. We are going
+  to use a safe version that returns an `Either`. We can export our smart
+  constructor instead of our new data type constructors, so no invalid records
+  are built. We are instead also choosing to export our normal constructor
+  and an `unsafeMkCsv` that just crashes in case of failure. We use `error`, 
+  which is meant to crash your program and should not be used liberally.
+  We also use `either :: (a -> c) -> (b -> c) -> Either a b -> c` to quickly
+  convert the output of `mkCsv` to an `error` or a `Csv`.
+
+  ```hs
+  mkCsv :: Maybe [T.Text] -> [Column] -> Either String Csv
+  mkCsv mHeader columns
+    | not headerSizeCorrect =
+        Left "Size of header row does not fit number of columns"
+    | not columnSizesCorrect =
+        Left "The columns do not have equal sizes"
+    | otherwise = Right Csv {csvHeader=mHeader, csvColumns=columns}
+    where
+      headerSizeCorrect =
+        M.maybe True (\h -> L.length h == L.length columns) mHeader
+      columnSizesCorrect =
+        L.length (L.nubBy (\x y -> length x == length y) columns) <= 1
+
+  unsafeMkCsv :: Maybe [T.Text] -> [Column] -> Csv
+  unsafeMkCsv header columns =
+    E.Either error id (mkCsv header columns)
+  ```
+
+- For the rest of the book, we will assume several qualified imports for our
+  code. `T` stands for `Data.Text`, `L` for `Data.List`, `M` for `Data.Maybe`,
+  and `E` for `Data.Either`.
+- The `($)` operator is a simple operator to solve a simple problem. It's
+  merely function application but performed at the lowest precedence and right
+  associative.
+
+  ```hs
+  ($) :: (a -> b) -> a -> b
+  ($) f x = f x
+
+  ghci> map (*10) [1..5] ++ [6..10] :: [Int]
+  [10,20,30,40,50,6,7,8,9,10]  -- The above only maps over half the list
+  ghci> map (*10) $ [1..5] ++ [6..10] :: [Int]
+  [10,20,30,40,50,60,70,80,90,10]
+  ```
+
+- Records can be cumbersome to work with, so we are going to use several
+  language extensions to make life easier. `NamedFieldPuns` let us pattern
+  match on fields without rebinding them to a new name. The field name becomes
+  the bound name automatically. `RecordWildCards` allows us to use `Csv {..}`
+  in pattern matching to bind every field to a variable of the same name. In
+  construction, `Csv {..}` fills in every field with local variables of the
+  same name as the fields.
+
+  ```hs
+  {-# LANGUAGE NamedFieldPun #-}
+  {-# LANGUAGE RecordWildCards #-}
+
+  -- because of RecordWildCards, `Csv {..}` creates `csvColumns`
+  -- otherwise we would have needed `Csv { csvColumns = c }` and use `c`
+  -- or simply `Csv { csvColumns }` thanks to `NamedFieldPuns`
+  numberOfRows :: Csv -> Int
+  numberOfRows Csv {..} =
+    case csvColumns of
+      [] -> 0
+      (x : _) -> length x
+
+  numberOfColumsn :: Csv -> Int
+  numberOfColumns Csv {..} = length csvColumns
+  ```
+
+- The most important operation of `Semigroup` is the binary, associative
+  operations `(<>)`. The `Monoid` typeclase has `mappend` which defaults to
+  `(<>)`, `mempty` the neutral element for `mappend`, and `mconcat` which
+  applies `mappend` to all the values of a list, condensing them to a single
+  value.
+
+  ```hs
+  class Semigroup a => Monoid a where
+    mempty :: a
+    mappend :: a -> a -> a
+    mconcat :: [a] -> a
+    {-# MINIMAL mempty #-}
+
+  instance Semigroup Csv where
+    (<>) = appendCsv
+
+  instance Monoid Csv where
+    mempty = Csv {csvHeader = Nothing, csvColumns = []}
+
+  appendCsv :: Csv -> Csv -> Csv
+  appendCsv a b =
+    Csv
+      { csvHeader =
+          if M.isNothing (csvHeader a) && M.isNothing (csvHeader b)
+            then Nothing
+            else Just $ header' a ++ header' b,
+        csvColumns = appendColumns (csvColumns a) (csvColumns b)
+      }
+    where
+      header' csv =
+        M.fromMaybe
+          (L.replicate (numberOfColumns csv) "")
+          (csvHeader csv)
+
+      appendColumns colsA colsB =
+        map (\cols -> cols ++ fillA) colsA
+          ++ map (\cols -> cols ++ fillB) colsB
+        where
+          fillA = replicate (numberOfRows b - numberOfRows a) NullValue
+          fillB = replicate (numberOfRows a - numberOfRows b) NullValue
+  ```
+
+- We can enable extentions project-wide in our `package.yaml` 
+
+  ```hs
+  default-extensions:
+    - OverloadedStrings
+    - RecordWildCards
+    - NamedFieldPuns
+  ```
+
+- We are also going to define our own type class, `Sliceable`:
+
+  ```hs
+  class Sliceable a where
+    slice :: Int -> Int -> a -> a
+    slice idx1 idx2 xs =
+      let (_, s, _) = slicePartition idx1 idx2 xs
+       in s
+    slicePartition :: Int, Int, a -> (a, a, a)
+
+  -- a List is sliceable
+  instance Sliceable [a] where
+    slicePartition idx1 idx2 xs =
+      ( take idx1 xs,
+        take (idx2 - idx1) $ drop idx1 xs,
+        drop idx2 xs
+      )
+
+  -- A Maybe that contains a Sliceable is Sliceable
+  instance Sliceable a => Sliceable (Maybe a) where
+    sliceParition idx1 idx2 Nothing =
+      (Nothing, Nothing, Nothing)
+    slicePartition idx1 idx2 (Just xs) =
+      let (hd, x, tl) = slicePartition idx1 idx2 xs
+       in (Just hd, Just s, Just tl)
+
+  -- And since we can slice Lists and Maybes, of course Csv
+  instance Sliceable Csv where
+    slicePartition idx1 idx2 Csv {..} =
+      let (headerHd, headerSpl, headerTl)
+            slicePartition idx1 idx2 csvHeader
+          (columnHd, columnSpl, columnTl) =
+            slicePartition idx1 idx2 csvColumns
+       in ( Csv {csvHeader = headerHd, csvColumns = columnHd},
+            Csv {csvHeader = headerSpl, csvColumns = columnSpl},
+            Csv {csvHeader = headerTl, csvHeader = columnTl}
+          )
+  ```
+
+- It can be useful to bundle modules working with the same concepts for
+  convenient re-export done in single files. In this project, we will bundle
+  `Csv` functionality. Our `Csv` directory holds all the appropriate files.
+  We will make a `Csv.hs` file in the main `src` directory to expose the
+  modules in the Csv subdirectory. This file can also contain code that
+  requires definitions from multiple modules. To export modules, we put
+  them in the export list prefixed by `module`.
+
+  ```hs
+  -- src/Csv.hs
+  module Csv 
+    ( module Csv.Conversion
+    , module Csv.Types
+    )
+  where
+
+  import Csv.Conversion
+  import Csv.Types
+  ```
+
+- So first to parse, we need a way to convert `Text` to `DataField` and vice
+  versa.
+
+  ```hs
+  readMaybe :: Read a => String -> Maybe a
+
+  textToDataField :: T.Text -> DataField
+  textToDataField "" = NullValue
+  textToDataField raw =
+    let mIntVal = readMaybe (T.unpack raw)
+     in maybe (TextValue raw) IntValue mIntVal
+
+  dataFieldToText :: DataField -> T.Text
+  dataFieldToText (IntValue i) = T.pack $ show i
+  dataFieldToText (TextValue t) = t
+  dataFieldToText NullValue = ""
+  ```
+
+- As a general rule, you should use `foldr` if the accumulating function is
+  lazy, and otherwise prefer `foldl'`.
+- Then we have this huge function to parse our CSV:
+
+  ```hs
+  parseCsv ::
+    CsvParseOptions ->
+    T.Text ->
+    Either String Csv
+  parseCsv options raw = case lines of
+    [] -> mkCsv Nothing []
+    ((_, firstLine) : rest) ->
+      let expectedLength = length $ splitFields firstLine
+       in case cpoHeaderOption options of
+            WithHeader ->
+              let headerFields = splitFields firstLine
+               in unsafeMkCsv (Just headerFields)
+                    <$> parseColumns expectedLength rest
+            WithoutHeader ->
+              unsafeMkCsv Nothing <$> parseColumns expectedLength lines
+    where
+      lines :: [(Int, T.Text)]
+      lines =
+        L.filter (\(_, t) -> not $ T.null t) $
+          L.zip [1 ..] $
+            T.splitOn
+              (T.singleton (sepLineSeparator $ cpoSeparators options))
+              raw
+
+      splitFields :: T.Text -> [T.Text]
+      splitFields = L.map T.strip . T.splitOn separator
+        where
+          separator :: T.Text
+          separator =
+            T.singleton $
+              sepFieldSeparator (cpoSeparators options)
+
+      parseColumns ::
+        Int ->
+        [(Int, T.Text)] ->
+        Either String [[DataField]]
+      parseColumns expectedLength lines =
+        let textColumns =
+              L.transpose
+                <$> L.foldl' parseRow (Right []) lines
+         in fmap (L.map (L.map textToDataField)) textColumns
+        where
+          parseRow ::
+            Either String [[T.Text]] ->
+            (Int, T.Text) ->
+            Either String [[T.Text]]
+          parseRow mRows (lNum, line) =
+            E.either
+              Left
+              ( \rows ->
+                  let fields = splitFields line
+                   in if length fields /= expectedLength
+                        then
+                          Left $
+                            "Number of fields in line "
+                              <> show lNum
+                              <> " does not match"
+                              <> " expected length of "
+                              <> show expectedLength
+                              <> "! Actual length is "
+                              <> show (length fields)
+                              <> "!"
+                        else Right $ rows ++ [fields]
+              )
+              mRows
+
+  parseWithHeader :: T.Text -> Either String Csv
+  parseWithHeader =
+    parseCsv (defaultOptions {cpoHeaderOption = WithHeader})
+
+  parseWithoutHeader :: T.Text -> Either String Csv
+  parseWithoutHeader = parseCsv defaultOptions
+  ```
+
+- Our first job of producing output is to simply write our CSV back to a file.
+  We will be using `Data.Text.IO` imported as `TIO`.
+
+  ```hs
+  toFileContent :: Csv -> [T.Text]
+  toFileContent Csv {..} =
+    let rows = L.map (L.map dataFieldToText) $ L.transpose csvColumns
+     in L.map (T.intercalate ",") $ M.maybe rows (: rows) csvHeader
+
+  writeCsv :: FilePath -> Csv -> IO ()
+  writeCsv path = TIO.writeFile path . T.intercalate "\n" . toFileContent
+  ```
+
+- We also wrote some pretty print functions you can see in `src/Csv/Print.hs`.
+- We added the ability to pretty print summaries, but no way to make summaries,
+  so we are adding `src/Csv/Operations.hs`.
+
+  ```hs
+  -- src/Csv/Operation.hs
+  foldCsv :: (DataField -> b -> b) -> b -> Csv -> [b]
+  foldCsv f z (Csv {csvColumns}) = map (foldr f z) csvColumns
+
+  filterCsv :: (DataField -> Bool) -> Csv -> Csv
+  filterCsv p csv@(Csv {csvColumns}) =
+    let rows = L.transpose csvColumns
+        -- we accept any row where the predicate holds for at least one field
+        filtered = L.filter (any p) rows
+     in csv {csvColumns = L.transpose filtered}
+
+  countNonEmpty :: Csv -> [Int]
+  countNonEmpty = foldCsv f 0
+    where
+      f NullValue acc = acc
+      f _ acc = acc +1
+
+  countOccurences :: DataField -> Csv -> [Int]
+  countOccurences df =
+    foldCsv (\x acc -> if x == df then acc + 1 else acc) 0
+
+  searchText :: T.Text -> Csv -> Csv
+  searchText t = filterCsv (\f -> dataFieldToText f `contains` t)
+    where
+      contains = flip T.isInfixOf
+  ```
+
+- So first we write an argument parsing utility in `src/Util/Arguments.hs`.
+  We're planning to move to `optparse-applicative`, a real argument parsing
+  library, for later projects, but we're rolling our own for this project.
+
+  ```hs
+  -- src/Util/Arguments.hs
+  getArguments :: IO [T.Text]
+  getArguments = map T.pack <$> getArgs
+
+  getValueOf :: T.Text -> IO (Maybe T.Text)
+  getValueOf key = do
+    L.foldl
+      ( \mVal arg ->
+          if M.isNothing mVal
+            then T.stripPrefix argKey arg
+            else mVal
+      )
+      Nothing
+      <$> getArguments
+    where
+      argKey = "--" <> key <> "="
+
+  getBool :: T.Text -> IO Bool
+  getBool key =
+    L.elem argKey <$> getArguments
+    where
+      argKey = "--" <> key
+
+  getChar :: T.Text -> IO (Maybe Char)
+  getChar key = do
+    sep <- getValueOf key
+    return $ case T.uncons <$> sep of
+      Just (Just (c, rest)) ->
+        if T.null rest
+          then Just c
+          else Nothing
+      _ -> Nothing
+
+  getText :: T.Text -> IO (Maybe T.Text)
+  getText = getValueOf
+
+  getInterval :: T.Text -> IO (Maybe (Int, Int))
+  getInterval key = do
+    mVal <- fmap T.strip <$> getValueOf key
+    case mVal of
+      Nothing -> return Nothing
+      Just val ->
+        let (a, b) = T.breakOn "," val
+         in case (readMaybe $ T.unpack a, readMaybe $ T.unpack (T.tail b)) of
+              (Just x, Just y) -> return $ Just (x, y) -- Parsed as Ints correctly
+              _ -> return Nothing
+  ```
+
+- Now we need a way to parse a file in our `Main.hs`:
+
+  ```hs
+  -- app/Main.hs
+  parseInFile :: T.Text -> IO (Either String (Csv.Csv T.Text))
+  parseInFile key = do
+    mInFile <- Args.getText key
+    mFieldSep <- Args.getChar "field-separator"
+    hasHeader <- Args.getBool "with-header"
+
+    let separators =
+          Csv.defaultSeparators
+            { Csv.fieldSeparator =
+                M.fromMaybe
+                  (Csv.fieldSeparator Csv.defaultSeparators)
+                  mFieldSep
+            }
+        headerOpt =
+          if hasHeader
+            then Csv.WithHeader
+            else Csv.WithoutHeader
+        parseOpts =
+          Csv.CsvParseOptions
+            { Csv.separators = separators
+            , Csv.headerOption = headerOpt
+            }
+
+    case mInFile of
+      Just inFile -> do
+        contents <- TIO.readFile $ T.unpack inFile
+        return $ Csv.parseCsv parseOpts contents
+      _ -> return $ Left "argument not set"
+
+  main :: IO ()
+  main = do
+    mCsv <- parseInFile "in"
+    case mCsv of
+      Left msg -> putStrLn msg
+      Right csv -> do
+        mAppend <- eitherToMaybe <$> parseInFile "append"
+        mSliceInterval <- Args.getInterval "slice"
+        mSearch <- Args.getText "search"
+
+        let mAppendOp = fmap (flip (<>)) mAppend
+            mSliceOp = fmap (uncurry slice) mSliceInterval
+            mSearchOp = fmap Csv.searchText mSearch
+            transformOp =
+              foldl
+                (\t mOp -> (M.fromMaybe id mOp) . t)
+                id
+                [mAppendOp, mSliceOp, mSearchOp]
+            transformedCsv = transformOp csv
+
+        mOut <- Args.getText "out"
+        case mOut of
+          Just "-" -> Csv.printCsv transformedCsv
+          Just fp -> Csv.writeCsv (T.unpack fp) transformedCsv
+          _ -> do
+            countNonEmpty <- Args.getBool "count-non-empty"
+            let mSummary =
+                  if countNonEmpty
+                    then Just . fmap (T.pack . show) $ Csv.countNonEmpty transformedCsv
+                    else Nothing
+            noPrettyOut <- Args.getBool "no-pretty"
+            unless noPrettyOut $
+              TIO.putStrLn $
+                Csv.prettyText $
+                  maybe
+                    id
+                    (flip Csv.unsafeWithSummaries)
+                    mSummary
+                    (Csv.fromCsv transformedCsv)
+
+  eitherToMaybe :: Either b a -> Maybe a
+  eitherToMaybe (Left _) = Nothing
+  eitherToMaybe (Right x) = Just x
+
+  when :: Bool -> IO () -> IO ()
+  when True act = act
+  when False _ = return ()
+
+  unless :: Bool -> IO () -> IO ()
+  unless b = when (not b)
+  ```
+
+## Chapter 9 - Quick checks and random tests
+
+- A *property* is a characteristic of data that can be computed and verified.
+- The `System.Random` module provides us with functions, types, and type
+  classes to generate random values. The most modern aproach can be found
+  in the `System.Random.Statefule` module. We will use `StdGen` which is a
+  typical pseudo-random generator. You and `random >= 1.2.1.1` to your
+  `package.yaml` `depdencies:` section.
+
+  ```hs
+  ghci> import System.Random
+  ghci> import System.Random.Stateful
+  ghci> g = mkStdGen 100
+  ghci> g
+  StdGen {unStdGen = SMGen 16626775891238333538 2532601429470541125}
+  ghci> random g :: (Int, StdGen)
+  (9216477508314497915,StdGen {unStdGen = SMGen 712633246999323047 2532601429470541125})
+
+  random :: (Random a, RandomGen g) => g -> (a, g)
+  randomR :: (Random a, RandomGen g) => (a, a) -> g -> (a, g)
+  uniform :: (Uniform a, RandomGen g) => g -> (a, g)
+  uniformR :: (UniformRange a, RandomGen g) => (a, a) -> g -> (a, b)
+  ```
+
+- `random` generates random values where the distribution of possible values of
+  a type is not known, and `uniform` generates uniformly distributed random
+  values for a given type. The ranged equivalent of both ends with `R` and
+  generates random values in the given range.
+- We can generate random values with the system StdGen and update the system
+  StdGen with `applyAtomicGen random globalStdGen :: IO Int` for an `Int`.
+
+  ```hs
+  applyGlobalStdGen :: (StdGen -> (a, StdGen)) -> IO a
+  applyGlobalStdGen f = applyAtomicGen f globalStdGen
+
+  ghci> applyGlobalStdGen random :: IO Int
+  -7583403057972408353
+  ghci> applyGlobalStdGen random :: IO Bool
+  False
+  ghci> applyGlobalStdGen random :: IO Double
+  0.5396729243902469
+  ```
+
+- `System.Random` provides us with a `Random` type class that is an example
+  of *return-type polymorphism*. The correct implementation is chosen based on
+  the type expected at *the call site*. The caller chooses the type.
+- It isn't a bad idea to give property tests in your code a special name like
+  prefixing them with `prop` or even `prop_`.
+- Property based testing is well suited to Haskell since it is *referentially
+  transparent*. There will be no side effects and there is no environment to
+  setup, so you merely need to test a function for the correct output to given
+  inputs.
