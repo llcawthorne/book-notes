@@ -41,8 +41,8 @@
 - We use the `do` notation to specify a sequence of actions and how their
   resulting values are passed to other actions and functions.
 - The `return` function wraps a value in an IO action.
-- The expressions passed to actions can be built from pure functions, allowing us
-  to use pure code within impure code.
+- The expressions passed to actions can be built from pure functions, allowing
+  us to use pure code within impure code.
 
   ```hs
   interactiveLines :: Int -> IO ()
@@ -1435,3 +1435,245 @@
   transparent*. There will be no side effects and there is no environment to
   setup, so you merely need to test a function for the correct output to given
   inputs.
+- To import `QuickCheck`, add `- QuickCheck >= 2.0` to package.yaml
+  dependencies.
+- The `quickCheck` function receives some prpoerty as its input and tests it
+  for us, creating an `IO` action. Two important instances of such a property
+  are `Bool` and QuickCheck's type `Property`. Furthermore, a property can be
+  a function that returns a property, so a function that returns `Bool` is a
+  property. Really, properties must have an instance of the `Testable` type
+  class, but we aren't going into that. Just think *property* when encountering
+  `Testable prop` in QuickCheck's documentation.
+
+  ```hs
+  ghci> import Test.QuickCheck
+  ghci> prop_rot13Symm s = s == rot13 (rot13 s)
+  ghci> :t prop_rot13Symm
+  prop_rot13Symm :: String -> Bool
+  ghci> quickCheck prop_rot13Symm
+  +++ OK, passed 100 tests.
+
+  ghci> symbols = upperAlphabet ++ lowerAlphabet ++ digits
+  ghci> rot13' = map $ (\ch -> if ch `elem` symbols then alphabetRot symbols 13 ch else ch)
+  ghci> prop_rot13'Symm s = s == rot13' (rot13' s)
+  ghci> quickCheck prop_rot13'Symm
+  *** Failed! Falsified (after 4 tests and 2 shrinks):
+  "a"
+  ``````
+
+- QuickCheck properties are usually written with the `prop_` prefix.
+- QuickCheck also shrinks counterexamples to provide the smallest value of
+  counterexample possible. The shrinking is often deterministic so that
+  multiple runs offer the same counterexample.
+- QuickCheck will generate arguments for any number of arguments independently.
+  QuickCheck uses generators to produce values for a variety of types. You can
+  try this in ghci with `generate arbitrary :: IO Int` where `Int` is the type
+  returned. Some functions are useful for custom generation:
+  - `choose :: Random a => (a, a) -> Gen a` generates numeric values in an
+    interval.
+  - `chooseAny :: Random a => Gen a` transform the random value from a `Random`
+    instance to a `Gen` of the same type.
+  - `oneof :: [Gen a] -> Gen a` - choose a generator from a list.
+  - `elements :: [a] -> Gen a` creates a generator that randomly picks an
+    element from the given list.
+  - `suchThat :: Gen a -> (a -> Bool) -> Gen a` modifies a generator to skip
+    unwatned elements based on a Boolean predicate.
+  - `listOf :: Gen a -> Gen [a]` generates a random length list of values from
+    a single item generator.
+  - `listOf1 :: Gen a -> Gen [a]` Like `listOf` but does not generate empty
+    lists.
+  - `vectorOf :: Int -> Gen a -> Gen [a]` generates a list of random values of
+    a given length.
+  - `vector :: Arbitrary a => Int -> Gen [a]` is like `vectorOf` but the
+    generator for the list is inferred on the type level.
+  - `shuffle :: [a] -> Gen [a]` produces random permutations of a given list.
+  - `sublistOf :: [a] -> Gen [a]` produces random sublists of the given list.
+- We can define our own generator with `do` notation. Note QuickCheck generators
+  have an internal size that determines some of the parameters of the generated
+  values. The `resize` function aallows you to adjust it, and it is
+  accessible via `getSize`.
+
+  ```hs
+  prop_alphabetRotClosed :: Property
+  prop_alphabetRotClosed =
+    forAll gen prop
+    where
+      prop :: (Alphabet, Int, Char) -> Bool
+      prop (alphabet, n, c) =
+        let c' = alphabetRot alphabet n c
+         in c' `elem` alphabet
+
+      -- remember, Alphabet = [Char]
+      gen :: Gen (Alphabet, Int, Char)
+      gen = do
+        size <- getSize
+        alphabet <- arbitrary `suchThat` (not . null)
+        n <- choose (-size, size)
+        c <- elements alphabet
+        return (L.nub alphabet, n, c)
+
+  -- demonstration of resize
+  ghci> import Control.Monad
+  ghci> import Test.QuickCheck
+  ghci> sample = replicateM 10
+  ghci> sample $ generate (arbitrary :: Gen Int)
+  [0,-8,12,9,-9,29,-15,19,-28,-26]
+  ghci> sample $ generate (resize 100 $ arbitrary :: Gen Int)
+  [-69,-38,13,-29,40,79,-33,-59,-28,-33]
+  ghci> sample $ generate (resize 10000 $ arbitrary :: Gen Int)
+  [270,-5063,-1121,-5645,-6974,9861,-1830,-5653,4493,9121]
+  ```
+
+- You notice above when we want to use a specific generator on some property
+  we need to use `forAll` on the generator and property which returns a 
+  property.
+- Repurposing existing generators for non-null or from a range is nice, but
+  sometimes we want to generate an example of a custom type. To do that, we
+  need to make our type an instance of `Arbitrary`. Recall our `AssocMap`:
+
+  ```hs
+  newtype AssocMap k v = AssocMap [(k, v)]
+    deriving (Show)
+  ```
+
+- Remember that each key can only appear once, so we need to respect this
+  property. `Gen` also has a `Functor` instance, so we can use `fmap` and
+  `<$>` to modify the generated values.
+
+  ```hs
+  import qualified Data.List as L
+  import Test.QuickCheck
+  -- ...
+  genAssocMap :: (Eq k, Arbitrary k, Arbitrary v) => Gen (AssocMap k v)
+  genAssocMap = do
+    keys <- L.nub <$> arbitrary
+    vals <- vectorOf (L.length keys) arbitrary
+    return $ AssocMap (L.zip keys vals)
+
+  ghci> generate genAssocMap :: IO (AssocMap Int Bool)
+  AssocMap [(0,True),(-1,False),(-23,True),(19,False),14,False),(2,False)]
+  ghci> generate genAssocMap :: IO (AssocMap Int (Either Bool Int))
+  AssocMap [(-10,Left True),(-20,Right 19)]
+  ghci> generate genAssocMap : IO (AssocMap Bool [Float])
+  AssocMap [(True,[7.2917347,17.285803,-12.867395,-3.3579175])]
+  ```
+
+- `shrink` is optional for an instance of `Arbitrary` but very useful.
+
+  ```hs
+  shrink :: a -> [a]
+  ghci> shrink 'H'
+  "abchABC"
+  ghci> shrink 'A'
+  "abc"
+  ghci> shrink 'h'
+  "abc"
+  ghci> shrink '\n'
+  "abcABC123 "
+  ghci> shrink '1'
+  "abcABC"
+
+  -- remember we have to keep keys unique but otherwise can shrink our
+  -- internal [(k, v)] which is already of Arbitrary types.
+  shrinkAssocMap ::
+    (Eq k, Arbitrary k, Arbitrary v) =>
+    AssocMap k v ->
+    [AssocMap k v]
+  shrinkAssocMap (AssocMap xs) =
+    L.map
+      (AssocMap . L.nubBy (\(k1, _) (k2, _) -> k1 == k2))
+      (shrink xs)
+
+  ghci> am <- generate (genAssocMap :: Gen (AssocMap Int Int))
+  ghci> am
+  AssocMap [(-26,11),(6,3),(12,-24),(-24,-4),(30,12),(-5,27),(-18,9)]
+  ghci> shrinkAssocMap am
+  [AssocMap [],,AssocMap [(-24,-4),(30,12),(-5,27),(-18,9)],...]
+  ```
+
+- Now we have our arbitrary and shrink definitions, so we can declare the
+  type an instance of `Arbitrary`:
+
+  ```hs
+  instance (Eq k, Arbitrary k, Arbitrary v) => Arbitrary (AssocMap k v)
+    where
+      arbitrary = genAssocMap
+      shrink = shrinkAssocMap
+  ```
+
+- Note we can use `label string prop` to add an annotation to a property and
+  return the property and `withMaxSuccess n prop` to test a property `n` times.
+  `collect` can be used to gather statistics of data tested.
+
+  ```hs
+  prop_lookup :: AssocMap Int Int -> Int -> Int -> Property
+  prop_lookup am k v = label' $ lookup k (insert k v am) == Just v
+    where
+      label' =
+        label
+          ( if lookup k am == Nothing
+              then "Key not present before insertion"
+              else "Key present before insertion"
+          )
+
+  prop_empty :: Int -> Property
+  prop_empty k = withMaxSuccess 10000 $ not (member k empty)
+
+  -- Here we're collecting how many times we tested the empty list.
+  prop_sortSorts :: [Int] -> Property
+  prop_sortSorts xs = collect (null xs) $ sort `sorts` xs
+  ```
+
+- Aside from customer geneators, QuickCheck tests take pre-conditions. We
+  add them to a property with the `==>` operator.
+
+  ```hs
+  prop_sortSorts :: [Int] -> Property
+  prop_sortSorts xs = length xs >= 2 ==> sort `sorts` xs
+  ghci> quickCheck prop_sortSorts
+  +++ OK, passed 100 tests; 43 discard.
+  ```
+
+- The `cover` function takes a number between 0 and 100 that specifies the
+  minimum amount of passing cases that are required, a condition for a value
+  to be passing, and a label for passing values. However `cover` doesn't
+  make a test fail. It only warns of the minimum amount isn't met. You can
+  wrap it in `checkCover` to turn the warning into a failed test.
+
+  ```hs
+  prop_sortSorts :: [Int] -> Property
+  prop_sortSorts xs = cover 25 (length xs >= 2) "non-trivial" $ sort `sorts` xs
+  ghci> quickCheck prop_sortSorts
+  +++ OK, passed 100 tests (93% non-trivial).
+  ```
+
+- There are other modifiers for QuickCheck:
+  - `verbose :: Testable prop => prop -> Property` makes the property test
+    more verbose and can be used in conjunction with `quickCheck` like
+    `quickCheck . verbose $ prop` or through `verboseCheck`.
+  - `verboseShrinking :: Testable prop => prop -> Property` includes shrinking
+    in the output.
+  - `noShrinking :: Testable prop => prop -> Property` disables shrinking for
+    the property.
+  - `withMaxSuccess :: Testable prop => Int -> prop -> Property` configures
+    what number of successes the test is done and accepted; defaults to 100.
+  - `within :: Testable prop => Int -> prop -> Property` makes a property
+    test fail if it wasn't completed in the specified number of microseconds.
+- `stack test` knows if our tests failed by whether the runner exits with
+  success of failure exit code. A very simple runner is shown below:
+
+  ```hs
+  module Main where
+
+  import System.Exit (exitFailure, exitSuccess)
+
+  main :: IO ()
+  main = do
+    success <- ...
+    if success
+      then exitSuccess
+      else exitFailure
+  ```
+
+- The `quickCheckAll` function collects all properties that are defined in a
+  module and uses `quickCheck` on all of them.
