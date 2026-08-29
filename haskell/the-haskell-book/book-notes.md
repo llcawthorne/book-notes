@@ -1194,3 +1194,22 @@
   ```
 
 ## Chapter 13 - Building Projects
+
+- Haskell code is divided into *modules* that define and export datatypes, type
+  synonyms, type classes, type class instances, and values defined at their
+  top level. Haskell modules act as namesspaces. Haskell Cabal, or Common
+  Architecture for Building Applications and Libraries, is a package manager.
+  A *package* is a problem you're building, including all its modules and
+  dependencies, whether you've written it or you're building someone else's
+  program. A package has *dependencies*, which are the interlinked elements of
+  that program along with the other packages and libraries it may depend on
+  and any tests and documentation associated witht he project. Cabal exists
+  to help organize all this and make sure all of your dependencies are properly
+  in scope. Stack is a cross-platform program for developing Haskell projects
+  thta helps you manage both projects made up of multiple packages as well as
+  individual packages, whereas Cabal exists primarily to describe a single
+  package with a Cabal file ending in `.cabal`. Stack is built on top of Cabal.
+- You can use `:browse` in ghci to see the functions included in a named module.
+- We made a hangman game and it's in ch13 folder.
+
+## Chapter 14 - Testing

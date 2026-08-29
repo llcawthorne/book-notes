@@ -1,0 +1,35 @@
+cabal-version:       2.2
+
+name:                hangman
+version:             0.1.0.0
+synopsis:            Playing Hangman
+-- description:
+homepage:            Chris N Julie
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Chris Allen and Julie Moronuki
+maintainer:          haskellbook.com
+category:            Game
+build-type:          Simple
+extra-source-files:  data/dict.txt
+
+executable hangman
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5
+                     , random
+                     , split
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+
+source-repository head
+  type:     git
+  location: https://github.com/githubuser/hangman
