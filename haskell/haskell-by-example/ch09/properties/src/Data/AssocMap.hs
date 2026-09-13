@@ -96,7 +96,7 @@ findWithDefault defaultValue key map =
 
 {-
 Since we have implemented an instance of the Arbitrary typeclass for AssocMap it
-is not your turn, to write properties for the type that can be tested.
+is now your turn to write properties for the type that can be tested.
 It’s important to check the basic function of this type as a map so we need to
 check:
   * A value can be looked up after it has been inserted

@@ -1,4 +1,4 @@
-# This file should ensure the existence of records required to run the 
+# This file should ensure the existence of records required to run the
 # application in every environment (production, development, test). The code
 # here should be idempotent so that it can be executed at any point in every
 # environment.
@@ -11,6 +11,7 @@
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
 # encoding: utf-8
+
 Product.delete_all
 product = Product.create(title: 'Programming Ruby 3.3 (5th Edition)',
   description:
@@ -77,3 +78,5 @@ product.image.attach(io: File.open(
 
 product.save!
 
+User.create! name: 'dave', email: 'dave@example.org',
+  password: Rails.application.credentials.dave_password

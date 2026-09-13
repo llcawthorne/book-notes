@@ -89,7 +89,7 @@ tryToDecrypt "" = ""
 tryToDecrypt msg =
   let
     -- The head of the resulting list from frequencyStats contains the most
-    -- frequenct letter, everything else is ignored. We perform a pattern
+    -- frequent letter, everything else is ignored. We perform a pattern
     -- match of which we are certain it will work!
     ((mostCommonLetter, _) : _) = frequencyStats msg
     -- An associative list (see chapter 3) containing letters and their

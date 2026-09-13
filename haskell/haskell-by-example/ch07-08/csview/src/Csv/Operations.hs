@@ -2,7 +2,7 @@ module Csv.Operations
   ( foldCsv
   , filterCsv
   , countNonEmpty
-  , countOccurences
+  , countOccurrences
   , searchText
   )
 where
@@ -28,8 +28,8 @@ countNonEmpty = foldCsv f 0
     f NullValue acc = acc
     f _ acc = acc +1
 
-countOccurences :: DataField -> Csv -> [Int]
-countOccurences df =
+countOccurrences :: DataField -> Csv -> [Int]
+countOccurrences df =
   foldCsv (\x acc -> if x == df then acc + 1 else acc) 0
 
 searchText :: T.Text -> Csv -> Csv

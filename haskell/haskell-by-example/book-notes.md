@@ -390,7 +390,7 @@
   this. Worst case, checking an edge exists as well as gathering children of
   a given node forces us to scan the whole list, as does inserting a new edge
   since we have to check for duplicates. Instead we are going to use an
-  *adjacency map*, `type Digraph a = [(a, [a])]`. Since we're using it to
+  *adjacency map*, `type DiGraph a = [(a, [a])]`. Since we're using it to
   model an undirected graph, we have to insert two elements for any given
   edge. It also takes more memory to store. If it was an actual map it
   would have O(1) lookups, but since the way the book defined it, it is
@@ -458,7 +458,7 @@
   `Int` is an instance of `Eq`.
 
   ```hs
-  hasNode :: (Eq a) => Digraph a -> a -> Bool
+  hasNode :: (Eq a) => DiGraph a -> a -> Bool
   hasNode = flip member
 
   addNode :: Eq a => DiGraph a -> a -> DiGraph a
@@ -602,11 +602,11 @@
 - So now we can test our functions.
 
   ```hs
-  ghci> insert 'a' "World" (insert 'b' "Hello" empty)"
+  ghci> insert 'a' "World" (insert 'b' "Hello" empty)
   AssocMap [('b', "World"), ('a', "Hello")]
   ghci> delete 'a' (insert 'a' "Delete me!" empty)
   AssocMap []
-  ``````
+  ```
 
 - It's generally possible to derive `Show` anytime the underlying types are
   in `Show`. Likewise, you can derive `Eq` if you want `(==)` to be defined
@@ -775,7 +775,7 @@
   ```hs
   {-# LANGUAGE ScopedTypeVariables #-}
   -- ...
-  type SearchState a = ([a], Digraph a, DiGraph a)
+  type SearchState a = ([a], DiGraph a, DiGraph a)
   data SearchResult a = Unsuccessful | Successful (DiGraph a)
 
   bfsSearch :: forall a. Eq a => DiGraph a -> a -> a -> Maybe [a]
@@ -802,7 +802,7 @@
           go n [] g = g
           go n (x :xs) g = go n xs (addEdge (x, n) g)
 
-      bfsSearch' :: Eq a => Search State a -> SearchResult a
+      bfsSearch' :: Eq a => SearchState a -> SearchResult a
       bfsSearch' ([], _, preds) = Unsuccessful
       bfsSearch' (frontier, g, preds) =
         let g' = deleteNodes frontier g
@@ -812,7 +812,7 @@
                 frontier
             frontier' = L.concatMap snd ch
             preds' = addMultiplePredecessors ch preds
-         in if end `L.elem` frontier`
+         in if end `L.elem` frontier'
              then Successful preds'
              else bfsSearch' (frontier', g', preds')
   ```
@@ -840,7 +840,7 @@
 
   printHelpText :: String -> IO ()
   printHelpText msg = do
-    printStrLn (msg ++ "\n")
+    putStrLn (msg ++ "\n")
     progName <- getProgName
     putStrLn ("Usage: " ++ progName ++ " <filename> <start> <end>")
 
@@ -849,7 +849,7 @@
     args <- getArgs
     case args of
       [dictFile, start, end] -> do
-        dict <- readDictionary dictfile
+        dict <- readDictionary dictFile
         case ladderSolve dict start end of
           Nothing -> putStrLn "No solution"
           Just sol -> do
@@ -907,7 +907,7 @@
     }
     deriving Show
 
-  data DataFile
+  data DataField
     = IntValue Int
     | TextValue T.Text
     | NullValue
@@ -922,7 +922,7 @@
   the header to be equal to the number of columns, and each column also needs
   to have the same number of elements. We can ensure these properties by only
   allowing `Csv` values to be built by a dedicated function that checks the
-  arguments for their validatity; a *smart constructor*. It is common for this
+  arguments for their validity; a *smart constructor*. It is common for this
   function to simply crash the program if something goes wrong. We are going
   to use a safe version that returns an `Either`. We can export our smart
   constructor instead of our new data type constructors, so no invalid records
@@ -948,7 +948,7 @@
 
   unsafeMkCsv :: Maybe [T.Text] -> [Column] -> Csv
   unsafeMkCsv header columns =
-    E.Either error id (mkCsv header columns)
+    E.either error id (mkCsv header columns)
   ```
 
 - For the rest of the book, we will assume several qualified imports for our
@@ -989,12 +989,12 @@
       [] -> 0
       (x : _) -> length x
 
-  numberOfColumsn :: Csv -> Int
+  numberOfColumns :: Csv -> Int
   numberOfColumns Csv {..} = length csvColumns
   ```
 
 - The most important operation of `Semigroup` is the binary, associative
-  operations `(<>)`. The `Monoid` typeclase has `mappend` which defaults to
+  operations `(<>)`. The `Monoid` typeclass has `mappend` which defaults to
   `(<>)`, `mempty` the neutral element for `mappend`, and `mconcat` which
   applies `mappend` to all the values of a list, condensing them to a single
   value.
@@ -1035,7 +1035,7 @@
           fillB = replicate (numberOfRows a - numberOfRows b) NullValue
   ```
 
-- We can enable extentions project-wide in our `package.yaml` 
+- We can enable extensions project-wide in our `package.yaml` 
 
   ```hs
   default-extensions:
@@ -1052,7 +1052,7 @@
     slice idx1 idx2 xs =
       let (_, s, _) = slicePartition idx1 idx2 xs
        in s
-    slicePartition :: Int, Int, a -> (a, a, a)
+    slicePartition :: Int -> Int -> a -> (a, a, a)
 
   -- a List is sliceable
   instance Sliceable [a] where
@@ -1064,22 +1064,22 @@
 
   -- A Maybe that contains a Sliceable is Sliceable
   instance Sliceable a => Sliceable (Maybe a) where
-    sliceParition idx1 idx2 Nothing =
+    slicePartition idx1 idx2 Nothing =
       (Nothing, Nothing, Nothing)
     slicePartition idx1 idx2 (Just xs) =
       let (hd, x, tl) = slicePartition idx1 idx2 xs
-       in (Just hd, Just s, Just tl)
+       in (Just hd, Just x, Just tl)
 
   -- And since we can slice Lists and Maybes, of course Csv
   instance Sliceable Csv where
     slicePartition idx1 idx2 Csv {..} =
-      let (headerHd, headerSpl, headerTl)
+      let (headerHd, headerSpl, headerTl) =
             slicePartition idx1 idx2 csvHeader
           (columnHd, columnSpl, columnTl) =
             slicePartition idx1 idx2 csvColumns
        in ( Csv {csvHeader = headerHd, csvColumns = columnHd},
             Csv {csvHeader = headerSpl, csvColumns = columnSpl},
-            Csv {csvHeader = headerTl, csvHeader = columnTl}
+            Csv {csvHeader = headerTl, csvColumns = columnTl}
           )
   ```
 
@@ -1387,10 +1387,10 @@
 
 - A *property* is a characteristic of data that can be computed and verified.
 - The `System.Random` module provides us with functions, types, and type
-  classes to generate random values. The most modern aproach can be found
-  in the `System.Random.Statefule` module. We will use `StdGen` which is a
-  typical pseudo-random generator. You and `random >= 1.2.1.1` to your
-  `package.yaml` `depdencies:` section.
+  classes to generate random values. The most modern approach can be found
+  in the `System.Random.Stateful` module. We will use `StdGen` which is a
+  typical pseudo-random generator. You add `random >= 1.2.1.1` to your
+  `package.yaml` `dependencies:` section.
 
   ```hs
   ghci> import System.Random
@@ -1437,7 +1437,7 @@
   inputs.
 - To import `QuickCheck`, add `- QuickCheck >= 2.0` to package.yaml
   dependencies.
-- The `quickCheck` function receives some prpoerty as its input and tests it
+- The `quickCheck` function receives some property as its input and tests it
   for us, creating an `IO` action. Two important instances of such a property
   are `Bool` and QuickCheck's type `Property`. Furthermore, a property can be
   a function that returns a property, so a function that returns `Bool` is a
@@ -1477,7 +1477,7 @@
   - `elements :: [a] -> Gen a` creates a generator that randomly picks an
     element from the given list.
   - `suchThat :: Gen a -> (a -> Bool) -> Gen a` modifies a generator to skip
-    unwatned elements based on a Boolean predicate.
+    unwanted elements based on a Boolean predicate.
   - `listOf :: Gen a -> Gen [a]` generates a random length list of values from
     a single item generator.
   - `listOf1 :: Gen a -> Gen [a]` Like `listOf` but does not generate empty
@@ -1490,7 +1490,7 @@
   - `sublistOf :: [a] -> Gen [a]` produces random sublists of the given list.
 - We can define our own generator with `do` notation. Note QuickCheck generators
   have an internal size that determines some of the parameters of the generated
-  values. The `resize` function aallows you to adjust it, and it is
+  values. The `resize` function allows you to adjust it, and it is
   accessible via `getSize`.
 
   ```hs
@@ -1624,14 +1624,14 @@
   prop_sortSorts xs = collect (null xs) $ sort `sorts` xs
   ```
 
-- Aside from customer geneators, QuickCheck tests take pre-conditions. We
+- Aside from custom generators, QuickCheck tests take pre-conditions. We
   add them to a property with the `==>` operator.
 
   ```hs
   prop_sortSorts :: [Int] -> Property
   prop_sortSorts xs = length xs >= 2 ==> sort `sorts` xs
   ghci> quickCheck prop_sortSorts
-  +++ OK, passed 100 tests; 43 discard.
+  +++ OK, passed 100 tests; 43 discarded.
   ```
 
 - The `cover` function takes a number between 0 and 100 that specifies the

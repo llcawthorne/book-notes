@@ -33,7 +33,7 @@ class ProductTest < ActiveSupport::TestCase
 
   def new_product(filename, content_type)
     Product.new(
-      title:        'My Book Title',
+      title:        "My Book Title",
       description:  "yyy",
       price:        1
     ).tap do |product|

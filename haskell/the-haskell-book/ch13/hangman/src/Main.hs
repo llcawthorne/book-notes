@@ -93,7 +93,7 @@ handleGuess puzzle guess = do
        , alreadyGuessed puzzle guess) of
 
     (_, True) -> do
-      putStrLn "You already guess that\
+      putStrLn "You already guessed that\
                \ character, pick \
                \ something else!"
       return puzzle
@@ -136,5 +136,5 @@ runGame puzzle = forever $ do
   case guess of
     [c] -> handleGuess puzzle c >>= runGame
     _   ->
-      putStrLn "You guess must\
+      putStrLn "Your guess must\
                 \ be a single character"

@@ -48,7 +48,7 @@ numberLines shouldIncr shouldNumber ls =
 const' :: a -> b -> a
 const' x = (\_ -> x)
 
--- This is equivalent to const``
+-- This is equivalent to const
 const'' :: a -> b -> a
 const'' x _ = x
 

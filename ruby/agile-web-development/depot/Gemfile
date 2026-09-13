@@ -20,7 +20,7 @@ gem "tailwindcss-rails"
 gem "jbuilder"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
-# gem "bcrypt", "~> 3.1.7"
+gem "bcrypt", "~> 3.1.7"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -40,9 +40,12 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-# gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 1.2"
 
 group :development, :test do
+  # add respec
+  gem "rspec-rails"
+
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
@@ -62,6 +65,18 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+
+  # Automatically retry flaky specs (system specs in particular) a few times
+  # before failing the run [https://github.com/NoRedInk/rspec-retry]
+  gem "rspec-retry"
+
+  # Mocking/stubbing for the Minitest suite (RSpec already ships rspec-mocks)
+  # [https://github.com/freerange/mocha]
+  gem "mocha"
+
+  # Minitest's equivalent of rspec-retry, scoped to system tests only
+  # [https://github.com/y-yagi/minitest-retry]
+  gem "minitest-retry"
 end
 
 gem "hotwire-spark", "~> 0.1.13", group: :development

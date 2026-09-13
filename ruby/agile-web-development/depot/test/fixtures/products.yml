@@ -2,12 +2,12 @@
 # https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  title: MyString
+  title: My Test Product One
   description: MyText
   price: 9.99
 
 two:
-  title: MyString
+  title: My Test Product Two
   description: MyText
   price: 9.99
 

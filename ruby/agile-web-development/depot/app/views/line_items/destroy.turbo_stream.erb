@@ -1,0 +1,4 @@
+<%= turbo_stream.remove @line_item %>
+<%= turbo_stream.replace 'cart' do %>
+  <%= render partial: 'layouts/cart', locals: { cart: @cart } %>
+<% end %>

@@ -1,0 +1,4 @@
+<%= turbo_stream.replace 'notice' do %>
+  <%= render partial: 'store/notice' %>
+<% end %>
+<%= turbo_stream.remove "product_#{params[:product_id]}" %>

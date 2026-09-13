@@ -28,7 +28,6 @@ class ProductsController < ApplicationController
         format.html { redirect_to @product, notice: "Product was successfully created." }
         format.json { render :show, status: :created, location: @product }
       else
-        puts @product.errors.full_messages
         format.html { render :new, status: :unprocessable_content }
         format.json { render json: @product.errors, status: :unprocessable_content }
       end
@@ -39,6 +38,9 @@ class ProductsController < ApplicationController
   def update
     respond_to do |format|
       if @product.update(product_params)
+        @product.broadcast_replace_later_to "store/products",
+          partial: "store/product"
+
         format.html { redirect_to @product, notice: "Product was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @product }
       else
@@ -50,11 +52,14 @@ class ProductsController < ApplicationController
 
   # DELETE /products/1 or /products/1.json
   def destroy
-    @product.destroy!
-
     respond_to do |format|
-      format.html { redirect_to products_path, notice: "Product was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
+      if @product.destroy
+        format.html { redirect_to products_path, notice: "Product was successfully destroyed.", status: :see_other }
+        format.json { head :no_content }
+      else
+        format.html { redirect_to products_path, alert: @product.errors.full_messages.to_sentence, status: :see_other }
+        format.json { render json: @product.errors, status: :unprocessable_content }
+      end
     end
   end
 
