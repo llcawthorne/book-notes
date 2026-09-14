@@ -1,9 +1,9 @@
 class LineItemsController < ApplicationController
-  allow_unauthenticated_access only: %i[ create destroy decrement ]
+  allow_unauthenticated_access only: %i[ create destroy decrement increment ]
   include CurrentCart
-  before_action :set_cart, only: %i[ create destroy decrement ]
-  before_action :set_line_item, only: %i[ show edit update destroy decrement ]
-  before_action :ensure_own_cart_item, only: %i[ destroy decrement ], unless: :authenticated?
+  before_action :set_cart, only: %i[ create destroy decrement increment ]
+  before_action :set_line_item, only: %i[ show edit update destroy decrement increment ]
+  before_action :ensure_own_cart_item, only: %i[ destroy decrement increment ], unless: :authenticated?
   rescue_from ActiveRecord::RecordNotFound, with: :invalid_product
 
   # GET /line_items or /line_items.json
@@ -64,7 +64,7 @@ class LineItemsController < ApplicationController
         if authenticated?
           redirect_to line_items_path, notice: "Line item was successfully destroyed.", status: :see_other
         else
-          redirect_to store_index_url, notice: "Line item was successfully destroyed."
+          redirect_to store_index_url, notice: t(".notice")
         end
       end
       format.json { head :no_content }
@@ -74,6 +74,22 @@ class LineItemsController < ApplicationController
   # PATCH /line_items/1/decrement
   def decrement
     @line_item.decrement_quantity!
+
+    respond_to do |format|
+      format.turbo_stream
+      format.html do
+        if authenticated?
+          redirect_to line_items_path, notice: "Line item was successfully updated.", status: :see_other
+        else
+          redirect_to store_index_url
+        end
+      end
+    end
+  end
+
+  # PATCH /line_items/1/increment
+  def increment
+    @line_item.increment_quantity!
 
     respond_to do |format|
       format.turbo_stream
@@ -109,10 +125,10 @@ class LineItemsController < ApplicationController
         # Turbo shows "Content missing" instead of following the redirect.
         # Render a stream instead so the stale frame is removed directly.
         format.turbo_stream do
-          flash.now[:alert] = "That product is no longer available."
+          flash.now[:alert] = t("line_items.invalid_product.alert")
           render "line_items/invalid_product"
         end
-        format.html { redirect_to store_index_url, alert: "That product is no longer available." }
+        format.html { redirect_to store_index_url, alert: t("line_items.invalid_product.alert") }
       end
     end
 

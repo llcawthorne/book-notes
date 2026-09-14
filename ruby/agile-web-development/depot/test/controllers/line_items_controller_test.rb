@@ -180,4 +180,39 @@ class LineItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :forbidden
   end
+
+  test "should let an unauthenticated visitor increment a line item's quantity" do
+    delete session_url
+    post line_items_url, params: { product_id: products(:pragprog).id }
+    my_item = LineItem.last
+
+    assert_difference -> { my_item.reload.quantity }, 1 do
+      patch increment_line_item_url(my_item)
+    end
+
+    assert_redirected_to store_index_url
+  end
+
+  test "should replace the row via turbo-stream when incrementing" do
+    delete session_url
+    post line_items_url, params: { product_id: products(:pragprog).id }
+    my_item = LineItem.last
+
+    patch increment_line_item_url(my_item), as: :turbo_stream
+
+    assert_response :success
+    assert_match /<turbo-stream action="replace" target="line_item_#{my_item.id}">/, @response.body
+    assert_match(/\$79\.98/, @response.body)
+  end
+
+  test "should forbid an unauthenticated visitor from incrementing a line item outside their own cart" do
+    delete session_url
+    post line_items_url, params: { product_id: products(:pragprog).id }
+
+    assert_no_difference -> { @line_item.reload.quantity } do
+      patch increment_line_item_url(@line_item)
+    end
+
+    assert_response :forbidden
+  end
 end

@@ -40,7 +40,7 @@ RSpec.describe OrderMailer, type: :mailer do
 
     it "lists the shipped line items in a table" do
       expect(mail.body.encoded).to match(%r{
-        <td[^>]*>1<\/td>\s*
+        <td[^>]*>\s*1\s*<\/td>\s*
         <td>&times;<\/td>\s*
         <td[^>]*>\s*The\sPragmatic\sProgrammer\s*</td>
       }x)

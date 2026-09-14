@@ -31,6 +31,23 @@
     <%= form.email_field :email, class: "input-field" %>
   </div>
 
+  <div class="my-5">
+    <%= form.label :coupon_code, t('.coupon_code') %>
+    <%= form.text_field :coupon_code, class: "input-field" %>
+  </div>
+
+  <div class="my-5">
+    <% if order.persisted? %>
+      <p><%= t('.subtotal') %> <%= localized_currency(order.subtotal) %></p>
+      <% if order.discount_percent.positive? %>
+        <p><%= t('.discount', percent: order.discount_percent) %> -<%= localized_currency(order.discount_amount) %></p>
+      <% end %>
+      <p class="font-bold"><%= t('.total') %> <%= localized_currency(order.total_price) %></p>
+    <% else %>
+      <p><%= t('.subtotal') %> <%= localized_currency(@cart.total_price) %></p>
+    <% end %>
+  </div>
+
   <div data-controller="payment">
     <div class="my-5">
       <%= form.label :pay_type, t(".pay_type") %>

@@ -3,10 +3,16 @@
     <strong class="block font-medium mb-1">Title:</strong>
     <%= product.title %>
   </div>
-  <div>
-    <strong class="block font-medium mb-1">Description:</strong>
-    <%= product.description %>
-  </div>
+  <% I18n.available_locales.each do |locale| %>
+    <div>
+      <strong class="block font-medium mb-1">Description (<%= locale.to_s.upcase %>):</strong>
+      <% if product.description_translations[locale].present? %>
+        <%= product.description_translations[locale] %>
+      <% else %>
+        <em>(none entered -- falls back to <%= Globalize.with_locale(locale) { product.description } %>)</em>
+      <% end %>
+    </div>
+  <% end %>
   <div>
     <strong class="block font-medium mb-1">Image:</strong>
     <%= link_to product.image.filename, product.image, class: "text-gray-700 underline hover:no-underline" if product.image.attached? %>

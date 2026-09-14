@@ -34,7 +34,7 @@ RSpec.describe "Products", type: :request do
     it "creates a product and redirects to it" do
       expect {
         post products_url, params: { product: {
-          description: product.description,
+          description_translations: { en: product.description },
           image: uploaded_image,
           price: product.price,
           title: title
@@ -62,7 +62,7 @@ RSpec.describe "Products", type: :request do
   describe "PATCH /products/:id" do
     it "updates the product and redirects to it" do
       patch product_url(product), params: { product: {
-        description: product.description,
+        description_translations: { en: product.description },
         image: uploaded_image,
         price: product.price,
         title: title
@@ -75,7 +75,7 @@ RSpec.describe "Products", type: :request do
       turbo_streams = capture_turbo_stream_broadcasts "store/products" do
         perform_enqueued_jobs do
           patch product_url(product), params: { product: {
-            description: product.description,
+            description_translations: { en: product.description },
             image: uploaded_image,
             price: product.price,
             title: title
@@ -110,6 +110,31 @@ RSpec.describe "Products", type: :request do
         follow_redirect!
         expect(response.body).to match(/Line Items present/)
       end
+    end
+  end
+
+  describe "without being signed in" do
+    before { logout }
+
+    it "requires authentication to list products" do
+      get products_url
+
+      expect(response).to redirect_to(new_session_url)
+    end
+
+    it "requires authentication to update a product" do
+      patch product_url(product), params: { product: { title: "Hijacked Title" } }
+
+      expect(response).to redirect_to(new_session_url)
+      expect(product.reload.title).not_to eq("Hijacked Title")
+    end
+
+    it "requires authentication to destroy a product" do
+      expect {
+        delete product_url(product)
+      }.not_to change(Product, :count)
+
+      expect(response).to redirect_to(new_session_url)
     end
   end
 end

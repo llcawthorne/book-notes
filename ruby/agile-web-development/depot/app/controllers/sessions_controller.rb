@@ -6,7 +6,9 @@ class SessionsController < ApplicationController
   end
 
   def create
-    if user = User.authenticate_by(params.permit(:email_address, :password))
+    user = User.count.zero? ? bootstrap_administrator : User.authenticate_by(params.permit(:email_address, :password))
+
+    if user
       start_new_session_for user
       redirect_to after_authentication_url
     else
@@ -18,4 +20,14 @@ class SessionsController < ApplicationController
     terminate_session
     redirect_to new_session_path
   end
+
+  private
+    # There's no administrator yet to authenticate against, so accept
+    # whatever was submitted and create the first one from it -- this is
+    # only reachable until that first user exists.
+    def bootstrap_administrator
+      user = User.new(name: params[:email_address], email_address: params[:email_address],
+        password: params[:password], password_confirmation: params[:password])
+      user if user.save
+    end
 end

@@ -6,4 +6,10 @@ You ordered the following items:
 
 <%= render @order.line_items -%>
 
+Subtotal: <%= number_to_currency(@order.subtotal) %>
+<% if @order.discount_percent.positive? -%>
+Discount (<%= @order.discount_percent %>%): -<%= number_to_currency(@order.discount_amount) %>
+<% end -%>
+Total: <%= number_to_currency(@order.total_price) %>
+
 We'll send you a separate e-mail when your order ships.

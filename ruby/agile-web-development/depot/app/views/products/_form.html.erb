@@ -16,10 +16,21 @@
     <%= form.text_field :title, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": product.errors[:title].none?, "border-red-400 focus:outline-red-600": product.errors[:title].any?}] %>
   </div>
 
-  <div class="my-5">
-    <%= form.label :description %>
-    <%= form.text_area :description, rows: 10, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": product.errors[:description].none?, "border-red-400 focus:outline-red-600": product.errors[:description].any?}] %>
-  </div>
+  <% I18n.available_locales.each do |locale| %>
+    <div class="my-5">
+      <%= label_tag "product_description_translations_#{locale}",
+        "Description (#{locale.to_s.upcase})#{' -- falls back to English if left blank' if locale != I18n.default_locale}" %>
+      <%# rich_text_area_tag is Action Text's plain Trix widget over a hidden
+        field -- no has_rich_text, no separate storage. It still submits the
+        same product[description_translations][locale] param as a plain
+        HTML string, straight into the existing text column. %>
+      <%= rich_text_area_tag "product[description_translations][#{locale}]",
+        product.description_translations[locale],
+        id: "product_description_translations_#{locale}",
+        input: "product_description_translations_#{locale}_input",
+        class: ["trix-content block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": product.errors[:description].none?, "border-red-400 focus:outline-red-600": product.errors[:description].any?}] %>
+    </div>
+  <% end %>
 
   <div class="my-5">
     <%= form.label :image %>

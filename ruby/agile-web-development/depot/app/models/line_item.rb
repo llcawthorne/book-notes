@@ -14,4 +14,8 @@ class LineItem < ApplicationRecord
       destroy!
     end
   end
+
+  def increment_quantity!
+    increment!(:quantity)
+  end
 end

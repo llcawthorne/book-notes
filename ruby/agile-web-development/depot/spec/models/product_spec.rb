@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Product, type: :model do
-  fixtures :products
+  fixtures :products, :product_translations
 
   def attach_image(product, filename:, content_type:)
     product.image.attach(
@@ -83,6 +83,72 @@ RSpec.describe Product, type: :model do
         expect(product).to be_invalid
         expect(product.errors[:title]).to eq([ "has already been taken" ])
       end
+    end
+
+    describe "description" do
+      subject(:product) do
+        attach_image(Product.new(title: "My Book Title", price: 1),
+          filename: "lorem.jpg", content_type: "image/jpeg")
+      end
+
+      it "requires an English description even when another locale is filled in" do
+        product.description_translations = { es: "Descripción en español" }
+
+        expect(product).to be_invalid
+        expect(product.errors[:description]).to be_present
+      end
+
+      it "is valid once the English description is present, regardless of other locales" do
+        product.description_translations = { en: "An English description" }
+
+        expect(product).to be_valid
+      end
+    end
+  end
+
+  describe "translated descriptions" do
+    it "falls back to the English description when a locale has no translation at all" do
+      product = products(:pragprog)
+      expect(product.translations.find_by(locale: :it)).to be_nil
+
+      italian_description = Globalize.with_locale(:it) { product.description }
+
+      expect(italian_description).to eq(Globalize.with_locale(:en) { product.description })
+    end
+
+    it "never translates Japanese -- descriptions always fall back to English" do
+      product = products(:pragprog)
+      expect(product.translations.find_by(locale: :ja)).to be_nil
+
+      expect(Globalize.with_locale(:ja) { product.description }).to eq(Globalize.with_locale(:en) { product.description })
+    end
+
+    it "returns the localized description once one is entered" do
+      # fixtures one_es ("MiTexto") and two_de ("MeinText") exercise this via
+      # fixture data rather than a runtime .create!, since a locale each
+      # product already has a fixture translation for can't be re-created.
+      expect(Globalize.with_locale(:es) { products(:one).description }).to eq("MiTexto")
+      expect(Globalize.with_locale(:en) { products(:one).description }).not_to eq("MiTexto")
+
+      expect(Globalize.with_locale(:de) { products(:two).description }).to eq("MeinText")
+    end
+
+    it "lets a territory locale fall back to its base language before English" do
+      # products(:one) has a real Spanish translation (fixture one_es) but
+      # no Spain-specific one, so es-ES should reuse the Spanish text rather
+      # than dropping all the way to English (see
+      # config/initializers/globalize.rb).
+      product = products(:one)
+      expect(product.translations.find_by(locale: "es-ES")).to be_nil
+
+      expect(Globalize.with_locale(:"es-ES") { product.description }).to eq("MiTexto")
+    end
+
+    it "falls back to English when a locale's translation is blank, not just missing" do
+      product = products(:pragprog)
+      product.translations.create!(locale: :it, description: "")
+
+      expect(Globalize.with_locale(:it) { product.description }).to eq(Globalize.with_locale(:en) { product.description })
     end
   end
 end

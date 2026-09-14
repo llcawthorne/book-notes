@@ -15,7 +15,7 @@ class OrderMailerTest < ActionMailer::TestCase
     assert_equal [ "dave@example.org" ], mail.to
     assert_equal [ "depot@example.com" ], mail.from
     assert_match %r{
-      <td[^>]*>1<\/td>\s*
+      <td[^>]*>\s*1\s*<\/td>\s*
       <td>&times;<\/td>\s*
       <td[^>]*>\s*The\sPragmatic\sProgrammer\s*</td>
     }x, mail.body.encoded

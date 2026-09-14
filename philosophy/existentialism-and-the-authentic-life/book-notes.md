@@ -19,13 +19,13 @@
 - Heidegger and Ortega were both phenomenologists that liked to make up words.
   Heidegger is notoriously difficult but his ideas influenced later
   existentialists. The idea of phenomenology is that philosophers study
-  phenomenon, and Heidegger in particular asserted there is no study of
-  phenomenon without studying it in relation to the self. Both philosophers
+  phenomena, and Heidegger in particular asserted there is no study of
+  phenomena without studying it in relation to the self. Both philosophers
   believed we are thrown into the world against our will, and Ortega insisted
   this is why we philosophize, to learn about the realm we were thrust into.
   Both stressed the idea of authenticity and being true to self, whatever that
   means for the individual. Ortega maintained each of us is responsible for his
-  own survival and giving their life shape, but those characteristics are
+  own survival and giving his life shape, but those characteristics are
   revealed in how we play the game of life, interacting with other people and
   objects.
 - (There were four good lectures on Camus that went into his short stories at
@@ -65,7 +65,7 @@
   it to be his most anti-Christian work. Camus thought hoping for something
   better in the afterlife didn't justify giving up on making this life less
   hellish. Camus also disagreed with the Christian view that people are to blame
-  for phenomenon like plagues. The plague is also a meditation on fascism and a
+  for phenomena like plagues. The plague is also a meditation on fascism and a
   chronicle of the resistance. One problem with looking at the plague as a
   metaphor for fascism is the fact that fascism has its roots in humans. Unlike
   the plague, which is a natural force where our struggles are in vain and our
@@ -79,11 +79,11 @@
   Engineer", "a father", "a good man." No matter how many of these attributes
   you list, you are missing something essential to what it means to be me. Even
   the strictest profession leaves room for self-expression. Instead of a good
-  waiter, you can choose to be a good, playful waiter. We should also respect
+  waiter, you can choose to be good and playful. We should also respect
   others' choice of self-expression and not treat them as an object. Sartre
   believed we chose what we become but at the same time are bound to make a
-  choice in line with the facts of, or historicity of, our situation. "You
-  become what you are in the context of what others have made of you." Sartre
+  choice in line with the facts of, or historicity of, our situation. You
+  become what you are in the context of what others have made of you. Sartre
   thought it "bad faith" to do nothing to change your situation but also "bad
   faith" to ignore the limits around you. You have to be aware of the price you
   pay for change. There is definite tension between freedom and the facts of our

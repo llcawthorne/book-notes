@@ -11,6 +11,13 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
+    # ExchangeRateService makes a real HTTP call in .request_rates; stub it
+    # globally so no test ever depends on network access. Tests that care
+    # about the fetch/fallback/caching behavior itself re-stub this locally.
+    setup do
+      ExchangeRateService.stubs(:request_rates).returns(ExchangeRateService::FALLBACK_RATES)
+    end
+
     # Add more helper methods to be used by all tests here...
     def login_as(user)
       get users_path
@@ -18,6 +25,10 @@ module ActiveSupport
         email_address: user.email_address,
         password: "password"
       }
+    end
+
+    def logout
+      delete session_path
     end
 
     # Kept as a reference for stubbing without a mocking dependency. Prefer

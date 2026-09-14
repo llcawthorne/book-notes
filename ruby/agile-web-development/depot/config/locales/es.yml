@@ -9,6 +9,17 @@ es:
         delimiter: "."
         format:    "%n&nbsp;%u"
 
+  # Not used by time.formats.short below, but kept for a future long-form
+  # date/time format (%B substitutes from this list).
+  date:
+    month_names:
+      [ ~, enero, febrero, marzo, abril, mayo, junio, julio, agosto,
+        septiembre, octubre, noviembre, diciembre ]
+
+  time:
+    formats:
+      short: "%d/%m/%Y %I:%M %p"
+
   activerecord:
     models:
       order:       "pedido"
@@ -36,17 +47,25 @@ es:
       questions:  "Preguntas"
       news:       "Noticias"
       contact:    "Contacto"
-
+      login:      "Iniciar sesión"
   carts:
     cart:
       title:      "Carrito de la Compra"
       empty:      "Vaciar Carrito"
       checkout:   "Comprar"
+      total:      "Total:"
+    destroy:
+      empty_notice: "Su carrito está vacío en este momento"
 
   line_items:
     line_item:
-      decrement:  "-1"
+      decrement:  "Disminuir cantidad"
+      increment:  "Aumentar cantidad"
       remove:     "Eliminar"
+    destroy:
+      notice: "El artículo se eliminó correctamente."
+    invalid_product:
+      alert: "Ese producto ya no está disponible."
 
   store:
     index:
@@ -57,10 +76,16 @@ es:
   orders:
     new:
       legend:       "Por favor, introduzca sus datos"
+      title:        "Finalizar Compra"
+      empty_cart_notice: "Su carrito está vacío"
     form:
       name:         "Nombre"
       address_html: "Direcci&oacute;n"
       email:        "E-mail"
+      coupon_code:  "Código de cupón"
+      subtotal:     "Subtotal:"
+      discount:     "Descuento (%{percent}%):"
+      total:        "Total:"
       pay_type:     "Forma de pago"
       pay_prompt_html: "Seleccione un método de pago"
       submit:       "Realizar Pedido"
@@ -73,7 +98,8 @@ es:
       account_number: "# de Cuenta"
     cc:
       cc_number: "Número"
-      expiration_date: "Expiración"  
+      expiration_date: "Expiración"
+      expiration_placeholder: "ej. 03/22"
     po:
       po_number: "Número"
 

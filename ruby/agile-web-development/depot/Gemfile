@@ -42,6 +42,11 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 
+# Per-locale model translations (product descriptions), backed by a
+# translations table so adding more locales later needs no schema change
+# [https://github.com/globalize/globalize]
+gem "globalize"
+
 group :development, :test do
   # add respec
   gem "rspec-rails"

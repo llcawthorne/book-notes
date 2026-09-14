@@ -16,6 +16,20 @@
     <%= order.pay_type %>
   </div>
   <div>
+    <strong class="block font-medium mb-1">Subtotal:</strong>
+    <%= number_to_currency(order.subtotal) %>
+  </div>
+  <% if order.discount_percent.positive? %>
+    <div>
+      <strong class="block font-medium mb-1">Discount (<%= order.discount_percent %>%):</strong>
+      -<%= number_to_currency(order.discount_amount) %>
+    </div>
+  <% end %>
+  <div>
+    <strong class="block font-medium mb-1">Total:</strong>
+    <%= number_to_currency(order.total_price) %>
+  </div>
+  <div>
     <strong class="block font-medium mb-1">Ship date:</strong>
     <%= order.ship_date %>
   </div>

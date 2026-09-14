@@ -44,4 +44,20 @@ class UserTest < ActiveSupport::TestCase
 
     assert user.valid?
   end
+
+  test "requires the email address to contain an @ symbol" do
+    user = users(:one)
+    user.email_address = "not-an-email"
+
+    assert user.invalid?
+    assert_equal [ "must contain an @ symbol" ], user.errors[:email_address]
+  end
+
+  test "does not duplicate the error when the email address is blank" do
+    user = users(:one)
+    user.email_address = ""
+
+    assert user.invalid?
+    assert_equal [ "can't be blank" ], user.errors[:email_address]
+  end
 end

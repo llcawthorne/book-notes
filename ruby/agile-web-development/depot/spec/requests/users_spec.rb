@@ -110,4 +110,35 @@ RSpec.describe "Users", type: :request do
       expect(response).to redirect_to(users_url)
     end
   end
+
+  describe "without being signed in" do
+    before { logout }
+
+    it "requires authentication to list users" do
+      get users_url
+
+      expect(response).to redirect_to(new_session_url)
+    end
+
+    it "requires authentication to view a user" do
+      get user_url(user)
+
+      expect(response).to redirect_to(new_session_url)
+    end
+
+    it "requires authentication to update a user" do
+      patch user_url(user), params: { user: { name: "Hijacked Name" } }
+
+      expect(response).to redirect_to(new_session_url)
+      expect(user.reload.name).not_to eq("Hijacked Name")
+    end
+
+    it "requires authentication to destroy a user" do
+      expect {
+        delete user_url(user)
+      }.not_to change(User, :count)
+
+      expect(response).to redirect_to(new_session_url)
+    end
+  end
 end

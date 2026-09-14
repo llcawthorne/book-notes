@@ -200,4 +200,42 @@ RSpec.describe "LineItems", type: :request do
       end
     end
   end
+
+  describe "PATCH /line_items/:id/increment" do
+    context "as an unauthenticated visitor" do
+      before { logout }
+
+      it "increases the quantity by one and redirects to the store" do
+        post line_items_url, params: { product_id: products(:pragprog).id }
+        my_item = LineItem.last
+
+        expect {
+          patch increment_line_item_url(my_item)
+        }.to change { my_item.reload.quantity }.from(1).to(2)
+
+        expect(response).to redirect_to(store_index_url)
+      end
+
+      it "replaces the row via turbo-stream and updates the cart total" do
+        post line_items_url, params: { product_id: products(:pragprog).id }
+        my_item = LineItem.last
+
+        patch increment_line_item_url(my_item), as: :turbo_stream
+
+        expect(response).to be_successful
+        expect(response.body).to match(%r{<turbo-stream action="replace" target="line_item_#{my_item.id}">})
+        expect(response.body).to match(/\$79\.98/)
+      end
+
+      it "is forbidden from incrementing a line item outside their own cart" do
+        post line_items_url, params: { product_id: products(:pragprog).id }
+
+        expect {
+          patch increment_line_item_url(line_item)
+        }.not_to change { line_item.reload.quantity }
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+  end
 end

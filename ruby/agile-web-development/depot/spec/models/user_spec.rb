@@ -39,6 +39,20 @@ RSpec.describe User, type: :model do
       expect(user.errors[:email_address]).to eq([ "has already been taken" ])
     end
 
+    it "requires the email address to contain an @ symbol" do
+      user.email_address = "not-an-email"
+
+      expect(user).to be_invalid
+      expect(user.errors[:email_address]).to eq([ "must contain an @ symbol" ])
+    end
+
+    it "does not duplicate the error when the email address is blank" do
+      user.email_address = ""
+
+      expect(user).to be_invalid
+      expect(user.errors[:email_address]).to eq([ "can't be blank" ])
+    end
+
     it "requires the password confirmation to match" do
       user.password_confirmation = "does not match"
 

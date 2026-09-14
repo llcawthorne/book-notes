@@ -30,4 +30,14 @@ class LineItemTest < ActiveSupport::TestCase
     assert line_item.destroyed?
     assert_not LineItem.exists?(line_item.id)
   end
+
+  test "increment_quantity! increases the quantity by one" do
+    line_item = line_items(:two)
+    line_item.update!(quantity: 1)
+
+    line_item.increment_quantity!
+
+    assert_equal 2, line_item.quantity
+    assert line_item.persisted?
+  end
 end

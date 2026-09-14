@@ -82,4 +82,35 @@ class OrdersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to orders_url
   end
+
+  test "should require authentication to list orders" do
+    logout
+
+    get orders_url
+    assert_redirected_to new_session_url
+  end
+
+  test "should require authentication to view an order" do
+    logout
+
+    get order_url(@order)
+    assert_redirected_to new_session_url
+  end
+
+  test "should require authentication to update an order" do
+    logout
+
+    patch order_url(@order), params: { order: { name: "Someone Else" } }
+    assert_redirected_to new_session_url
+    assert_not_equal "Someone Else", @order.reload.name
+  end
+
+  test "should require authentication to destroy an order" do
+    logout
+
+    assert_no_difference("Order.count") do
+      delete order_url(@order)
+    end
+    assert_redirected_to new_session_url
+  end
 end

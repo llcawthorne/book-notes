@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_152900) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_14_003741) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.integer "status", default: 0, null: false
     t.string "message_id", null: false
@@ -63,6 +63,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_152900) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "coupons", force: :cascade do |t|
+    t.string "code", null: false
+    t.integer "discount_percent", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_coupons_on_code", unique: true
+  end
+
   create_table "line_items", force: :cascade do |t|
     t.integer "product_id", null: false
     t.integer "cart_id"
@@ -89,11 +97,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_152900) do
     t.string "account_number"
     t.string "po_number"
     t.date "ship_date"
+    t.integer "discount_percent", default: 0, null: false
+  end
+
+  create_table "product_translations", force: :cascade do |t|
+    t.integer "product_id", null: false
+    t.string "locale", null: false
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id", "locale"], name: "index_product_translations_on_product_id_and_locale", unique: true
+    t.index ["product_id"], name: "index_product_translations_on_product_id"
   end
 
   create_table "products", force: :cascade do |t|
     t.string "title"
-    t.text "description"
     t.decimal "price", precision: 8, scale: 2
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -132,6 +150,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_152900) do
   add_foreign_key "line_items", "carts"
   add_foreign_key "line_items", "orders"
   add_foreign_key "line_items", "products"
+  add_foreign_key "product_translations", "products"
   add_foreign_key "sessions", "users"
   add_foreign_key "support_requests", "orders"
 end

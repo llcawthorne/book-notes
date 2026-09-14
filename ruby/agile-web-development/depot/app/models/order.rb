@@ -11,11 +11,31 @@ class Order < ApplicationRecord
   validates :name, :address, :email, presence: true
   validates :pay_type, inclusion: pay_types.keys
 
+  # Not a column -- an admin-issued code entered at checkout, resolved to a
+  # discount_percent (below) at validation time. discount_percent, not a
+  # live reference to the Coupon, is what's actually persisted, so a coupon
+  # edited or deleted later doesn't change what a past order actually paid.
+  attr_accessor :coupon_code
+
+  before_validation :apply_coupon_code
+
   def add_line_items_from_cart(cart)
     cart.line_items.each do |item|
       item.cart_id = nil
       line_items << item
     end
+  end
+
+  def subtotal
+    line_items.sum(&:total_price)
+  end
+
+  def discount_amount
+    subtotal * discount_percent / 100.0
+  end
+
+  def total_price
+    subtotal - discount_amount
   end
 
   def charge!(pay_type_params)
@@ -50,4 +70,17 @@ class Order < ApplicationRecord
       OrderMailer.payment_failed(self, payment_result.error).deliver_later
     end
   end
+
+  private
+    def apply_coupon_code
+      return if coupon_code.blank?
+
+      coupon = Coupon.find_by(code: coupon_code.to_s.strip.upcase)
+
+      if coupon
+        self.discount_percent = coupon.discount_percent
+      else
+        errors.add(:coupon_code, "is not a valid coupon code")
+      end
+    end
 end

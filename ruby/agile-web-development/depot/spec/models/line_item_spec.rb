@@ -58,4 +58,13 @@ RSpec.describe LineItem, type: :model do
       expect(LineItem.exists?(line_item.id)).to be false
     end
   end
+
+  describe "#increment_quantity!" do
+    it "increases the quantity by one" do
+      line_item.save!
+
+      expect { line_item.increment_quantity! }.to change(line_item, :quantity).from(3).to(4)
+      expect(line_item).to be_persisted
+    end
+  end
 end

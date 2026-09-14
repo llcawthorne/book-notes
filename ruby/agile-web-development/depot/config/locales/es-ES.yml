@@ -1,0 +1,16 @@
+# Spain-flavored Spanish. Only overrides what's genuinely different from
+# the generic "es" locale (used for Mexican/US Spanish speakers, who pay in
+# USD): the currency. Everything else -- all the UI text, and product
+# descriptions via Globalize -- falls back to config/locales/es.yml, since
+# the language itself doesn't change (see config/application.rb's
+# config.i18n.fallbacks and config/initializers/globalize.rb).
+es-ES:
+
+  number:
+    currency:
+      format:
+        unit:      "€"
+        precision: 2
+        separator: ","
+        delimiter: "."
+        format:    "%n&nbsp;%u"

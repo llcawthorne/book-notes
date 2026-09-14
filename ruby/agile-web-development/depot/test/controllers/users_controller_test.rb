@@ -85,4 +85,35 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to users_url
   end
+
+  test "should require authentication to list users" do
+    logout
+
+    get users_url
+    assert_redirected_to new_session_url
+  end
+
+  test "should require authentication to view a user" do
+    logout
+
+    get user_url(@user)
+    assert_redirected_to new_session_url
+  end
+
+  test "should require authentication to update a user" do
+    logout
+
+    patch user_url(@user), params: { user: { name: "Hijacked Name" } }
+    assert_redirected_to new_session_url
+    assert_not_equal "Hijacked Name", @user.reload.name
+  end
+
+  test "should require authentication to destroy a user" do
+    logout
+
+    assert_no_difference("User.count") do
+      delete user_url(@user)
+    end
+    assert_redirected_to new_session_url
+  end
 end

@@ -1,0 +1,111 @@
+# Italian. Machine/AI-assisted translation, "good enough" for a teaching
+# app rather than reviewed by a native speaker -- see config/locales/es.yml
+# for the structure this mirrors.
+it:
+
+  number:
+    currency:
+      format:
+        unit:      "€"
+        precision: 2
+        separator: ","
+        delimiter: "."
+        format:    "%n&nbsp;%u"
+
+  # Not used by time.formats.short below, but kept for a future long-form
+  # date/time format (%B substitutes from this list).
+  date:
+    month_names:
+      [ ~, gennaio, febbraio, marzo, aprile, maggio, giugno, luglio,
+        agosto, settembre, ottobre, novembre, dicembre ]
+
+  time:
+    formats:
+      short: "%d/%m/%Y %I:%M %p"
+
+  activerecord:
+    models:
+      order:       "ordine"
+    attributes:
+      order:
+        address:   "Indirizzo"
+        name:      "Nome"
+        email:     "E-mail"
+        pay_type:  "Metodo di pagamento"
+    errors:
+      messages:
+        inclusion: "non è incluso nell'elenco"
+        blank:     "non può essere vuoto"
+
+  errors:
+    template:
+      body:        "Si sono verificati problemi con i seguenti campi:"
+      header:
+        one:       "1 errore ha impedito il salvataggio di questo %{model}"
+        other:     "%{count} errori hanno impedito il salvataggio di questo %{model}"
+
+  layouts:
+    application:
+      title:      "La Libreria Pragmatica"
+      home:       "Home"
+      questions:  "Domande"
+      news:       "Notizie"
+      contact:    "Contatti"
+      login:      "Accedi"
+  carts:
+    cart:
+      title:      "Il Tuo Carrello"
+      empty:      "Svuota Carrello"
+      checkout:   "Checkout"
+      total:      "Totale:"
+    destroy:
+      empty_notice: "Il tuo carrello è attualmente vuoto"
+
+  line_items:
+    line_item:
+      decrement:  "Diminuisci quantità"
+      increment:  "Aumenta quantità"
+      remove:     "Rimuovi"
+    destroy:
+      notice: "L'articolo è stato rimosso correttamente."
+    invalid_product:
+      alert: "Questo prodotto non è più disponibile."
+
+  store:
+    index:
+      title_html: "Il Tuo Catalogo Pragmatic"
+    product:
+      add_html:   "Aggiungi al Carrello"
+
+  orders:
+    new:
+      legend:       "Inserisci i tuoi dati"
+      title:        "Checkout"
+      empty_cart_notice: "Il tuo carrello è vuoto"
+    form:
+      name:         "Nome"
+      address_html: "Indirizzo"
+      email:        "E-mail"
+      coupon_code:  "Codice sconto"
+      subtotal:     "Subtotale:"
+      discount:     "Sconto (%{percent}%):"
+      total:        "Totale:"
+      pay_type:     "Metodo di pagamento"
+      pay_prompt_html: "Seleziona un metodo di pagamento"
+      submit:       "Effettua l'Ordine"
+      pay_types:
+        "Check":           "Assegno"
+        "Credit card":     "Carta di Credito"
+        "Purchase order":  "Ordine di Acquisto"
+    check:
+      routing_number: "Codice ABI"
+      account_number: "Numero di Conto"
+    cc:
+      cc_number: "Numero Carta"
+      expiration_date: "Scadenza"
+      expiration_placeholder: "es. 03/22"
+    po:
+      po_number: "Numero Ordine"
+
+
+  thanks:          "Grazie per il tuo ordine"

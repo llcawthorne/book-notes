@@ -47,6 +47,25 @@ RSpec.configure do |config|
   # instead of true.
   config.use_transactional_fixtures = true
 
+  # Minitest gets this automatically from Rails 8's executor_around_test_case
+  # default, which is how config/initializers/globalize.rb's
+  # Rails.application.executor.to_run hook (setting Globalize.fallbacks) ends
+  # up applied in those tests. RSpec doesn't wrap examples in the executor on
+  # its own, so without this, model specs would see no fallback configured --
+  # even though every real request or job always runs inside the executor.
+  config.around do |example|
+    Rails.application.executor.wrap { example.run }
+  end
+
+  # ExchangeRateService makes a real HTTP call in .request_rates; stub it
+  # globally so no spec ever depends on network access. Specs that care
+  # about the fetch/fallback/caching behavior itself re-stub this locally.
+  config.before do
+    allow(ExchangeRateService).to receive(:request_rates).and_return(ExchangeRateService::FALLBACK_RATES)
+  end
+
+  config.include ActiveSupport::Testing::TimeHelpers
+
   # You can uncomment this line to turn off ActiveRecord support entirely.
   # config.use_active_record = false
 

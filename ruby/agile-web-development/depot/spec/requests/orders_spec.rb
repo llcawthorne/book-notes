@@ -113,4 +113,35 @@ RSpec.describe "Orders", type: :request do
       expect(response).to redirect_to(orders_url)
     end
   end
+
+  describe "without being signed in" do
+    before { logout }
+
+    it "requires authentication to list orders" do
+      get orders_url
+
+      expect(response).to redirect_to(new_session_url)
+    end
+
+    it "requires authentication to view an order" do
+      get order_url(order)
+
+      expect(response).to redirect_to(new_session_url)
+    end
+
+    it "requires authentication to update an order" do
+      patch order_url(order), params: { order: { name: "Someone Else" } }
+
+      expect(response).to redirect_to(new_session_url)
+      expect(order.reload.name).not_to eq("Someone Else")
+    end
+
+    it "requires authentication to destroy an order" do
+      expect {
+        delete order_url(order)
+      }.not_to change(Order, :count)
+
+      expect(response).to redirect_to(new_session_url)
+    end
+  end
 end

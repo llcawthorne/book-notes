@@ -1,0 +1,111 @@
+# German. Machine/AI-assisted translation, "good enough" for a teaching
+# app rather than reviewed by a native speaker -- see config/locales/es.yml
+# for the structure this mirrors.
+de:
+
+  number:
+    currency:
+      format:
+        unit:      "€"
+        precision: 2
+        separator: ","
+        delimiter: "."
+        format:    "%n&nbsp;%u"
+
+  # Not used by time.formats.short below, but kept for a future long-form
+  # date/time format (%B substitutes from this list).
+  date:
+    month_names:
+      [ ~, Januar, Februar, März, April, Mai, Juni, Juli, August,
+        September, Oktober, November, Dezember ]
+
+  time:
+    formats:
+      short: "%d.%m.%Y %I:%M %p"
+
+  activerecord:
+    models:
+      order:       "Bestellung"
+    attributes:
+      order:
+        address:   "Adresse"
+        name:      "Name"
+        email:     "E-Mail"
+        pay_type:  "Zahlungsart"
+    errors:
+      messages:
+        inclusion: "ist nicht in der Liste enthalten"
+        blank:     "darf nicht leer sein"
+
+  errors:
+    template:
+      body:        "Es gab Probleme mit den folgenden Feldern:"
+      header:
+        one:       "1 Fehler verhinderte, dass diese(r/s) %{model} gespeichert wurde"
+        other:     "%{count} Fehler verhinderten, dass diese(r/s) %{model} gespeichert wurde"
+
+  layouts:
+    application:
+      title:      "Das Pragmatische Bücherregal"
+      home:       "Startseite"
+      questions:  "Fragen"
+      news:       "Neuigkeiten"
+      contact:    "Kontakt"
+      login:      "Anmelden"
+  carts:
+    cart:
+      title:      "Ihr Warenkorb"
+      empty:      "Warenkorb leeren"
+      checkout:   "Zur Kasse"
+      total:      "Gesamt:"
+    destroy:
+      empty_notice: "Ihr Warenkorb ist derzeit leer"
+
+  line_items:
+    line_item:
+      decrement:  "Menge verringern"
+      increment:  "Menge erhöhen"
+      remove:     "Entfernen"
+    destroy:
+      notice: "Der Artikel wurde erfolgreich entfernt."
+    invalid_product:
+      alert: "Dieses Produkt ist nicht mehr verfügbar."
+
+  store:
+    index:
+      title_html: "Ihr Pragmatic-Katalog"
+    product:
+      add_html:   "In den Warenkorb"
+
+  orders:
+    new:
+      legend:       "Bitte geben Sie Ihre Daten ein"
+      title:        "Zur Kasse"
+      empty_cart_notice: "Ihr Warenkorb ist leer"
+    form:
+      name:         "Name"
+      address_html: "Adresse"
+      email:        "E-Mail"
+      coupon_code:  "Gutscheincode"
+      subtotal:     "Zwischensumme:"
+      discount:     "Rabatt (%{percent}%):"
+      total:        "Gesamt:"
+      pay_type:     "Zahlungsart"
+      pay_prompt_html: "Wählen Sie eine Zahlungsmethode"
+      submit:       "Bestellung aufgeben"
+      pay_types:
+        "Check":           "Scheck"
+        "Credit card":     "Kreditkarte"
+        "Purchase order":  "Bestellung"
+    check:
+      routing_number: "Bankleitzahl"
+      account_number: "Kontonummer"
+    cc:
+      cc_number: "Kartennummer"
+      expiration_date: "Ablaufdatum"
+      expiration_placeholder: "z.B. 03/22"
+    po:
+      po_number: "Bestellnummer"
+
+
+  thanks:          "Vielen Dank für Ihre Bestellung"

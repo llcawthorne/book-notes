@@ -3,16 +3,12 @@
 
 one:
   title: My Test Product One
-  description: MyText
   price: 9.99
 
 two:
   title: My Test Product Two
-  description: MyText
   price: 9.99
 
 pragprog:
   title:        The Pragmatic Programmer
-  description:
-    Your Journey TO Mastery, 20th Anniversary Edition (2nd Edition)
   price:        39.99

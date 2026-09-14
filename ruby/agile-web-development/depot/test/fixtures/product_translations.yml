@@ -1,0 +1,41 @@
+# Read about fixtures at
+# https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+#
+# The file name doesn't classify to the right model on its own: Globalize
+# defines the translation class as the nested Product::Translation, not a
+# top-level ProductTranslation, so it has to be spelled out here.
+#
+# Globalize's belongs_to on this class is named `globalized_model` with a
+# custom foreign_key of "product_id" -- Rails fixtures' usual
+# "<association_name>: label" and "<column>_id: label" shorthands both
+# assume the association name and FK follow the standard convention, which
+# this doesn't, so neither resolves the label automatically. Compute the
+# id the same way products.yml's labels do instead.
+_fixture:
+  model_class: Product::Translation
+
+one_en:
+  product_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
+  locale: en
+  description: MyText
+
+one_es:
+  product_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
+  locale: es
+  description: MiTexto
+
+two_en:
+  product_id: <%= ActiveRecord::FixtureSet.identify(:two) %>
+  locale: en
+  description: MyText
+
+pragprog_en:
+  product_id: <%= ActiveRecord::FixtureSet.identify(:pragprog) %>
+  locale: en
+  description:
+    Your Journey TO Mastery, 20th Anniversary Edition (2nd Edition)
+
+two_de:
+  product_id: <%= ActiveRecord::FixtureSet.identify(:two) %>
+  locale: de
+  description: MeinText

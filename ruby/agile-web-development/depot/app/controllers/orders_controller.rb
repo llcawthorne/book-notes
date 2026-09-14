@@ -81,7 +81,7 @@ class OrdersController < ApplicationController
       params.expect(order: [ :name, :address, :email, :pay_type,
                              :credit_card_number, :expiration_date,
                              :routing_number, :account_number, :po_number,
-                             :ship_date ])
+                             :ship_date, :coupon_code ])
     end
 
     def pay_type_params
@@ -96,7 +96,7 @@ class OrdersController < ApplicationController
 
     def ensure_cart_isnt_empty
       if @cart.line_items.empty?
-        redirect_to store_index_url, notice: "Your cart is empty"
+        redirect_to store_index_url, notice: t(".empty_cart_notice")
       end
     end
 end

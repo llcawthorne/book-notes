@@ -25,7 +25,7 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Product.count") do
       post products_url, params: {
         product: {
-          description: @product.description,
+          description_translations: { en: @product.description },
           image: file_fixture_upload("lorem.jpg", "image/jpeg"),
           price: @product.price,
           title: @title
@@ -49,7 +49,7 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
   test "should update product" do
     patch product_url(@product), params: {
       product: {
-        description: @product.description,
+        description_translations: { en: @product.description },
         image: file_fixture_upload("lorem.jpg", "image/jpeg"),
         price: @product.price,
         title: @title
@@ -63,7 +63,7 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
       perform_enqueued_jobs do
         patch product_url(@product), params: {
           product: {
-            description: @product.description,
+            description_translations: { en: @product.description },
             image: file_fixture_upload("lorem.jpg", "image/jpeg"),
             price: @product.price,
             title: @title
@@ -94,5 +94,29 @@ class ProductsControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "#alert", /Line Items present/
     assert Product.exists?(products(:two).id)
+  end
+
+  test "should require authentication to list products" do
+    logout
+
+    get products_url
+    assert_redirected_to new_session_url
+  end
+
+  test "should require authentication to update a product" do
+    logout
+
+    patch product_url(@product), params: { product: { title: "Hijacked Title" } }
+    assert_redirected_to new_session_url
+    assert_not_equal "Hijacked Title", @product.reload.title
+  end
+
+  test "should require authentication to destroy a product" do
+    logout
+
+    assert_no_difference("Product.count") do
+      delete product_url(@product)
+    end
+    assert_redirected_to new_session_url
   end
 end

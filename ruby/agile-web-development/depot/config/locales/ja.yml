@@ -1,0 +1,117 @@
+# Japanese. Machine/AI-assisted translation, "good enough" for a teaching
+# app rather than reviewed by a native speaker -- see config/locales/es.yml
+# for the structure this mirrors.
+#
+# Deliberately not wired into Globalize/product descriptions: this locale
+# translates the UI chrome only, and falls back straight to the English
+# product description (see config/initializers/globalize.rb) rather than
+# getting its own translated catalog.
+ja:
+
+  number:
+    currency:
+      format:
+        unit:      "¥"
+        precision: 0
+        separator: "."
+        delimiter: ","
+        format:    "%u%n"
+
+  # Japanese doesn't name months (no "September" equivalent) -- it just
+  # numbers them with a 月 ("month") suffix. Not used by time.formats.short
+  # below, but kept for a future long-form date/time format (%B substitutes
+  # from this list).
+  date:
+    month_names:
+      [ ~, 1月, 2月, 3月, 4月, 5月, 6月, 7月, 8月, 9月, 10月, 11月, 12月 ]
+
+  time:
+    formats:
+      short: "%Y/%m/%d %I:%M %p"
+
+  activerecord:
+    models:
+      order:       "注文"
+    attributes:
+      order:
+        address:   "住所"
+        name:      "名前"
+        email:     "メールアドレス"
+        pay_type:  "お支払い方法"
+    errors:
+      messages:
+        inclusion: "は一覧に含まれていません"
+        blank:     "を入力してください"
+
+  errors:
+    template:
+      body:        "次のフィールドに問題があります:"
+      header:
+        one:       "1個のエラーのため、この%{model}を保存できませんでした"
+        other:     "%{count}個のエラーのため、この%{model}を保存できませんでした"
+
+  layouts:
+    application:
+      title:      "プラグマティック・ブックシェルフ"
+      home:       "ホーム"
+      questions:  "質問"
+      news:       "ニュース"
+      contact:    "お問い合わせ"
+      login:      "ログイン"
+  carts:
+    cart:
+      title:      "カート"
+      empty:      "カートを空にする"
+      checkout:   "レジに進む"
+      total:      "合計:"
+    destroy:
+      empty_notice: "カートは現在空です"
+
+  line_items:
+    line_item:
+      decrement:  "数量を減らす"
+      increment:  "数量を増やす"
+      remove:     "削除"
+    destroy:
+      notice: "商品を削除しました。"
+    invalid_product:
+      alert: "この商品は現在ご利用いただけません。"
+
+  store:
+    index:
+      title_html: "プラグマティック・カタログ"
+    product:
+      add_html:   "カートに追加"
+
+  orders:
+    new:
+      legend:       "お客様情報をご入力ください"
+      title:        "レジに進む"
+      empty_cart_notice: "カートが空です"
+    form:
+      name:         "お名前"
+      address_html: "ご住所"
+      email:        "メールアドレス"
+      coupon_code:  "クーポンコード"
+      subtotal:     "小計:"
+      discount:     "割引 (%{percent}%):"
+      total:        "合計:"
+      pay_type:     "お支払い方法"
+      pay_prompt_html: "お支払い方法を選択してください"
+      submit:       "注文を確定する"
+      pay_types:
+        "Check":           "小切手"
+        "Credit card":     "クレジットカード"
+        "Purchase order":  "発注書"
+    check:
+      routing_number: "銀行コード"
+      account_number: "口座番号"
+    cc:
+      cc_number: "カード番号"
+      expiration_date: "有効期限"
+      expiration_placeholder: "例: 03/22"
+    po:
+      po_number: "発注番号"
+
+
+  thanks:          "ご注文ありがとうございました"

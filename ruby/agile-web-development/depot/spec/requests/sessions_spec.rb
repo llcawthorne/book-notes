@@ -52,6 +52,41 @@ RSpec.describe "Sessions", type: :request do
         expect(response).to redirect_to(new_session_path)
       end
     end
+
+    context "when no administrator exists yet" do
+      before { User.delete_all }
+
+      it "creates the first administrator from whatever was submitted and starts a session" do
+        expect {
+          post session_url, params: { email_address: "new_admin@example.com", password: "secret" }
+        }.to change(User, :count).by(1)
+
+        expect(response).to redirect_to(admin_url)
+
+        admin = User.last
+        expect(admin.email_address).to eq("new_admin@example.com")
+        expect(admin.authenticate("secret")).to be_truthy
+      end
+
+      it "does not bootstrap an administrator with a blank password" do
+        expect {
+          post session_url, params: { email_address: "new_admin@example.com", password: "" }
+        }.not_to change(User, :count)
+
+        expect(response).to redirect_to(new_session_path)
+      end
+
+      it "goes back to requiring real credentials once an administrator exists" do
+        post session_url, params: { email_address: "new_admin@example.com", password: "secret" }
+        delete session_url
+
+        expect {
+          post session_url, params: { email_address: "someone_else@example.com", password: "whatever" }
+        }.not_to change(User, :count)
+
+        expect(response).to redirect_to(new_session_path)
+      end
+    end
   end
 
   describe "DELETE /session" do

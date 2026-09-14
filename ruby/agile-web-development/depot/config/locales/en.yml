@@ -38,6 +38,10 @@ en:
         delimiter: ","
         format:    "%u%n"
 
+  time:
+    formats:
+      short: "%m/%d/%Y %I:%M %p"
+
   errors:
     template:
       body:        "There were problems with the following fields:"
@@ -52,17 +56,25 @@ en:
       questions:  "Questions"
       news:       "News"
       contact:    "Contact"
-
+      login:      "Login"
   carts:
     cart:
       title:      "Your Cart"
       empty:      "Empty cart"
       checkout:   "Checkout"
+      total:      "Total:"
+    destroy:
+      empty_notice: "Your cart is currently empty"
 
   line_items:
     line_item:
-      decrement:  "-1"
+      decrement:  "Decrease quantity"
+      increment:  "Increase quantity"
       remove:     "Remove"
+    destroy:
+      notice: "Line item was successfully destroyed."
+    invalid_product:
+      alert: "That product is no longer available."
 
   store:
     index:
@@ -73,10 +85,16 @@ en:
   orders:
     new:
       legend:       "Please Enter Your Details"
+      title:        "Checkout"
+      empty_cart_notice: "Your cart is empty"
     form:
       name:         "Name"
       address_html: "Address"
       email:        "E-mail"
+      coupon_code:  "Coupon code"
+      subtotal:     "Subtotal:"
+      discount:     "Discount (%{percent}%):"
+      total:        "Total:"
       pay_type:     "Pay with"
       pay_prompt_html: "Select a payment method"
       submit:       "Place Order"
@@ -90,6 +108,7 @@ en:
     cc:
       cc_number: "CC #"
       expiration_date: "Expiry"
+      expiration_placeholder: "e.g. 03/22"
     po:
       po_number: "PO #"
 

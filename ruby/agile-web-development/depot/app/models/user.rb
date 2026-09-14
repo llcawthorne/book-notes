@@ -2,7 +2,8 @@ class User < ApplicationRecord
   attr_accessor :current_password, :skip_current_password_check
 
   validates :name, presence: true, uniqueness: true
-  validates :email_address, presence: true, uniqueness: true
+  validates :email_address, presence: true, uniqueness: true,
+    format: { with: /@/, message: "must contain an @ symbol", allow_blank: true }
   has_secure_password
   has_many :sessions, dependent: :destroy
 
