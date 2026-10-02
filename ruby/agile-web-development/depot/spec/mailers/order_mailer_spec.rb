@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe OrderMailer, type: :mailer do
-  fixtures :orders, :line_items, :products
+  fixtures :all
 
   describe "#received" do
     let(:mail) { OrderMailer.received(orders(:one)) }
@@ -44,6 +44,25 @@ RSpec.describe OrderMailer, type: :mailer do
         <td>&times;<\/td>\s*
         <td[^>]*>\s*The\sPragmatic\sProgrammer\s*</td>
       }x)
+    end
+  end
+
+  describe "locale localization" do
+    it "renders in the order's captured locale, currency included" do
+      orders(:one).update!(locale: "de")
+
+      mail = OrderMailer.received(orders(:one))
+
+      expect(mail.subject).to eq("Pragmatic Store Bestellbestätigung")
+      expect(mail.body.encoded).to include("Vielen Dank für Ihre kürzliche Bestellung")
+      expect(mail.body.encoded).to include("€")
+    end
+
+    it "does not leak the order's locale into the current thread" do
+      orders(:one).update!(locale: "de")
+      OrderMailer.received(orders(:one))
+
+      expect(I18n.locale).to eq(:en)
     end
   end
 

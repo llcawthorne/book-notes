@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe PasswordsMailer, type: :mailer do
-  fixtures :users
+  fixtures :all
 
   describe "#reset" do
     let(:user) { users(:one) }

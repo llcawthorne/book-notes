@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Passwords", type: :request do
-  fixtures :users
+  fixtures :all
 
   let(:user) { users(:one) }
   let(:token) { user.password_reset_token }

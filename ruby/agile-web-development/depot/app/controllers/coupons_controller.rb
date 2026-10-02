@@ -34,6 +34,6 @@ class CouponsController < ApplicationController
     end
 
     def coupon_params
-      params.expect(coupon: [ :code, :discount_percent ])
+      params.expect(coupon: [ :code, :discount_percent, :expires_on ])
     end
 end

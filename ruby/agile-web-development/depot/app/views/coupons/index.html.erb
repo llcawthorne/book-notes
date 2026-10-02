@@ -17,13 +17,14 @@
       <tr>
         <th class="px-3 text-left">Code</th>
         <th class="px-3 text-left">Discount</th>
+        <th class="px-3 text-left">Expires</th>
         <th class="px-3"></th>
       </tr>
     </thead>
 
     <tfoot>
       <tr>
-        <td colspan="3">
+        <td colspan="4">
           <div class="mt-8">
             <%= link_to 'New coupon',
                         new_coupon_path,
@@ -39,6 +40,16 @@
         <tr class="<%= cycle('bg-green-50', 'bg-white') %>">
           <td class="px-3 py-3 font-mono"><%= coupon.code %></td>
           <td class="px-3"><%= coupon.discount_percent %>%</td>
+          <td class="px-3">
+            <% if coupon.expires_on.present? %>
+              <%= coupon.expires_on %>
+              <% if coupon.expired? %>
+                <span class="text-red-600 font-medium">(expired)</span>
+              <% end %>
+            <% else %>
+              &mdash;
+            <% end %>
+          </td>
           <td class="px-3">
             <%= button_to 'Destroy',
                           coupon,

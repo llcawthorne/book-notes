@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe SupportRequestMailer, type: :mailer do
-  fixtures :support_requests
+  fixtures :all
 
   describe "#respond" do
     let(:support_request) { support_requests(:one) }

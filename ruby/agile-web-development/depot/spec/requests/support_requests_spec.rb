@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "SupportRequests", type: :request do
-  fixtures :support_requests, :users
+  fixtures :all
 
   before { login_as users(:one) }
 

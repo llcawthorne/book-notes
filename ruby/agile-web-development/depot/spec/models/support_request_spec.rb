@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe SupportRequest, type: :model do
-  fixtures :orders
+  fixtures :all
 
   subject(:support_request) do
     SupportRequest.new(email: "chris@example.com", subject: "Need help", body: "I can't check out!")

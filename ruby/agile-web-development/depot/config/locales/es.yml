@@ -105,3 +105,25 @@ es:
 
 
   thanks:          "Gracias por su pedido"
+
+  order_mailer:
+    received:
+      subject:       "Confirmación de Pedido de Pragmatic Store"
+      dear:          "Estimado/a %{name}"
+      thanks:        "Gracias por su reciente pedido de The Pragmatic Store."
+      items_ordered: "Usted pidió los siguientes artículos:"
+      subtotal:      "Subtotal: %{amount}"
+      discount:      "Descuento (%{percent}%): -%{amount}"
+      total:         "Total: %{amount}"
+      ships_notice:  "Le enviaremos un correo electrónico aparte cuando se envíe su pedido."
+    shipped:
+      subject:     "Pedido de Pragmatic Store Enviado"
+      title:       "Pedido de Pragmatic Enviado"
+      notice:      "Solo para informarle que hemos enviado su pedido reciente:"
+      qty:         "Cant."
+      description: "Descripción"
+    payment_failed:
+      subject:      "Pago de Pragmatic Store Fallido"
+      dear:         "Estimado/a %{name}"
+      intro:        "No pudimos procesar el pago de su pedido reciente de The Pragmatic Store:"
+      retry_notice: "Por favor, verifique los datos de su pago e inténtelo de nuevo, o contáctenos si cree que se trata de un error."

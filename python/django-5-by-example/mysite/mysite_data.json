@@ -1,0 +1,313 @@
+[
+{
+  "model": "auth.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$720000$No3IKzpBcLZfKv5psqWo4r$JKbslwD9+dZHHtxq0JtDiSxzAUwfJ+6O3nVWkg14iXs=",
+    "last_login": "2026-09-16T14:32:33.149Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "llcawthorne@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-09-14T21:43:22.474Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "sites.site",
+  "pk": 1,
+  "fields": {
+    "domain": "localhost:8000",
+    "name": "localhost:8000"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 1,
+  "fields": {
+    "name": "jazz",
+    "slug": "jazz"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 2,
+  "fields": {
+    "name": "music",
+    "slug": "music"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 4,
+  "fields": {
+    "name": "welcome",
+    "slug": "welcome"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 6,
+  "fields": {
+    "name": "markdown",
+    "slug": "markdown"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 8,
+  "fields": {
+    "name": "Django",
+    "slug": "django"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 9,
+  "fields": {
+    "name": "Tokyo",
+    "slug": "tokyo"
+  }
+},
+{
+  "model": "taggit.tag",
+  "pk": 11,
+  "fields": {
+    "name": "Godzilla",
+    "slug": "godzilla"
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 10,
+  "fields": {
+    "tag": 4,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 1
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 11,
+  "fields": {
+    "tag": 8,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 2
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 12,
+  "fields": {
+    "tag": 1,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 2
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 13,
+  "fields": {
+    "tag": 2,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 2
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 14,
+  "fields": {
+    "tag": 9,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 3
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 15,
+  "fields": {
+    "tag": 11,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 3
+  }
+},
+{
+  "model": "taggit.taggeditem",
+  "pk": 17,
+  "fields": {
+    "tag": 6,
+    "content_type": [
+      "blog",
+      "post"
+    ],
+    "object_id": 5
+  }
+},
+{
+  "model": "blog.post",
+  "pk": 1,
+  "fields": {
+    "title": "Welcome",
+    "slug": "welcome",
+    "author": [
+      "admin"
+    ],
+    "body": "Welcome to the site! I'm admin, but my friends call me administrator.",
+    "publish": "2026-09-14T21:47:36Z",
+    "created": "2026-09-14T21:48:16.550Z",
+    "updated": "2026-09-19T16:43:55.029Z",
+    "status": "PB"
+  }
+},
+{
+  "model": "blog.post",
+  "pk": 2,
+  "fields": {
+    "title": "Who was Django Reinhardt?",
+    "slug": "who-was-django-reinhardt",
+    "author": [
+      "admin"
+    ],
+    "body": "Who was Django Reinhardt?",
+    "publish": "2026-09-14T21:57:54Z",
+    "created": "2026-09-14T21:58:25.393Z",
+    "updated": "2026-09-19T16:44:05.052Z",
+    "status": "PB"
+  }
+},
+{
+  "model": "blog.post",
+  "pk": 3,
+  "fields": {
+    "title": "Godzilla Attacks Tokyo",
+    "slug": "godzilla-attacks-tokyo",
+    "author": [
+      "admin"
+    ],
+    "body": "Oh no! There goes Tokyo.\r\nGo go, Godzilla!",
+    "publish": "2026-09-15T00:35:57Z",
+    "created": "2026-09-15T00:36:30.864Z",
+    "updated": "2026-09-19T16:44:20.511Z",
+    "status": "PB"
+  }
+},
+{
+  "model": "blog.post",
+  "pk": 4,
+  "fields": {
+    "title": "Django Unchained",
+    "slug": "django-unchained",
+    "author": [
+      "admin"
+    ],
+    "body": "This is Django, but Django unchained! \r\nIt's off the hook. \r\nIt's Django 5.",
+    "publish": "2026-09-16T14:32:41Z",
+    "created": "2026-09-16T14:33:29.257Z",
+    "updated": "2026-09-19T16:44:34.857Z",
+    "status": "PB"
+  }
+},
+{
+  "model": "blog.post",
+  "pk": 5,
+  "fields": {
+    "title": "Markdown Post",
+    "slug": "markdown-post",
+    "author": [
+      "admin"
+    ],
+    "body": "This is a post formatted in markdown\r\n-------------------------------------\r\n\r\n*This is emphasized* and **this is more emphasized**.\r\n\r\nHere is a list:\r\n\r\n* One\r\n* Two\r\n* Three\r\n\r\nAnd a [link to Django website](https://www.djangoproject.com/).",
+    "publish": "2026-09-19T15:15:30Z",
+    "created": "2026-09-19T15:17:45.955Z",
+    "updated": "2026-09-19T16:44:41.278Z",
+    "status": "PB"
+  }
+},
+{
+  "model": "blog.comment",
+  "pk": 1,
+  "fields": {
+    "post": 2,
+    "name": "Django Reinhardt",
+    "email": "django@djangoproject.com",
+    "body": "You talking about me again?",
+    "created": "2026-09-17T22:58:58.717Z",
+    "updated": "2026-09-17T22:58:58.717Z",
+    "active": true
+  }
+},
+{
+  "model": "blog.comment",
+  "pk": 2,
+  "fields": {
+    "post": 2,
+    "name": "Lewis",
+    "email": "llcawthorne@gmail.com",
+    "body": "Django was a punk!",
+    "created": "2026-09-18T00:25:28.541Z",
+    "updated": "2026-09-18T00:25:28.541Z",
+    "active": true
+  }
+},
+{
+  "model": "blog.comment",
+  "pk": 3,
+  "fields": {
+    "post": 4,
+    "name": "Lewis Cawthorne",
+    "email": "llcawthorne@gmail.com",
+    "body": "I really like this article.",
+    "created": "2026-09-18T00:27:24.354Z",
+    "updated": "2026-09-18T00:27:24.354Z",
+    "active": true
+  }
+},
+{
+  "model": "blog.comment",
+  "pk": 4,
+  "fields": {
+    "post": 4,
+    "name": "Joe Dirt",
+    "email": "joe@dirtbag.com",
+    "body": "I really like this article more than the last guy.",
+    "created": "2026-09-18T22:53:03.903Z",
+    "updated": "2026-09-18T22:53:03.903Z",
+    "active": true
+  }
+},
+{
+  "model": "blog.comment",
+  "pk": 5,
+  "fields": {
+    "post": 4,
+    "name": "Lewis Cawthorne",
+    "email": "llcawthorne@gmail.com",
+    "body": "Django 6 is the unchained!",
+    "created": "2026-09-19T00:37:07.341Z",
+    "updated": "2026-09-19T00:37:07.341Z",
+    "active": true
+  }
+}
+]

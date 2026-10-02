@@ -1,36 +1,32 @@
 class OrderMailer < ApplicationMailer
   default from: "Sam Ruby <depot@example.com>"
-  # Subject can be set in your I18n file at config/locales/en.yml
-  # with the following lookup:
-  #
-  #   en.order_mailer.received.subject
-  #
+
+  # Wrapping the whole action body -- not just the view render -- in
+  # I18n.with_locale matters here: mail() renders the templates immediately
+  # when called, so the subject (t(".subject")) and the body must both be
+  # produced while the locale override is active. This runs in a background
+  # job (see ChargeOrderJob), which has no request to inherit I18n.locale
+  # from, hence order.locale being captured at checkout time in the first
+  # place (OrdersController#create).
   def received(order)
-    @order = order
-
-    mail to: order.email, subject: "Pragmatic Store Order Confirmation"
+    I18n.with_locale(order.locale) do
+      @order = order
+      mail to: order.email, subject: t(".subject")
+    end
   end
 
-  # Subject can be set in your I18n file at config/locales/en.yml
-  # with the following lookup:
-  #
-  #   en.order_mailer.shipped.subject
-  #
   def shipped(order)
-    @order = order
-
-    mail to: order.email, subject: "Pragmatic Store Order Shipped"
+    I18n.with_locale(order.locale) do
+      @order = order
+      mail to: order.email, subject: t(".subject")
+    end
   end
 
-  # Subject can be set in your I18n file at config/locales/en.yml
-  # with the following lookup:
-  #
-  #   en.order_mailer.payment_failed.subject
-  #
   def payment_failed(order, error_message)
-    @order = order
-    @error_message = error_message
-
-    mail to: order.email, subject: "Pragmatic Store Payment Failed"
+    I18n.with_locale(order.locale) do
+      @order = order
+      @error_message = error_message
+      mail to: order.email, subject: t(".subject")
+    end
   end
 end

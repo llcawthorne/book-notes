@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe ChargeOrderJob, type: :job do
-  fixtures :orders
+  fixtures :all
 
   let(:order) { orders(:one) }
   let(:pay_type_params) { { "routing_number" => "123456", "account_number" => "987654" } }

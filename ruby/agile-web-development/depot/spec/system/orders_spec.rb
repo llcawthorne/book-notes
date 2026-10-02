@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Orders", type: :system do
   include ActiveJob::TestHelper
 
-  fixtures :products, :orders, :users
+  fixtures :all
 
   describe "checkout form's payment fields" do
     before do

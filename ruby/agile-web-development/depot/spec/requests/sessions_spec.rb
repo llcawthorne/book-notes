@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Sessions", type: :request do
-  fixtures :users
+  fixtures :all
 
   let(:user) { users(:one) }
 

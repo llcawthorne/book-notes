@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_14_003741) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_14_015439) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.integer "status", default: 0, null: false
     t.string "message_id", null: false
@@ -68,6 +68,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_14_003741) do
     t.integer "discount_percent", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "expires_on"
     t.index ["code"], name: "index_coupons_on_code", unique: true
   end
 
@@ -98,6 +99,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_14_003741) do
     t.string "po_number"
     t.date "ship_date"
     t.integer "discount_percent", default: 0, null: false
+    t.string "locale", default: "en", null: false
   end
 
   create_table "product_translations", force: :cascade do |t|

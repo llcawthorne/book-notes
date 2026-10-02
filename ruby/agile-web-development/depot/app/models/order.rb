@@ -77,10 +77,12 @@ class Order < ApplicationRecord
 
       coupon = Coupon.find_by(code: coupon_code.to_s.strip.upcase)
 
-      if coupon
-        self.discount_percent = coupon.discount_percent
-      else
+      if coupon.nil?
         errors.add(:coupon_code, "is not a valid coupon code")
+      elsif coupon.expired?
+        errors.add(:coupon_code, "has expired")
+      else
+        self.discount_percent = coupon.discount_percent
       end
     end
 end

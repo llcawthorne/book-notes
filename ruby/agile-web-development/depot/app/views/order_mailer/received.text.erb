@@ -1,15 +1,15 @@
-Dear <%= @order.name %>
+<%= t('.dear', name: @order.name) %>
 
-Thank you for your recent order from The Pragmatic Store.
+<%= t('.thanks') %>
 
-You ordered the following items:
+<%= t('.items_ordered') %>
 
 <%= render @order.line_items -%>
 
-Subtotal: <%= number_to_currency(@order.subtotal) %>
+<%= t('.subtotal', amount: localized_currency(@order.subtotal)) %>
 <% if @order.discount_percent.positive? -%>
-Discount (<%= @order.discount_percent %>%): -<%= number_to_currency(@order.discount_amount) %>
+<%= t('.discount', percent: @order.discount_percent, amount: localized_currency(@order.discount_amount)) %>
 <% end -%>
-Total: <%= number_to_currency(@order.total_price) %>
+<%= t('.total', amount: localized_currency(@order.total_price)) %>
 
-We'll send you a separate e-mail when your order ships.
+<%= t('.ships_notice') %>

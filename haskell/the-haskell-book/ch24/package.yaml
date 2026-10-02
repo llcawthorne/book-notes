@@ -21,9 +21,17 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
-- trifecta
+- aeson
+- attoparsec
+- bytestring
+- containers
 - parsers
+- parsec
 - raw-strings-qq
+- scientific
+- text
+- trifecta
+- hspec
 
 ghc-options:
 - -Wall

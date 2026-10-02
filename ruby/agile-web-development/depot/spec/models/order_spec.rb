@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Order, type: :model do
-  fixtures :products
+  fixtures :all
 
   subject(:order) { Order.new(name: "Dave Thomas", address: "123 Main St", email: "dave@example.com", pay_type: "Check") }
 
@@ -31,6 +31,65 @@ RSpec.describe Order, type: :model do
 
     it "requires a recognized pay_type" do
       expect { order.pay_type = "Bitcoin" }.to raise_error(ArgumentError)
+    end
+  end
+
+  describe "coupon codes" do
+    it "captures the coupon's discount_percent when a valid code is entered" do
+      Coupon.create!(code: "SAVE10", discount_percent: 10)
+      order.coupon_code = "save10"
+
+      expect(order).to be_valid
+      expect(order.discount_percent).to eq(10)
+    end
+
+    it "is rejected when the coupon code doesn't exist" do
+      order.coupon_code = "NOPE"
+
+      expect(order).to be_invalid
+      expect(order.errors[:coupon_code]).to be_present
+    end
+
+    it "is valid with no coupon code, applying no discount" do
+      expect(order).to be_valid
+      expect(order.discount_percent).to eq(0)
+    end
+
+    it "is rejected when the coupon code has expired" do
+      Coupon.create!(code: "OLD10", discount_percent: 10, expires_on: Date.yesterday)
+      order.coupon_code = "old10"
+
+      expect(order).to be_invalid
+      expect(order.errors[:coupon_code]).to be_present
+      expect(order.discount_percent).to eq(0)
+    end
+
+    it "accepts a coupon code that expires today" do
+      Coupon.create!(code: "SAVE10", discount_percent: 10, expires_on: Date.current)
+      order.coupon_code = "save10"
+
+      expect(order).to be_valid
+      expect(order.discount_percent).to eq(10)
+    end
+  end
+
+  describe "#subtotal, #discount_amount, and #total_price" do
+    before do
+      order.save!
+      order.discount_percent = 10
+      order.line_items.create!(product: products(:pragprog), quantity: 2, price: products(:pragprog).price)
+    end
+
+    it "computes the subtotal from the line items" do
+      expect(order.subtotal).to eq(products(:pragprog).price * 2)
+    end
+
+    it "computes the discount amount from the subtotal and discount_percent" do
+      expect(order.discount_amount).to eq(order.subtotal * 0.1)
+    end
+
+    it "computes the total price as the subtotal minus the discount" do
+      expect(order.total_price).to eq(order.subtotal - order.discount_amount)
     end
   end
 

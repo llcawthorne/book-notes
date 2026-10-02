@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe SupportMailbox, type: :mailbox do
-  fixtures :orders
+  fixtures :all
 
   describe "receiving a support request email" do
     subject(:support_request) { SupportRequest.last }

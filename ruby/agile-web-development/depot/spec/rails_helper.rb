@@ -42,6 +42,13 @@ RSpec.configure do |config|
     Rails.root.join('test/fixtures')
   ]
 
+  # rspec-rails defaults raw file fixtures (file_fixture, and the
+  # ActiveStorage::FixtureSet.blob calls in test/fixtures/active_storage/
+  # blobs.yml) to spec/fixtures/files, independently of fixture_paths above
+  # -- since this app keeps everything under test/fixtures, that default
+  # pointed nowhere and silently broke any fixture image attachment.
+  config.file_fixture_path = "test/fixtures/files"
+
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false
   # instead of true.

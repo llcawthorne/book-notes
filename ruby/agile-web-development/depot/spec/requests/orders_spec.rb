@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Orders", type: :request do
-  fixtures :orders, :users, :products
+  fixtures :all
 
   before { login_as users(:one) }
 
@@ -35,6 +35,16 @@ RSpec.describe "Orders", type: :request do
   end
 
   describe "POST /orders" do
+    it "captures the current locale on the order" do
+      post line_items_url(locale: "de"), params: { product_id: products(:pragprog).id }
+
+      post orders_url(locale: "de"), params: { order: {
+        address: order.address, email: order.email, name: order.name, pay_type: order.pay_type
+      } }
+
+      expect(Order.last.locale).to eq("de")
+    end
+
     it "creates an order and redirects to the store" do
       expect {
         post orders_url, params: { order: {
@@ -43,6 +53,35 @@ RSpec.describe "Orders", type: :request do
       }.to change(Order, :count).by(1)
 
       expect(response).to redirect_to(store_index_url(locale: "en"))
+    end
+
+    context "with a valid coupon code" do
+      it "creates the order, capturing the coupon's discount" do
+        Coupon.create!(code: "SAVE10", discount_percent: 10)
+        post line_items_url, params: { product_id: products(:pragprog).id }
+
+        post orders_url, params: { order: {
+          address: order.address, email: order.email, name: order.name, pay_type: order.pay_type,
+          coupon_code: "save10"
+        } }
+
+        expect(Order.last.discount_percent).to eq(10)
+      end
+    end
+
+    context "with an invalid coupon code" do
+      it "does not create the order" do
+        post line_items_url, params: { product_id: products(:pragprog).id }
+
+        expect {
+          post orders_url, params: { order: {
+            address: order.address, email: order.email, name: order.name, pay_type: order.pay_type,
+            coupon_code: "NOPE"
+          } }
+        }.not_to change(Order, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+      end
     end
   end
 

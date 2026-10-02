@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe LineItem, type: :model do
-  fixtures :products
+  fixtures :all
 
   subject(:line_item) do
     LineItem.new(product: products(:pragprog), quantity: 3, price: products(:pragprog).price)

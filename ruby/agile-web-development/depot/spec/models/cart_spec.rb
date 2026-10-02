@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Cart, type: :model do
-  fixtures :products
+  fixtures :all
   subject(:cart) { Cart.new }
 
   let(:book_one) { products(:pragprog) }

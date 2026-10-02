@@ -109,3 +109,25 @@ de:
 
 
   thanks:          "Vielen Dank für Ihre Bestellung"
+
+  order_mailer:
+    received:
+      subject:       "Pragmatic Store Bestellbestätigung"
+      dear:          "Liebe(r) %{name}"
+      thanks:        "Vielen Dank für Ihre kürzliche Bestellung bei The Pragmatic Store."
+      items_ordered: "Sie haben folgende Artikel bestellt:"
+      subtotal:      "Zwischensumme: %{amount}"
+      discount:      "Rabatt (%{percent}%): -%{amount}"
+      total:         "Gesamt: %{amount}"
+      ships_notice:  "Wir senden Ihnen eine separate E-Mail, sobald Ihre Bestellung versandt wurde."
+    shipped:
+      subject:     "Pragmatic Store Bestellung Versandt"
+      title:       "Pragmatic Bestellung Versandt"
+      notice:      "Wir möchten Sie darüber informieren, dass wir Ihre kürzliche Bestellung versandt haben:"
+      qty:         "Menge"
+      description: "Beschreibung"
+    payment_failed:
+      subject:      "Pragmatic Store Zahlung Fehlgeschlagen"
+      dear:         "Liebe(r) %{name}"
+      intro:        "Wir konnten die Zahlung für Ihre kürzliche Bestellung bei The Pragmatic Store nicht verarbeiten:"
+      retry_notice: "Bitte überprüfen Sie Ihre Zahlungsdaten und versuchen Sie es erneut, oder kontaktieren Sie uns, falls Sie glauben, dass dies ein Fehler ist."

@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Store", type: :request do
-  fixtures :users, :products, :product_translations
+  fixtures :all
 
   before { login_as users(:one) }
 

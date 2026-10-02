@@ -26,7 +26,11 @@ source-repository head
 library
   exposed-modules:
       AltParsing
+      BT
+      ChapterExercises
+      Data.Ini
       LearnParsers
+      Marshalling
       Text.Fractions
   other-modules:
       Paths_ch24
@@ -36,9 +40,17 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , hspec
+    , parsec
     , parsers
     , raw-strings-qq
+    , scientific
+    , text
     , trifecta
   default-language: Haskell2010
 
@@ -52,10 +64,18 @@ executable ch24-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
     , ch24
+    , containers
+    , hspec
+    , parsec
     , parsers
     , raw-strings-qq
+    , scientific
+    , text
     , trifecta
   default-language: Haskell2010
 
@@ -70,9 +90,17 @@ test-suite ch24-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
     , ch24
+    , containers
+    , hspec
+    , parsec
     , parsers
     , raw-strings-qq
+    , scientific
+    , text
     , trifecta
   default-language: Haskell2010

@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Store", type: :system do
-  fixtures :products
+  fixtures :all
 
   describe "product broadcast highlight" do
     it "flashes a product's card when a turbo-stream replace targets it" do

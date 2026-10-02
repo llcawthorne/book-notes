@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Admin", type: :request do
-  fixtures :users
+  fixtures :all
 
   describe "GET /admin" do
     context "when logged in" do

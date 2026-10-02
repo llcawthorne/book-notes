@@ -114,3 +114,25 @@ en:
 
 
   thanks:          "Thank you for your order"
+
+  order_mailer:
+    received:
+      subject:       "Pragmatic Store Order Confirmation"
+      dear:          "Dear %{name}"
+      thanks:        "Thank you for your recent order from The Pragmatic Store."
+      items_ordered: "You ordered the following items:"
+      subtotal:      "Subtotal: %{amount}"
+      discount:      "Discount (%{percent}%): -%{amount}"
+      total:         "Total: %{amount}"
+      ships_notice:  "We'll send you a separate e-mail when your order ships."
+    shipped:
+      subject:     "Pragmatic Store Order Shipped"
+      title:       "Pragmatic Order Shipped"
+      notice:      "This is just to let you know that we've shipped your recent order:"
+      qty:         "Qty"
+      description: "Description"
+    payment_failed:
+      subject:      "Pragmatic Store Payment Failed"
+      dear:         "Dear %{name}"
+      intro:        "We were unable to process payment for your recent order from The Pragmatic Store:"
+      retry_notice: "Please check your payment details and try again, or contact us if you believe this is an error."

@@ -26,6 +26,7 @@ class OrdersController < ApplicationController
   # POST /orders or /orders.json
   def create
     @order = Order.new(order_params)
+    @order.locale = I18n.locale
     @order.add_line_items_from_cart(@cart)
 
     respond_to do |format|

@@ -1,9 +1,9 @@
-<h3>Pragmatic Order Shipped</h3>
+<h3><%= t('.title') %></h3>
 <p>
-  This is just to let you know that we've shipped your recent order:
+  <%= t('.notice') %>
 </p>
 
 <table>
-  <tr><th colspan="2">Qty</th><th>Description</th></tr>
+  <tr><th colspan="2"><%= t('.qty') %></th><th><%= t('.description') %></th></tr>
 <%= render @order.line_items -%>
 </table>

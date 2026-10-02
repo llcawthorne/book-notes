@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Product, type: :model do
-  fixtures :products, :product_translations
+  fixtures :all
 
   def attach_image(product, filename:, content_type:)
     product.image.attach(

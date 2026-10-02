@@ -32,6 +32,43 @@ class OrdersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to store_index_url(locale: "en")
   end
 
+  test "captures the current locale on the order at checkout" do
+    post line_items_url(locale: "de"), params: { product_id: products(:pragprog).id }
+
+    post orders_url(locale: "de"), params: { order: {
+      address: @order.address, email: @order.email, name: @order.name, pay_type: @order.pay_type
+    } }
+
+    assert_equal "de", Order.last.locale
+  end
+
+  test "should create an order with a valid coupon code, capturing its discount" do
+    Coupon.create!(code: "SAVE10", discount_percent: 10)
+    post line_items_url, params: { product_id: products(:pragprog).id }
+
+    assert_difference("Order.count") do
+      post orders_url, params: { order: {
+        address: @order.address, email: @order.email, name: @order.name, pay_type: @order.pay_type,
+        coupon_code: "save10"
+      } }
+    end
+
+    assert_equal 10, Order.last.discount_percent
+  end
+
+  test "should not create an order with an invalid coupon code" do
+    post line_items_url, params: { product_id: products(:pragprog).id }
+
+    assert_no_difference("Order.count") do
+      post orders_url, params: { order: {
+        address: @order.address, email: @order.email, name: @order.name, pay_type: @order.pay_type,
+        coupon_code: "NOPE"
+      } }
+    end
+
+    assert_response :unprocessable_content
+  end
+
   test "should show order" do
     get order_url(@order)
     assert_response :success

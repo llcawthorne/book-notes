@@ -115,3 +115,25 @@ ja:
 
 
   thanks:          "ご注文ありがとうございました"
+
+  order_mailer:
+    received:
+      subject:       "プラグマティックストア注文確認"
+      dear:          "%{name} 様"
+      thanks:        "この度はThe Pragmatic Storeにてご注文いただき、誠にありがとうございます。"
+      items_ordered: "ご注文いただいた商品は以下の通りです:"
+      subtotal:      "小計: %{amount}"
+      discount:      "割引 (%{percent}%): -%{amount}"
+      total:         "合計: %{amount}"
+      ships_notice:  "商品を発送いたしましたら、改めてメールにてご連絡いたします。"
+    shipped:
+      subject:     "プラグマティックストア発送のお知らせ"
+      title:       "プラグマティック注文発送"
+      notice:      "ご注文いただいた商品を発送しましたのでお知らせいたします:"
+      qty:         "数量"
+      description: "商品説明"
+    payment_failed:
+      subject:      "プラグマティックストア支払い失敗"
+      dear:          "%{name} 様"
+      intro:        "The Pragmatic Storeでのご注文のお支払い処理ができませんでした:"
+      retry_notice: "お支払い情報をご確認の上、もう一度お試しください。エラーだと思われる場合はお問い合わせください。"

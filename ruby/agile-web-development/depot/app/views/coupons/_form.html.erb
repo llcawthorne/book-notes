@@ -21,6 +21,11 @@
     <%= form.number_field :discount_percent, min: 1, max: 100, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": coupon.errors[:discount_percent].none?, "border-red-400 focus:outline-red-600": coupon.errors[:discount_percent].any?}] %>
   </div>
 
+  <div class="my-5">
+    <%= form.label :expires_on, "Expires on (optional)" %>
+    <%= form.date_field :expires_on, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": coupon.errors[:expires_on].none?, "border-red-400 focus:outline-red-600": coupon.errors[:expires_on].any?}] %>
+  </div>
+
   <div class="inline">
     <%= form.submit class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white inline-block font-medium cursor-pointer" %>
   </div>

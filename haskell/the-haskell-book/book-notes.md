@@ -2462,3 +2462,395 @@
   keep the result on the side they are pointing to. The last two are the same
   except they point at a constant you keep the result of while executing the
   other side and throwing the value away, like `string "true" $> True`.
+- When writing parsers in Haskell, it's often easier to work in terms of smaller
+  parsers that deal with a sub-problem of the overall parsing problem you are
+  solving, then combine them into the final parser. A good example can be found
+  in `ch24/src/Data/Ini.hs` where we make an Ini file parser.
+- Parser combinators are whitespace-sensitive by default, so without handling
+  it explicitly, something like "1 2 3" won't parse as three numbers, the
+  parser chokes on the space after "1". `token p` runs parser `p`, then
+  automatically consumes and discards any trailing whitespace, letting
+  token-wrapped parsers be chained together (e.g. `some (token digits)`)
+  without manually skipping whitespace between them. Some parsers, like
+  `integer`, are already tokenized for you, no need to wrap them again.
+  Don't get tokenization happy, though: keep it coarse-grained and
+  selective. Overusing tokenizing parsers can make things slow or hard
+  to understand (e.g. don't double-wrap something already tokenized,
+  like `token (some (token digits))`).
+- You can annotate parses with `<?>`.
+
+  ```hs
+  tryAnnot :: (Monad f, CharParsing f) => f Char
+  tryAnnot = (try (char '1' >> char '2') <?> "Tried 12" )
+         <|> (char '3' <?> "Tried 3")
+
+  Prelude> trifP tryAnnot "13"
+  Failure (interactive):1:1: error: expected:
+    Tried 12, Tried 3
+  13<EOF>
+  ```
+
+- Definitions
+  1. A *parser* parses.
+  2. A *parser combinator* combines two or more parsers to produce a new parser.
+     A good example of this is using `<|>` from `Alternative` to produce a new
+     parser from the disjunction of two parser arguments to `<|>`. Or `some`.
+     Or `many`. Or `mappend`. Or `>>`.
+  3. *Marshalling* is transforming a potentially nonlinear representation of
+     data in memory into a format that can be stored on disk or transmitted over
+     a network socket. Going in the opposite direction is called unmarshalling.
+     Cf. *serialization* and *deserialization*.
+  4. A *tokenizer* converts text, usually a stream of characters, into more
+     meaningful or "chunkier" structures, such as words, sentences, or symbols -
+     that is *tokens*. The `lines` and `words` functions you used earlier in
+     this book ar unsophisticated tokenizers.
+  5. *Lexer* - see *tokenizer*.
+
+## Chapter 25 - Composing Types
+
+- Functors and applicatives are both closed under composition. You can compose
+  two functors (or two applicatives) and return another functor (or
+  applicative). However, when you compose two monads, the result is not
+  necessarily a monad. A monad transformer is a variant of any ordinary monad
+  that takes an additional type argument that is assumed to have a `Monad`
+  instance. For example, `MaybeT` is the transformer variants of the `Maybe`
+  type. The transformer variant gives us a `Monad` instances that binds over
+  both bits of structure allowing us to compose monads and combine their
+  effects. Monad transformers are never sum or product types; they are always a
+  means of wrapping one extra layer of (monadic) structure around another type,
+  so they are often defined with `newtype`.
+
+  ```hs
+  newtype Identity a = Identity { runIdentity :: a }
+
+  newtype Compose f g a = Compose { getCompose :: f (g a) }
+    deriving (Eq, Show)
+
+  ghci> Compose [Just 1, Nothing]
+  ghci> xs = [Just (1 :: Int), Nothing]
+  ghci> :t Compose xs
+  Compose xs :: Compose [] Maybe Int
+
+  instance Functor Identity where
+    fmap f (Identity a) = Identity (f a)
+
+  instance (Functor f, Functor g) => Functor (Compose f g) where
+    fmap f (Compose fga) = Compose $ (fmap . fmap) f fga
+
+  ghci> fmap (+1) (Compose xs)
+  Compose {getCompose = [Just 2, Nothing]}
+
+  instance (Applicative f, Applicative g) => Applicative (Compose f g) where
+    pure :: a -> Compose f g a
+    -- pure a = Compose (pure (pure a :: g a) :: f (g a))
+    pure a = Compose (pure (pure a))
+
+    (<*>) :: Compose f g (a -> b)
+          -> Compose f g a
+          -> Compose f g b
+    -- (Compose f) <*> (Compose a) = Compose (liftA2 (<*>) f a)
+    (Compose f) <*> (Compose a) = Compose ((<*>) <$> f <*> a)
+  ```
+
+- So Monads don't compose naturally. We need to know the type of one of the
+  Monads to know how to join the two Monad binds. We'll start with `IdentityT`:
+
+  ```hs
+  newtype Identity a = Identity { runIdentity :: a }
+    deriving (Eq, Show)
+
+  newtype IdentityT f a = IdentityT { runIdentityT :: f a }
+    deriving (Eq, Show)
+
+  instance Functor Identity where
+    fmap f (Identity a) = Identity (f a)
+ 
+  instance (Functor m) => Functor (IdentityT m) where
+    fmap f (IdentityT fa) = IdentityT (fmap f fa)
+
+  instance Applicative Identity where
+    pure = Identity
+    (Identity f) <*> (Identity a) = Identity (f a)
+
+  instance (Applicative m) => Applicative (IdentityT m) where
+    pure x = IdentityT (pure x)
+    (IdentityT fab) <*> (IdentityT fa) = IdentityT (fab <*> fa)
+
+  instance Monad Identity where
+    return = pure
+    (Identity a) >>= f = f a
+
+  instance (Monad m) => Monad (IdentityT m) where
+    return = pure
+    (IdentityT ma) >>= f = IdentityT $ ma >>= runIdentityT . f
+  ```
+
+- As you see above, we need to know the `IdentityT` type concretely primarily
+  so we know to call `runIdentityT` on the result of `ma >>= f` since `f`
+  literally takes us past our desired result of `m b` and returns an
+  `IdentityT m b` instead. `runIdentityT` unwraps that to the correct result
+  for `ma`'s bind operation then we rewrap for the result of `IdentityT ma`'s
+  bind operatation. The rewrap is a noop for `IdentityT` but could be important
+  for say `StateT` or `ReaderT` (or `IO` but that's normally an inner monad in
+  a stack and not a transformers).
+- The book derived it a bit differently but had good general advice. Whenever
+  you try to combine results and end up with an `m (T m b)` for some monads `m`
+  and `T`, you need the transformer version of `T` so it can unwrap an 
+  intermediate result and you get an `m (m b)` which is easily handled by
+  `join` to get an `m b` then rewrapped to a `T m b`.
+
+## Chapter 26 - Monad Transformers
+
+- `IdentityT` has its uses, but doesn't show up often, so we're moving on to
+  `MaybeT`. You'll notice from the newtype that the actually `Maybe` goes in
+  the inner layer and the base Monad goes on the outside.
+
+  ```hs
+  newtype MaybeT m a = MaybeT { runMaybeT :: m (Maybe a) }
+
+  instance (Functor m) => Functor (MaybeT m) where
+    fmap f (MaybeT ma) = MaybeT $ (fmap . fmap) f ma
+
+  instance (Applicative m) => Applicative (MaybeT m) where
+    pure x = MaybeT (pure (pure x))
+    (MaybeT fab) <*> (MaybeT mma) = MaybeT $ (<*>) <$> fab <*> mma
+
+  instance (Monad m) => Monad (MaybeT m) where
+    return = pure
+    (>>=) :: MaybeT m a -> (a -> MaybeT m b) -> MaybeT m b
+    (MaybeT ma) >>= f = MaybeT $ do
+            -- ma :: m (Maybe a)
+            -- v :: Maybe a
+            v <- ma
+            case v of
+              Nothing -> return Nothing
+              Just y -> runMaybeT (f y)
+  -- y :: a
+  -- f :: a -> MaybeT m b
+  -- f y :: MaybeT m b
+  -- runMaybeT (f y) :: m (Maybe b)
+  ```
+
+- We will also look at the useful `EitherT`:
+
+  ```hs
+  newtype EitherT e m a = EitherT { runEitherT :: m (Either e a) }
+
+  instance (Functor m) => Functor (EitherT m) where
+    fmap f (EitherT ma) = EitherT $ (fmap . fmap) f ma
+
+  instance (Applicative m) => Applicative (EitherT e m) where
+    pure x = EitherT (pure (pure x))
+    (EitherT fab) <*> (EitherT mma) = EitherT $ (<*>) <$> fab <*> mma
+
+  instance (Monad m) => Monad (EitherT m) where
+    return = pure
+    (>==) :: EitherT m a -> (a -> EitherT m b) -> EitherT m b
+    (EitherT ma) >>= f = EitherT $ do
+            -- ma :: m (Either e a)
+            -- v :: Either e a
+            v <- ma
+            case v of
+              Left e -> return (Left e)
+              Right y -> runEitherT (f y)
+
+  swapEither :: Either e a -> Either a e
+  swapEither (Left e) = Right e
+  swapEither (Right a) = Left a
+
+  swapEitherT :: (Functor m) => EitherT e m a -> EitherT a m e
+  swapEitherT (EitherT ma) = EitherT $ fmap swapEither ma
+
+  eitherT :: Monad m => (a -> m c) -> (b -> m c) -> EitherT a m b -> m c
+  eitherT f g (EitherT ma) = do $
+            v <- ma
+            case v of
+              Left a -> f a
+              Right b -> g b
+  ```
+
+- `ReaderT` is one of the most commonly used transfomers in conventional
+  Haskell applications.
+
+  ```hs
+  newtype ReaderT r m a = ReaderT { runReaderT :: r -> m a }
+
+  instance (Functor m) => Functor (ReaderT r m) where
+    fmap f (ReaderT rma) = ReaderT $ (fmap . fmap) f rma
+
+  instance (Applicative m) => Applicative (ReaderT r m) where
+    pure a = ReaderT (pure (pure a))
+
+    (ReaderT fmab) <*> (ReaderT rma) =
+      ReaderT $ (<*>) <$> fmab <*> rma
+
+  instance (Monad m) => Monad (ReaderT r m) where
+    return = pure
+
+    (>>=) :: ReaderT r m a -> (a -> ReaderT r m b) -> ReaderT r m b
+    (ReaderT rma) >>= f = ReaderT $ \r -> do
+      a <- rma r
+      runReaderT (f a) r
+  ```
+
+- `StateT` is `State` but with additional monadic structure wrapped around the
+  result.
+
+  ```hs
+  newtype StateT s m a = StateT { runStateT :: s -> m (a, s) }
+  
+  instance (Functor m) => Functor (StateT s m) where
+    fmap f (StateT g) = StateT $ \s -> fmap (\(a, s') -> (f a, s')) (g s)
+    -- or pointfree
+    -- fmap f (StateT g) = StateT $ fmap (fmap (\(a, s') -> (f a, s'))) g
+
+  instance (Monad m) => Applicative (StateT s m) where
+    pure x = StateT $ \s -> pure (x, s)
+
+    (StateT smf ) <*> (StateT sma) = StateT $ \s -> do
+      (f, s') <- smf s
+      (a, s'') <- sma s'
+      return (f a, s'')
+
+  instance (Monad m) => Monad (StateT s m) where
+    return = pure
+
+    (StateT sma) >>= f = StateT $ \s -> do
+      (a, s') <- sma s
+      runStateT (f a) s'
+  ```
+
+- You can use any monad transformer as the base monad by wrapping `Identity`.
+- In general, don't roll your own transformers. There are well built versions
+  of everything we discussed in the `transformers` library that comes packaged
+  with GHC. Most of the time though we use `ExceptT` from `transformers`
+  instead of `EitherT` which is defined in `either` on Hackage.
+- In transformers, the Monad is wrapped around what we have but not what we
+  need. This means either `Either` and `Maybe` are on the innermost layer in
+  `ExceptT` and `MaybeT` because we have an `Either` or `Maybe` value inside
+  the other monad, but when we have a `Reader`, it is `r -> m a` because we
+  need an `r` so the `Reader` is the outer layer. When Haskellers refer to the
+  *base* monad, they mean what is structurally outermost. If we declare
+  `type MyType a = IO [Maybe a]` then the *base* is `IO`.
+- Instances of `MonadTrans` provide a `lift` which raises functions to work in
+  the context of the transformer stack. It works like an `fmap` or `liftM`
+  that raises you the appropriate number of levels. If you find yourself
+  chaining many calls of `lift`, it is a code smell. At the very least, write
+  yourself an instance of `MonadTrans` for your stack so one `lift` is equal
+  to `lift . lift . lift` for the stack.
+- Any monad built by applying a sequence of manad transformers to the `IO`
+  monad will be an instance of `MonadIO` which provides a `liftIO` that will
+  lift an `IO` action until it is lifting over all structure embedded in the
+  outermost `IO` type. This is from `Control.Monad.IO.Class`.
+
+## Chapter 27 - Non-strictness
+
+- Strict languages evaluate *inside out*; non-strict languages like Haskell
+  evaluated *outside in*. The idea is that evaluation is driven by demand, not
+  by constructor like a strict language.
+- You can force evaulation with `seq`. `seq` evaluates its first argument when
+  the second argument has to be evaluated. It isn't precisely like a strict
+  langugae. It evanulates up to weak head normal form (the first data
+  constructor or first lambda).
+- If you `import Debug.Trace (trace)` you can use the `trace` function to see
+  when things are evaluated. `trace` takes a string and an expression, and it
+  prints the string when the expression is evaluated.
+- You can make expressions be evaluated less by assigning them names. Haskell
+  aggressively attempts to only evaluate a named expression once. Likewise, 
+  inlining values can cause them to be evaluated multiple times. You can also
+  prevent sharing with a lambda since Haskell doesn't memoize and cannot
+  reuse function results. This can be valuable for a large datum that acts as
+  an intermediate value that you don't want hanging out in memory. Note though
+  that functions aren't shared when they have named arguments, but they are
+  when written in point-free style.
+- There are language extensions `Strict` and `StrictData` to make code strict.
+  `StrictData` makes every field of every data type in the module strict (as
+  if each field had a `!`). It's common, often enabled project-wide via
+  `default-extensions`, and helps avoid space leaks from unevaluated thunks
+  building up in long-lived records. `Strict` implies `StrictData` and also
+  makes bindings and function arguments strict. It's heavy-handed and can
+  change semantics (code relying on laziness can diverge), so you mostly see
+  it in performance-sensitive modules. Either can be opted out of locally
+  with `~`.record types.
+
+## Chapter 28 - Basic Libraries
+
+- When benchmarking compile your code with `-O` or `-O2` option, either by hand
+  like `stack ghc -- -O2 bench.hs` or in `ghc-options`.
+- [Criterion](http://hackage.haskell.org/package/criterion) is a good
+  benchmarking package. When running benchmarks in `main` just
+  `import Criterion.Main` and use `bench`.
+- `stack ghc -- -prof -fprof-auto -rtsopts -O2 profile.hs` then running it with  `./profile +RTS -P` will profile your code and generate a readable `
+  'profile.prof`. See the
+  [GHC Docs](https://downloads.haskell.org/ghc/latest/docs/users_guide/profiling.html)
+  for more info. You can also do memory profiling with
+  `stack ghc -- -prof -fprof-auto -rtsopts -O2 loci.hs` then
+  `./loci +RTS -hc -p` and calling `hp2ps loci.hp` and viewing the postscript
+  output in a PDF reader. Criterion also has `whnf` and `nf` functions to 
+  partially evaluate expressions. Note that Criterion is no longer maintained 
+  by the original author but has been picked up by the community.
+- For data structures we will mostly focus on the `containers` library. It is
+  [documented here](https://hackage.haskell.org/package/containers). You're
+  best using `Data.Map` anytime you have keys and values since it promises
+  fast lookups. If your key type is `Int`, you might be better of with a 
+  `HashMap`, `IntMap`, or `Vector`. `Data.Set` is for unique, ordered lists of 
+  just values. Unlike traditional lists, `Data.Sequence` is a structure where
+  you can append to either end quickly. `data.Vector` is in the `vector` 
+  library,
+  [Vector documentation](https://hackage.haskell.org/package/vector). You want
+  a `Vector` when you need memory efficiency, your data access is indexing via
+  and `Int` value, you want uniform performance, and you will construct a 
+  `Vector` once and read it many times. 
+  `Data.Vector.Mutable` is a mutable Vector. 
+- `String` is good enough for demonstrations or toy programs. `Text` from the
+  `text` library is much better for memory usage and efficient indexing into
+  the string.
+  `ByteString` is also used for `String` values but is a `Vector` of
+  `Word8` byte values. It is in the `byestring` library. `Char8` is not for
+  Unicode or more generally for text.
+
+## Chapter 29 - IO
+
+- `IO` primarily exists to give us a way to order operation and to disable some
+  of the sharing we saw in Chapter 27. A value of `IO a` isn't an `a` but a
+  description of how you might get an `a`.
+
+## Chapter 30 - When Things Go Wrong
+
+- An exception is a type with an instance of the `Exception` type class.
+
+  ```hs
+  class (Typeable e, Show e) => Exception e where
+    toException :: e -> SomeException
+    fromException :: SomeException -> Maybe e
+    displayException :: e -> String
+
+  data SomeException where
+    SomeException :: Exception e => e -> SomeException
+  ```
+
+- We don't use `toException` and `fromException` directly and instead call
+  functions that call them for us. Any type that implements the `Exception`
+  class can be that `e` and be subsumed under the `SomeException` type.
+- The `Typeable` type class lives in the `Data.Typable` module. You do
+  not need to explicitly derive `Typeable` on your datatypes in order to use
+  the `Data.Typable` API.
+- At runtime when an exception is thrown it starts rolling back through the
+  call stack looking for a `catch`. When it finds a `catch` it checks to see
+  what type of exception this `catch` catches. A `catch` that handles
+  `SomeException` will match any type of exception. Youc an only handle 
+  exceptions in `IO`, because `IO` comes with the implicit contract, "You
+  cannot expect this computation to succeed unconditionally." If nothing
+  catches an exception, it kills the program.
+
+  ```hs
+  catch :: Exception e => IO a -> (e -> IO a) -> IO a
+
+  -- Control.Exception 
+  try :: Exception e => IO a -> IO (Either e a)
+  ```
+
+- `throwIO` allows you to throw an exception. There is also `throw` to throw
+  exceptions without IO. You almost never want `thrown`,
+- Note that `Exception` instances are derivable by `instance Exception Type`.
+  If your type takes an argument, it is included as extra information.

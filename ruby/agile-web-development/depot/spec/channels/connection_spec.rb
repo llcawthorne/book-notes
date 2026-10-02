@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe ApplicationCable::Connection, type: :channel do
-  fixtures :users
+  fixtures :all
 
   let(:user) { users(:one) }
   let!(:session) { user.sessions.create!(user_agent: "RSpec", ip_address: "127.0.0.1") }

@@ -3,19 +3,21 @@
 module Text.Fractions where
 
 import Control.Applicative
+import Data.Attoparsec.Text (parseOnly)
 import Data.Ratio ((%))
+import Data.String (IsString)
 import Text.Trifecta
 
-badFraction :: String
+badFraction :: IsString s => s
 badFraction = "1/0"
-alsoBad :: String
+alsoBad :: IsString s => s
 alsoBad = "10"
-shouldWork :: String
+shouldWork :: IsString s => s
 shouldWork = "1/2"
-shouldAlsoWork :: String
+shouldAlsoWork :: IsString s => s
 shouldAlsoWork = "2/1"
 
-parseFraction :: Parser Rational
+parseFraction :: (MonadFail m, TokenParsing m) => m Rational
 parseFraction = do
   numerator <- decimal
   _ <- char '/'
@@ -29,13 +31,21 @@ parseFraction = do
 parseFractionOrDecimal :: Parser (Either Rational Double)
 parseFractionOrDecimal = (Left <$> try parseFraction) <|> (Right <$> double)
 
-runPF :: IO ()
-runPF = do
-  let parseFraction' = parseString parseFraction mempty
+main :: IO ()
+main = do
+  -- parseOnly is Attoparsec
+  let attoP = parseOnly parseFraction
 
-  print $ parseFraction' shouldWork
-  print $ parseFraction' shouldAlsoWork
+  print $ attoP badFraction
+  print $ attoP shouldWork
+  print $ attoP shouldAlsoWork
+  print $ attoP alsoBad
 
-  print $ parseFraction' alsoBad
-  print $ parseFraction' badFraction
+  -- parseString is Trifecta
+  let p f i = parseString f mempty i
+
+  print $ p parseFraction badFraction
+  print $ p parseFraction shouldWork
+  print $ p parseFraction shouldAlsoWork
+  print $ p parseFraction alsoBad
 

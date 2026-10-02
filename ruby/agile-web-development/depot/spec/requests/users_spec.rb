@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Users", type: :request do
-  fixtures :users
+  fixtures :all
 
   let(:user) { users(:one) }
 

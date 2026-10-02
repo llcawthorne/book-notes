@@ -28,4 +28,21 @@ class OrderMailerTest < ActionMailer::TestCase
     assert_equal [ "depot@example.com" ], mail.from
     assert_match "Card declined", mail.body.encoded
   end
+
+  test "received renders in the order's captured locale, currency included" do
+    orders(:one).update!(locale: "de")
+
+    mail = OrderMailer.received(orders(:one))
+
+    assert_equal "Pragmatic Store Bestellbestätigung", mail.subject
+    assert_match "Vielen Dank für Ihre kürzliche Bestellung", mail.body.encoded
+    assert_match "€", mail.body.encoded
+  end
+
+  test "received does not leak the order's locale into the current thread" do
+    orders(:one).update!(locale: "de")
+    OrderMailer.received(orders(:one))
+
+    assert_equal :en, I18n.locale
+  end
 end

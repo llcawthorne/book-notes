@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "LineItems", type: :request do
-  fixtures :line_items, :users, :products
+  fixtures :all
 
   before { login_as users(:one) }
 

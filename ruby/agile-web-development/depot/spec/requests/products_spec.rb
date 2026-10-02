@@ -5,7 +5,7 @@ RSpec.describe "Products", type: :request do
   include ActiveJob::TestHelper
   include Turbo::Broadcastable::TestHelper
 
-  fixtures :products, :users
+  fixtures :all
 
   before { login_as users(:one) }
 

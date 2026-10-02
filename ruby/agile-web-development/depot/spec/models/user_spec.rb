@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe User, type: :model do
-  fixtures :users
+  fixtures :all
 
   subject(:user) do
     User.new(name: "New User", email_address: "new_user@example.com",

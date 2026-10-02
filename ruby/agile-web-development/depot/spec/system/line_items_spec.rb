@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "LineItems", type: :system do
   include ActiveJob::TestHelper
 
-  fixtures :products
+  fixtures :all
 
   describe "adding a stale product to the cart" do
     it "shows a friendly alert and notifies the system administrator" do
