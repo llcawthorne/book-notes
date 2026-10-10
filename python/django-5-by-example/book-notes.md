@@ -3000,3 +3000,1653 @@
       def ready(self):
           import account.signals  # noqa: F401
   ```
+
+## Chapter 8 - Building an Online Shop
+
+- New project, so we startproject and startapp then start defining out model:
+
+  ```py
+  # myshop/shop/models.py
+  from django.db import models
+
+  class Category(models.Model):
+      name = models.CharField(max_length=200)
+      slug = models.SlugField(max_length=200, unique=True)
+
+      class Meta:
+          ordering = ["name"]
+          indexes = [
+              models.Index(fields=["name"]),
+          ]
+          verbose_name = "category"
+          verbose_name_plural = "categories"
+
+      def __str__(self):
+          return self.name
+
+
+  class Product(models.Model):
+      category = models.ForeignKey(
+          Category, related_name="products", on_delete=models.CASCADE
+      )
+      name = models.CharField(max_length=200)
+      slug = models.SlugField(max_length=200)
+      image = models.ImageField(upload_to="products/%Y/%m/%d", blank=True)
+      description = models.TextField(blank=True)
+      price = models.DecimalField(max_digits=10, decimal_places=2)
+      available = models.BooleanField(default=True)
+      created = models.DateTimeField(auto_now_add=True)
+      updated = models.DateTimeField(auto_now=True)
+
+      class Meta:
+          ordering = ["name"]
+          indexes = [
+              models.Index(fields=["id", "slug"]),
+              models.Index(fields=["name"]),
+              models.Index(fields=["-created"]),
+          ]
+
+      def __str__(self):
+          return self.name
+
+  # myshop/shop/admin.py
+  from django.contrib import admin
+
+  from .models import Category, Product
+
+  @admin.register(Category)
+  class CategoryAdmin(admin.ModelAdmin):
+      list_display = ["name", "slug"]
+      prepopulated_fields = {"slug": ("name",)}
+
+
+  @admin.register(Product)
+  class ProductAdmin(admin.ModelAdmin):
+      list_display = ["name", "slug", "price", "available", "created", "updated"]
+      list_filter = ["available", "created", "updated"]
+      list_editable = ["price", "available"]
+      prepopulated_fields = {"slug": ("name",)}
+  ```
+
+- Remembering that defining a field as unique automatically generates an index
+  for it.
+- Always use `DecimalField` and not `FloatField` when dealing with money.
+
+  ```py
+  # myshop/shop/views.py
+  from django.shortcuts import get_object_or_404, render
+
+  from .models import Category, Product
+
+  def product_list(request, category_slug=None):
+      category = None
+      categories = Category.objects.all()
+      products = Product.objects.filter(available=True)
+      if category_slug:
+          category = get_object_or_404(Category, slug=category_slug)
+          products = products.filter(category=category)
+      return render(
+          request,
+          "shop/product/list.html",
+          {
+              "category": category, 
+              "categories": categories, 
+              "products": products},
+      )
+
+  def product_detail(request, id, slug):
+      product = get_object_or_404(Product, id=id, slug=slug, available=True)
+      return render(request, "shop/product/detail.html", {"product": product})
+
+  # myshop/shop/urls.py
+  from django.urls import path
+
+  from . import views
+
+  app_name = "shop"
+  urlpatterns = [
+      path("", views.product_list, name="product_list"),
+      path(
+          "<slug:category_slug>/", 
+          views.product_list, 
+          name="product_list_by_category"),
+      path(
+          "<int:id>/<slug:slug>",
+          views.product_detail,
+          name="product_detail"
+      )
+  ]
+
+  # myshop/myshop/urls.py
+  from django.contrib import admin
+  from django.urls import path
+
+  urlpatterns = [
+      path("admin/", admin.site.urls),
+      path("", include("shop.urls", namespace="shop"))
+  ]
+
+  # myshop/shop/models.py
+  from django.db import models
+  from django.urls import reverse
+
+  class Category(models.Model):
+      # ...
+      def get_absolute_url(self):
+          return reverse("shop:product_list_by_category", args=[self.slug])
+
+  class Product(models.Model):
+      # ...
+      def get_absolute_url(self):
+          return reverse("shop:product_detail", args=[self.id, self.slug])
+
+  # myshop/shop/templates/shop/base.html
+  {% load static %}
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>{% block title %}My shop{% endblock %}</title>
+      <link href="{% static "css/base.css" %}" rel="stylesheet">
+    </head>
+    <body>
+      <div id="header">
+        <a href="/" class="logo">My shop</a>
+      </div>
+      <div id="subheader">
+        <div class="cart">
+          Your cart is empty.
+        </div>
+      </div>
+      <div id="content">
+        {% block content %}
+        {% endblock %}
+      </div>
+    </body>
+  </html>
+
+  # myshop/shop/templates/shop/product/list.html
+  {% extends "shop/base.html" %}
+  {% load static %}
+  {% block title %}
+    {% if category %}{{ category.name }}{% else %}Products{% endif %}
+  {% endblock %}
+  {% block content %}
+    <div id="sidebar">
+      <h3>Categories</h3>
+      <ul>
+        <li {% if not category %}class="selected"{% endif %}>
+          <a href="{% url "shop:product_list" %}">All</a>
+        </li>
+        {% for c in categories %}
+          <li {% if category.slug == c.slug %}class="selected"{% endif %}>
+            <a href="{{ c.get_absolute_url }}">{{ c.name }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div id="main" class="product-list">
+      <h1>{% if category %}{{ category.name }}{% else %}Products{% endif %}</h1>
+      {% for product in products %}
+        <div class="item">
+          <a href="{{ product.get_absolute_url }}">
+            <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static "img/no_image.png" %}{% endif %}">
+          </a>
+          <a href="{{ product.get_absolute_url }}">{{ product.name }}</a>
+          <br>
+            ${{ product.price }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endblock %}
+
+  # myshop/shop/templates/shop/product/detail.html
+  {% extends "shop/base.html" %}
+  {% load static %}
+  {% block title %}
+    {{ product.name }}
+  {% endblock %}
+  {% block content %}
+    <div class="product-detail">
+      <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static "img/no_image.png" %}{% endif %}">
+      <h1>{{ product.name }}</h1>
+      <h2>
+        <a href="{{ product.category.get_absolute_url }}">
+          {{ product.category }}
+        </a>
+      </h2>
+      <p class="price">${{ product.price }}</p>
+      {{ product.description|linebreaks }}
+    </div>
+  {% endblock %}
+
+  # myshop/myshop/settings.py
+  MEDIA_URL = "media/"
+  MEDIA_ROOT = BASE_DIR / "media"
+
+  # myshop/myshop/urls.py
+  from django.conf import settings
+  from django.conf.urls.static import static
+  from django.contrib import admin
+  from django.urls import include, path
+
+  urlpatterns = [
+      path("admin/", admin.site.urls),
+      path("", include("shop.urls", namespace="shop")),
+  ]
+
+  if settings.DEBUG:
+      urlpatterns += static(
+          settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
+      )
+  ```
+
+- The Django session framework supports anonymous and user sessions and allows
+  you to store arbitrary data for each visitor. Session data is stored server-
+  side (by default in the database) and associated with the user by a session
+  ID stored in cookies. The session middleware makes the current session
+  available through the `request` object as `request.session`. You treat it like
+  a Python dictionary like `request.session['foo'] = 'bar'`. You would retrieve
+  foo's value with `request.session.get('foo')` or delete it via
+  `del request.session['foo']`. When a user authenticates, their anonymous
+  session is lost and a new session created. You would need to manually copy
+  over data to preserve it after `login`.
+- `SESSION_ENGINE` allows you to specify sessions as stored in the database (the
+  default), file-based, cached (best performance but requires a CACHE), cached
+  database sessions, and cookie-based sessions.
+- Django uses JSON to serialize session data, and JSON only allows string key
+  names.
+
+  ```py
+  # myshop/myshop/settings.py
+  INSTALLED_APPS = [
+      # ...
+      "cart.apps.CartConfig",
+      "shop.apps.ShopConfig",
+  ]
+  # ...
+  CART_SESSION_ID = "cart"
+
+  # myshop/cart/cart.py
+  from decimal import Decimal
+
+  from django.conf import settings
+  from shop.models import Product
+
+  class Cart:
+      def __init__(self, request):
+          """
+          Initialize the cart.
+          """
+          self.session = request.session
+          cart = self.session.get(settings.CART_SESSION_ID)
+          if not cart:
+              # save an empty cart in the session
+              cart = self.session[settings.CART_SESSION_ID] = {}
+          self.cart = cart
+
+      def __iter__(self):
+          """
+          Iterate over the items in the cart and get the products
+          from the database.
+          """
+          product_ids = self.cart.keys()
+          products = Product.objects.filter(id__in=product_ids)
+          cart = self.cart.copy()
+          for product in products:
+              cart[str(product.id)]['product'] = product
+          for item in cart.values():
+              item['price'] = Decimal(item['price'])
+              item['total_price'] = item['price'] * item['quantity']
+              yield item
+
+      def __len__(self):
+          """
+          Count all items in the cart.
+          """
+          return sum(item['quantity'] for item in self.cart.values())
+
+      def add(self, product, quantity=1, override_quantity=False):
+          """
+          Add a product to the cart or update its quantity.
+          """
+          product_id = str(product.id)
+          if product_id not in self.cart:
+              self.cart[product_id] = {'quantity': 0, 'price': str(product.price)}
+          if override_quantity:
+              self.cart[product_id]['quantity'] = quantity
+          else:
+              self.cart[product_id]['quantity'] += quantity
+          self.save()
+
+      def remove(self, product):
+          """
+          Remove a product from the cart.
+          """
+          product_id = str(product.id)
+          if product_id in self.cart:
+              del self.cart[product_id]
+              self.save()
+
+      def clear(self):
+          # remove cart from session
+          del self.session[settings.CART_SESSION_ID]
+          self.save()
+
+      def get_total_price(self):
+          return sum(
+              Decimal(item['price']) * item['quantity']
+              for item in self.cart.values()
+          )
+
+      def save(self):
+          # mark the session as "modified" to make sure it gets saved
+          self.session.modified = True
+  ```
+
+- And we need forms, views, and templates to interact with our `Cart`:
+
+  ```py
+  # myshop/cart/forms.py
+  from django import forms
+
+  PRODUCT_QUANTITY_CHOICES = [(i, str(i)) for i in range(1, 21)]
+
+  class CartAddProductForm(forms.Form):
+      quantity = forms.TypedChoiceField(
+          choices=PRODUCT_QUANTITY_CHOICES, 
+          coerce=int
+      )
+      override = forms.BooleanField(
+          required=False, initial=False, widget=forms.HiddenInput
+      )
+
+  # myshop/cart/views.py
+  from django.shortcuts import get_object_or_404, redirect, render
+  from django.views.decorators.http import require_POST
+  from shop.models import Product
+
+  from .cart import Cart
+  from .forms import CartAddProductForm
+
+  @require_POST
+  def cart_add(request, product_id):
+      cart = Cart(request)
+      product = get_object_or_404(Product, id=product_id)
+      form = CartAddProductForm(request.POST)
+      if form.is_valid():
+          cd = form.cleaned_data
+          cart.add(
+              product=product,
+              quantity=cd['quantity'],
+              override_quantity=cd['override']
+          )
+      return redirect('cart:cart_detail')
+
+  @require_POST
+  def cart_remove(request, product_id):
+      cart = Cart(request)
+      product = get_object_or_404(Product, id=product_id)
+      cart.remove(product)
+      return redirect("cart:cart_detail")
+
+  def cart_detail(request):
+      cart = Cart(request)
+      return render(request, 'cart/detail.html', {'cart': cart})
+
+  # myshop/cart/templates/cart/detail.html
+  {% extends "shop/base.html" %}
+  {% load static %}
+  {% block title %}
+    Your shopping cart
+  {% endblock %}
+  {% block content %}
+    <h1>Your shopping cart</h1>
+    <table class="cart">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Product</th>
+          <th>Quantity</th>
+          <th>Remove</th>
+          <th>Unit price</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cart %}
+          {% with product=item.product %}
+            <tr>
+              <td>
+                <a href="{{ product.get_absolute_url }}">
+                  <img src="{% if product.image %}{{ product.image.url }}"
+                  {% else %}{% static "img/no_image.png" %}{% endif %}">
+                </a>
+              </td>
+              <td>{{ product.name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>
+                <form action="{% url "cart:cart_remove" product.id %}" method="post">
+                  <input type="submit" value="Remove">
+                  {% csrf_token %}
+                </form>
+              </td>
+              <td class="num">${{ item.price }}</td>
+              <td class="num">${{ item.total_price }}</td>
+            </tr>
+          {% endwith %}
+        {% endfor %}
+        <tr class="total">
+          <td>Total</td>
+          <td colspan="4"></td>
+          <td class="num">${{ cart.get_total_price }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-right">
+      <a href="{% url "shop:product_list" %}" class="button light">Continue shopping</a>
+      <a href="#" class="button">Checkout</a>
+    </p>
+  {% endblock %}
+
+  # myshop/cart/urls.py
+  from django.urls import path
+
+  from . import views
+
+  app_name = "cart"
+  urlpatterns = [
+      path("", views.cart_detail, name="cart_detail"),
+      path("add/<int:product_id>/", views.cart_add, name="cart_add"),
+      path("remove/<int:product_id/>", views.cart_remove, name="cart_remove"),
+  ]
+
+  # myshop/myshop/urls.py
+      path("cart/", include("cart.urls", namespace="cart")),
+      path("", include("shop.urls", namespace="shop")),
+
+  # myshop/shop/views.py
+  from cart.forms import CartAddProductForm
+  # ...
+  def product_detail(request, id, slug):
+      product = get_object_or_404(Product, id=id, slug=slug, available=True)
+      cart_product_form = CartAddProductForm()
+      return render(
+          request, 
+          "shop/product/detail.html", 
+          {"product": product, "cart_product_form": cart_product_form}
+      )
+
+  # myshop/shop/templates/shop/product.detail.html
+  # ...
+      <p class="price">${{ product.price }}</p>
+      <form action="{% url "cart:cart_add" product.id %}" method="post">
+        {{ cart_product_form }}
+        {% csrf_token %}
+        <input type="submit" value="Add to cart">
+      </form>
+      {{ product.description|linebreaks }}
+  # ...
+  ```
+
+- Make sure to include "cart/" before "" for shop, since it is more restrictive.
+- It looks nice but we want to be able to override quantity before placing an
+  order:
+
+  ```py
+  # myshop/cart/views.py
+  def cart_detail(request):
+      cart = Cart(request)
+      for item in cart:
+          item["update_quantity_form"] = CartAddProductForm(
+              initial={"quantity": item["quantity"], "override": True}
+          )
+      return render(request, "cart/detail.html", {"cart": cart})
+
+  # myshop/cart/templates/cart/detail.html
+  # find and replace this:
+                <td>{{ item.quantity }}</td>
+  # with
+              <td>
+                <form action="{% url "cart:cart_add" product.id %}" method="post">
+                  {{ item.update_quantity_form.quantity }}
+                  {{ item.update_quantity_form.override }}
+                  <input type="submit" value="Update">
+                  {% csrf_token %}
+                </form>
+              </td>
+  ```
+
+- A context processor is a Python function that takes the `request` object as an
+  argument and returns a dictionary that gets added to the request context. They
+  are used when you need to make something globally avilable to all templates.
+  We want to add the current cart in the request context.
+
+  ```py
+  # myshop/cart/context_processors.py
+  from .cart import Cart
+
+  def cart(request):
+      return {"cart": Cart(request)}
+
+  # myshop/myshop/settings.py
+  TEMPLATES = [
+      {
+          "BACKEND": "django.template.backends.django.DjangoTemplates",
+          "DIRS": [],
+          "APP_DIRS": True,
+          "OPTIONS": {
+              "context_processors": [
+                  "django.template.context_processors.debug",
+                  "django.template.context_processors.request",
+                  "django.contrib.auth.context_processors.auth",
+                  "django.contrib.messages.context_processors.messages",
+                  "cart.context_processors.cart"
+              ],
+          },
+      },
+  ]
+
+  # myshop/shop/templates/shop/base.html
+  # find and replace
+        <div class="cart">
+          Your cart is empty.
+        </div>
+  # with
+        <div class="cart">
+          {% with total_items=cart|length %}
+            {% if total_items > 0 %}
+              Your cart:
+              <a href="{% url "cart:cart_detail" %}">
+                {{ total_items }} item{{ total_items|pluralize }},
+                ${{ cart.get_total_price }}
+              </a>
+            {% else %}
+              Your cart is empty.
+            {% endif %}
+          {% endwith %}
+        </div>
+  ```
+
+- Context processors are executed in all the requests that use `RequestContext`.
+  You might want to create a custom template tag instead of a context processor
+  if your functionality is not needed in all templates, especially if it
+  involves database queries.
+- At this point we have finished the basic shopping site functionality of
+  displaying products and adding quantities to a cart. Next we need a way for
+  our customers to place an order. `./manage.py startapp orders`.
+
+  ```py
+  # myshop/orders/models.py
+  from django.db import models
+
+  class Order(models.Model):
+      first_name = models.CharField(max_length=50)
+      last_name = models.CharField(max_length=50)
+      email = models.EmailField()
+      address = models.CharField(max_length=250)
+      postal_code = models.CharField(max_length=20)
+      city = models.CharField(max_length=100)
+      created = models.DateTimeField(auto_now_add=True)
+      updated = models.DateTimeField(auto_now=True)
+      paid = models.BooleanField(default=False)
+
+      class Meta:
+          ordering = ["-created"]
+          indexes = [
+              models.Index(fields=["-created"]),
+          ]
+
+      def __str__(self):
+          return f"Order {self.id}"
+
+      def get_total_cost(self):
+          return sum(item.get_cost() for item in self.items.all())
+
+  class OrderItem(models.Model):
+      order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
+      product = models.ForeignKey(
+          "shop.Product", related_name="order_items", on_delete=models.CASCADE
+      )
+      price = models.DecimalField(max_digits=10, decimal_places=2)
+      quantity = models.PositiveIntegerField(default=1)
+
+      def __str__(self):
+          return str(self.id)
+
+      def get_cost(self):
+          return self.price * self.quantity
+
+  # myshop/orders/admin.py
+  from django.contrib import admin
+
+  from .models import Order, OrderItem
+
+  class OrderItemInline(admin.TabularInline):
+      model = OrderItem
+      raw_id_fields = ["product"]
+
+  @admin.register(Order)
+  class OrderAdmin(admin.ModelAdmin):
+      list_display = [
+          "id",
+          "first_name",
+          "last_name",
+          "email",
+          "address",
+          "postal_code",
+          "city",
+          "paid",
+          "created",
+          "updated",
+      ]
+      list_filter = ["paid", "created", "updated"]
+      inlines = [OrderItemInline]
+  ```
+
+- An inline lets you include a model on the same edit page as its related model.
+- So the plan with orders is a three step process:
+  1. Present a user with an order form to fill in their data.
+  2. Create a new `Order` instance with the data entered, and create an 
+     associated `OrderItem` instance for each item in the cart.
+  3. Clear all the cart's contents and redirect the user to a success page.
+
+  ```py
+  # myshop/orders/forms.py
+  from django import forms
+  from .models import Order
+
+  class OrderCreateForm(forms.ModelForm):
+      class Meta:
+          model = Order
+          fields = [
+              'first_name',
+              'last_name',
+              'email',
+              'address',
+              'postal_code',
+              'city'
+          ]
+
+  # myshop/orders/views.py
+  from cart.cart import Cart
+  from django.shortcuts import render
+
+  from .forms import OrderCreateForm
+  from .models import OrderItem
+
+  def order_create(request):
+      cart = Cart(request)
+      if request.method == 'POST':
+          form = OrderCreateForm(request.POST)
+          if form.is_valid():
+              order = form.save()
+              for item in cart:
+                  OrderItem.objects.create(
+                      order=order,
+                      product=item['product'],
+                      price=item['price'],
+                      quantity=item['quantity']
+                  )
+              cart.clear()
+              return render(
+                  request, 'orders/order/created.html', {'order': order}
+              )
+      else:
+          form = OrderCreateForm()
+          return render(
+              request, 'orders/order/create.html', {'cart': cart, 'form': form}
+          )
+
+  # myshop/orders/urls.py
+  from django.urls import path
+  from . import views
+
+  app_name = "orders"
+  urlpatterns = [
+      path("create/", views.order_create, name="order_create"),
+  ]
+
+  # myshop/myshop/urls.py
+      path("orders/", include("orders.urls", namespace="orders")),
+
+  # myshop/cart/templates/cart/detail.html
+  # find and replace
+      <a href="#" class="button">Checkout</a>
+  # with
+      <a href="{% url "orders:order_create" %}" class="button">
+        Checkout
+      </a>
+
+  # myshop/orders/templates/orders/order/create.html
+  {% extends "shop/base.html" %}
+  {% block title %}
+    Checkout
+  {% endblock %}
+  {% block content %}
+    <h1>Checkout</h1>
+    <div class="order-info">
+      <h3>Your order</h3>
+      <ul>
+        {% for item in cart %}
+          <li>
+            {{ item.quantity }}x {{ item.product.name }}
+            <span>${{ item.total_price }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      <p>Total: ${{ cart.get_total_price }}</p>
+    </div>
+    <form method="post" class="order-form">
+      {{ form.as_p }}
+      <p><input type="submit" value="Place order"></p>
+      {% csrf_token %}
+    </form>
+  {% endblock %}
+
+  # myshop/orders/templates/orders/order/created.html
+  {% extends "shop/base.html" %}
+  {% block title %}
+    Thank you
+  {% endblock %}
+  {% block content %}
+    <h1>Thank you</h1>
+    <p>Your order has been successfully completed. Your order number is
+    <strong>{{ order.id }}</strong>.</p>
+  {% endblock %}
+
+  # myshop/shop/templates/shop/base.html
+  # find and replace
+            {% else %}
+              Your cart is empty.
+            {% endif %}
+  # with
+            {% elif not order %}
+              Your cart is empty.
+            {% endif %}
+  ```
+
+- Now we are going to asynchronously send an email when taking an order.
+  Asynchronous execution can be used for any data-intensive, resource-intensive,
+  or time-consuming process or any process subject to failure which might
+  require a retry policy. To implement asynchronous tasks in this project, we
+  will use Celery for managing task queues and RabbitMQ as the message broker.
+- First we install celery: `pip install celery==5.4.0`. And we pull the RabbitMQ
+  image via `docker pull rabbitmq:3.13.1-management1.` To run RabbitMQ,
+  `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13.1-management`.
+  Then we can access RabbitMQ's management interface at `http://127.0.0.1:15672`
+  in a browser. Use `guest` for both username and password.
+
+  ```py
+  # myshop/myshop/celery.py
+  import os
+  from celery import Celery
+
+  os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myshop.settings")
+  app = Celery("myshop")
+  app.config_from_object("django.conf:settings", namespace="CELERY")
+  app.autodiscover_tasks()
+
+  # myshop/myshop/__init__.py
+  from .celery import app as celery_app
+
+  __all__ = ["celery_app"]
+  ```
+
+- Now we can start a celery worker from another shell with:
+  `celery -A myshop worker -l info --pool=threads`. 
+  Now in your RabbitMQ Admin you should show
+  some graphs, several connections, and several queues.
+- The `CELERY_ALWAYS_EAGER` setting allows you to execute tasks locally in a
+  synchronous manner instead of sending them to the queue. This is useful for
+  running unit tests or executing the application without running Celery.
+- Define tasks for Celery in a `tasks.py` file in your app directory:
+
+  ```py
+  # myshop/order/tasks.py
+  from celery import shared_task
+  from django.core.mail import send_mail
+  from .models import Order
+
+  @shared_task
+  def order_created(order_id):
+      """
+      Task to send an e-mail notification when an order is
+      successfully created.
+      """
+      order = Order.objects.get(id=order_id)
+      subject = f"Order nr. {order.id}"
+      message = (
+          f"Dear {order.first_name},\n\n"
+          f"You have successfully placed an order."
+          f"Your order ID is {order.id}."
+      )
+      mail_sent = send_mail(subject, message, "admin@myshop.com", [order.email])
+      return mail_sent
+
+  # myshop/myshop/settings.py
+  EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+  # myshop/orders/views.py
+  from .tasks import order_created
+  # ...
+              cart.clear()
+              order_created.delay(order.id)
+              return render(request, "orders/order/created.html", {"order": order})
+  ```
+
+- It is recommended to only pass IDs to task functions and retrieve objects from
+  the database when the task is executed.
+- You call the `delay()` method of a task to execute is asynchronously.
+- You can also monitor Celery with Flower. `pip install flower==2.0.1'` then
+  from a new shell `celery -A myshop flower` and browsing to
+  `http://localhost:5555/`. If this wasn't a development box, we'd run Flower
+  with `celery -A myshop flower --basic-auth=user:pwd` where `user` and `pwd`
+  are credentials to login. Flower also provides login via Google, GitHub, or
+  Okta OAuth <https://flower.readthedocs.io/en/latest/auth.html>.
+
+## Chapter 9 - Managing Payments and Orders
+
+- We are going to integrate payments through
+  [Stripe Checkout](https://stripe.com/docs/payments/checkout). First you need
+  to [register](https://dashboard.stripe.com/register). Now you want to
+  `pip install stripe==9.3.0`. And get your
+  [api keys](https://dashboard.stripe.com/test/apikeys).
+
+  ```py
+  # myshop/.env
+  STRIPE_PUBLISHABLE_KEY=pk_test_XXXX
+  STRIPE_SECRET_KEY=sk_test_XXXX
+
+  # myshop/myshop/settings.py
+  from decouple import config
+
+  STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')
+  STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+  STRIPE_API_VERSION = '2024-04-10'
+  ```
+
+- `./manage.py startapp payments` and add it to `INSTALLED_APPS`.
+
+  ```py
+  # myshop/orders/views.py
+  from django.shortcuts import redirect, render
+  # find these three lines and replace
+              cart.clear()
+              order_created.delay(order.id)
+              return render(request, "orders/order/created.html", {"order": order})
+  # with
+              cart.clear()
+              order_created.delay(order.id)
+              request.session["order_id"] = order.id
+              return redirect("payment:process")
+
+  # myshop/payment/views.py
+  from decimal import Decimal
+
+  import stripe
+  from django.conf import settings
+  from django.shortcuts import get_object_or_404, redirect, render
+  from django.urls import reverse
+
+  from orders.models import Order
+
+  stripe.api_key = settings.STRIPE_SECRET_KEY
+  stripe.api_version = settings.STRIPE_API_VERSION
+
+  def payment_process(request):
+      order_id = request.session.get('order_id')
+      order = get_object_or_404(Order, id=order_id)
+      if request.method == 'POST':
+          success_url = request.build_absolute_uri(
+              reverse('payment:completed')
+          )
+          cancel_url = request.build_absolute_uri(
+              reverse('payment:canceled')
+          )
+          # Stripe checkout session data
+          session_data = {
+              'mode': 'payment',
+              'client_reference_id': order.id,
+              'success_url': success_url,
+              'cancel_url': cancel_url,
+              'line_items': []
+          }
+          # add order items to the Stripe checkout session
+          for item in order.items.all():
+              session_data["line_items"].append(
+                  {
+                      "price_data": {
+                          "unit_amount": int(item.price * Decimal("100")),
+                          "currency": "usd",
+                          "product_data": {
+                              "name": item.product.name,
+                          },
+                      },
+                      "quantity": item.quantity,
+                  }
+              )
+
+          session = stripe.checkout.Session.create(**session_data)
+          return redirect(session.url, code=303)
+      else:
+          return render(request, 'payment/process.html', locals())
+
+  def payment_completed(request):
+      return render(request, 'payment/completed.html')
+
+  def payment_canceled(request):
+      return render(request, 'payment/canceled.html')
+
+  # myshop/payment/urls.py
+  from django.urls import path
+  from . import views
+
+  app_name = "payment"
+
+  urlpatterns = [
+      path("process/", views.payment_process, name="process"),
+      path("completed/", views.payment_completed, name="completed"),
+      path("canceled/", views.payment_canceled, name="canceled"),
+  ]
+
+  # myshop/myshop/urls.py
+      path("payment/", include("payment.urls", namespace="payment")),
+
+  # myshop/payment/templates/payment/process.html
+  {% extends "shop/base.html" %}
+  {% load static %}
+  {% block title %}Pay your order{% endblock %}
+  {% block content %}
+    <h1>Order summary</h1>
+    <table class="cart">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Product</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.items.all %}
+          <tr class="row{% cycle "1" "2" %}">
+            <td>
+              <img src="{% if item.product.image %}{{ item.product.image.url }}
+              {% else %}{% static "img/no_image.png" %}{% endif %}"
+            </td>
+          <td>{{ item.product.name }}</td>
+          <td class="num">${{ item.price }}</td>
+          <td class="num">{{ item.quantity }}</td>
+          <td class="num">${{ item.get_cost}}</td>
+          </tr>
+        {% endfor %}
+        <tr class="total">
+          <td colspan="4">Total</td>
+          <td class="num">${{ order.get_total_cost }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <form action="{% url "payment:process" %}" method="post">
+      <input type="submit" value="Pay now">
+      {% csrf_token %}
+    </form>
+  {% endblock %}
+
+  # myshop/payment/templates/payment/completed.html
+  {% extends "shop/base.html" %}
+  {% block title %}Payment successful{% endblock %}
+  {% block content %}
+    <h1>Your payment was successful</h1>
+    <p>Your payment has been processed successfully.</p>
+  {% endblock %}
+
+  # myshop/payment/templates/payment/canceled.html
+  {% extends "shop/base.html" %}
+  {% block title %}Payment canceled{% endblock %}
+  {% block content %}
+    <h1>Your payment has not been processed</h1>
+    <p>There was a problem processing your payment.</p>
+  {% endblock %}
+  ```
+
+- Stripe has card number for testing:
+  - Successfuly payment: 4242 4242 4242 4242, CVC any three, Expiry any future
+  - Failed payment: 4000 0000 0000 0002, CVC any three, Expiry any future date
+  - Requires 3D: 4000 0025 0000 3155, CVC any three, Expiry any future
+- You can see your successful payments at:
+  <https://dashboard.stripe.com/test/payments>
+- You can add a webhook to get notified of Stripe payments at:
+  <https://dashboard.stripe.com/test/webhooks>. Click on "Test with a local
+  listener".
+- First run `brew install stripe-cli` then `stripe login` and run 
+  `stripe listen --print-secret` to get the secret
+  and store it as STRIPE_WEBHOOK_SECRET in your .env, then add
+  `STRIPE_WEBHOOK_SECRET = config("STIPE_WEBHOOK_SECRET")` to 
+  `myshop/settings.py`. Then we'll add our webhook:
+
+  ```py
+  # myshop/payment/webhooks.py
+  import stripe
+  from django.conf import settings
+  from django.http import HttpResponse
+  from django.views.decorators.csrf import csrf_exempt
+
+  from orders.models import Order
+
+  @csrf_exempt
+  def stripe_webhook(request):
+      payload = request.body
+      sig_header = request.META["HTTP_STRIPE_SIGNATURE"]
+      event = None
+      try:
+          event = stripe.Webhook.construct_event(
+              payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+          )
+      except ValueError as e:
+          # Invalid payload
+          return HttpResponse(status=400)
+      except stripe.SignatureVerificationError as e:
+          # Invalid signature
+          return HttpResponse(status=400)
+      if event.type == 'checkout.session.completed':
+          session = event.data.object
+          if (session.mode == 'payment' and session.payment_status == 'paid'):
+              try:
+                  order = Order.objects.get(id=session.client_reference_id)
+              except Order.DoesNotExist:
+                  return HttpResponse(status=404)
+              order.paid = True
+              order.save()
+      return HttpResponse(status=200)
+
+  # myshop/payment/urls.py
+  from . import views, webhooks
+
+      path("webhook/", webhooks.stripe_webhook, name="stripe-webhook")
+  ```
+
+- At this point I had ten terminal windows open, so I did `pip install honcho`,
+  and also `pip install watchfiles`, then wrote a `Procefile`, and ran 
+  everything with `honcho start`. `celery` and `flower` use `watchfiles`.
+
+  ```py
+  # myshop/Procfile
+  rabbitmq: docker run --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13.1-management
+  celery: watchfiles --filter python "celery -A myshop worker -l info --pool=threads" .
+  flower: watchfiles --filter python "celery -A myshop flower" .
+  web: python manage.py runserver
+  stripe: stripe listen --all-snapshot --forward-to 127.0.0.1:8000/payment/webhook/
+  ```
+
+- So Stripe payments have a payment ID, and we want to associate that with our
+  `Order` instead of simply marking it paid.
+
+  ```py
+  # myshop/orders/models.py
+  from django.conf import settings
+
+  class Order(models.Model):
+      # ...
+      stripe_id = models.CharField(max_length=250, blank=True)
+      # ...
+      def get_stripe_url(self):
+          if not self.stripe_id:
+              return ''
+          if '_test_' in settings.STRIPE_SECRET_KEY:
+              path = '/test/'
+          else:
+              path = '/'
+          return f'https://dashboard.stripe.com{path}payments/{self.stripe_id}'
+
+  # myshop/payment/webhooks.py
+  def stripe_webhook(request):
+      # ...
+              order.paid = True
+              order.stripe_id = session.payment_intent
+              order.save()
+
+  # myshop/orders/admin.py
+  from django.utils.safestring import mark_safe
+
+  def order_payment(obj):
+      url = obj.get_stripe_url()
+      if obj.stripe_id:
+          html = f'<a href="{url}" target="_blank">{obj.stripe_id}</a>'
+          return mark_safe(html)
+      return ''
+
+  order_payment.short_description = "Stripe payment"
+  # ...
+  class OrderAdmin(admin.ModelAdmin):
+      # ...
+      "paid",
+      order_payment,
+      "created",
+      "updated"
+  ]
+  # ...
+  ```
+
+- Now, not only can we take orders but we can also process payment. Next we're
+  going to work on exporting the orders as a CSV file with a custom action on
+  the administration site. A custom action is just a regular function that
+  receives the current `ModelAdmin` being displayed, the current request
+  object as an `HttpRequest` instance, and a QuerySet for the objects selected
+  by the user. It shows up in the Action: dropdown.
+
+  ```py
+  # myshop/orders/admin.py
+  import csv
+  import datetime
+
+  from django.http import HttpResponse
+
+  def export_to_csv(modeladmin, request, queryset):
+      opts = modeladmin.model._meta
+      content_disposition = (
+          f'attachment; filename={opts.verbose_name}.csv'
+      )
+      response = HttpResponse(content_type='text/csv')
+      response['Content-Disposition'] = content_disposition
+      writer = csv.writer(response)
+      fields = [
+          field
+          for field in opts.get_fields()
+          if not field.many_to_many and not field.one_to_many
+      ]
+      # Write a first row with header information
+      writer.writerow([field.verbose_name for field in fields])
+      for obj in queryset:
+          data_row = []
+          for field in fields:
+              value = getattr(obj, field.name)
+              if isinstance(value, datetime.datetime):
+                  value = value.strftime("%d/%m/%Y")
+              data_row.append(value)
+          writer.writerow(data_row)
+      return response
+
+  export_to_csv.short_description = "Export to CSV"
+  ```
+  class OrderAdmin(admin.ModelAdmin):
+      # ...
+      inlines = [OrderItemInline]
+      actions = [export_to_csv]
+  ```
+
+- You can do more than adding actions by creating a custom administration
+  template. You just have to make sure only staff users can access your view
+  and that you maintain the administration look and feel by making your template
+  extend an administration template.
+
+  ```py
+  # myshop/orders/views.py
+  from django.contrib.admin.views.decorators import staff_member_required
+  from django.shortcuts import get_object_or_404, redirect, render
+  
+  from .models import Order, OrderItem
+
+  @staff_member_required
+  def admin_order_detail(request, order_id):
+      order = get_object_or_404(Order, id=order_id)
+      return render(
+          request, 'admin/orders/order/detail.html', {'order': order}
+      )
+
+  # myshop/orders/urls.py
+      path(
+          "admin/order/<int:order_id>/",
+          views.admin_order_detail,
+          name="admin_order_detail",
+      ),
+
+  # myshop/orders/templates/admin/orders/order/detail.html
+  {% extends "admin/base_site.html" %}
+  {% block title %}
+    Order {{ order.id }} {{ block.super }}
+  {% endblock %}
+  {% block breadcrumbs %}
+    <div class+"breadcrumbs">
+      <a href="{% url "admin:index" %}">Home</a> &rsaquo;
+      <a href="{% url "admin:orders_order_changelist" %}>Orders</a> &rsaquo;
+      <a href="{% url "admin:orders_order_change" order.id %}">
+        Order {{ order.id }}
+      </a>
+      &rsaquo; Detail
+    </div>
+  {% endblock %}
+  {% block content %}
+    <div class+"module">
+      <h1>Order {{ order.id }}</h1>
+      <ul class="object-tools">
+        <li>
+          <a href="#" onclick="window.print();">
+            Print order
+          </a>
+        </li>
+      </ul>
+      <table>
+        <tr>
+          <th>Created</th>
+          <td>{{ order.created }}</td>
+        </tr>
+        <tr>
+          <th>Customer</th>
+          <td>{{ order.first_name }} {{ order.last_name }}</td>
+        </tr>
+        <tr>
+          <th>
+            Email
+          </th>
+          <td><a href="mailto:{{ order.email }}">{{ order.email }}</a></td>
+        </tr>
+        <tr>
+          <th>Address</th>
+          <td>
+            {{ order.address }},
+            {{ order.postal_code }} {{ order.city }}
+          </td>
+        </tr>
+        <tr>
+          <th>Total amount</th>
+          <td>${{ order.get_total_cost }}</td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td>{% if order.paid %}Paid{% else %}Pending payment{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Stripe payment</th>
+          <td>
+            {% if order.stripe_id %}
+              <a href="{{ order.get_stripe_url }}" target="_blank">
+                {{ order.stripe_id }}
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="module">
+      <h2>Items bought</h2>
+      <table style="width:100%">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.items.all %}
+            <tr class="row{% cycle "1" "2" %}">
+              <td>{{ item.product.name }}</td>
+              <td class="num">${{ item.price }}</td>
+              <td class="num">{{ item.quantity }}</td>
+              <td class="num">${{ item.get_cost }}</td>
+            </tr>
+          {% endfor %}
+          <tr class="total">
+            <td colspan="3">Total</td>
+            <td class="num">${{ order.get_total_cost }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endblock %}
+
+  # myshop/orders/admin.py
+  from django.urls import reverse
+
+  def order_detail(obj):
+      url = reverse("orders:admin_order_detail", args=[obj.id])
+      return mark_safe(f'<a href="{url}">View</a>')
+
+  class OrderAdmin(admin.ModelAdmin):
+      # ...
+          "updated",
+          order_detail,
+      ]
+  ```
+
+- We're going to use WeasyPrint to change our HTML to PDF. The requirements are
+  at <https://doc.courtboullion.org/weasyprint/stable/first_steps.html>, but
+  for OS X it's as simple a `brew install weasyprint` then 
+  `pip install WweasyPrint==61.2`. Then we make a special template:
+
+  ```py
+  # myshop/orders/templates/orders/order/pdf.html
+  <html>
+    <body>
+      <h1>My Shop</h1>
+      <p>
+        Invoice no. {{ order.id }}<br />
+        <span class="secondary">
+          {{ order.created|date:"M d, Y" }}
+        </span>
+      </p>
+      <h3>Bill to</h3>
+      <p>
+        {{ order.first_name }} {{ order.last_name }}<br />
+        {{ order.email }}<br />
+        {{ order.address }}<br />
+        {{ order.postal_code }}, {{ order.city }}
+      </p>
+      <h3>Items bought</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.items.all %}
+            <tr class="row{% cycle "1" "2" %}">
+              <td>{{ item.product.name }}</td>
+              <td class="num">${{ item.price }}</td>
+              <td class="num">{{ item.quantity }}</td>
+              <td class="num">${{ item.get_cost }}</td>
+            </tr>
+          {% endfor %}
+          <tr class="total">
+            <td colspan="3">Total</td>
+            <td class="num">${{ order.get_total_cost }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <span class="{% if order.paid %}paid{% else %}pending{% endif %}">
+        {% if order.paid %}Paid{% else %}Pending payment{% endif %}
+      </span>
+    </body>
+  </html>
+
+  # myshop/orders/views.py
+  import weasyprint
+  from django.contrib.admin.views.decorators import staff_member_required
+  from django.contrib.staticfiles import finders
+  from django.http import HttpResponse
+  from django.shortcuts import get_object_or_404, redirect, render
+  from django.template.loader import render_to_string
+
+  from cart.cart import Cart
+
+  from .forms import OrderCreateForm
+  from .models import Order, OrderItem
+  from .tasks import order_created
+
+  @staff_member_required
+  def admin_order_pdf(request, order_id):
+      order = get_object_or_404(Order, id=order_id)
+      html = render_to_string("orders/order/pdf.html", {"order": order})
+      response = HttpResponse(content_type="application/pdf")
+      response["Content-Disposition"] = f"filename=order_{order.id}.pdf"
+      weasyprint.HTML(string=html).write_pdf(
+          response, stylesheets=[weasyprint.CSS(finders.find("css/pdf.css"))]
+      )
+      return response
+
+  # myshop/myshop/settings.py
+  STATIC_ROOT = BASE_DIR / 'static'
+
+  # then run
+  $ python manage.py collectstatic
+
+  # myshop/orders/urls.py
+      path('admin/order/<int:order_id>/pdf/',
+           views.admin_order_pdf,
+           name='admin_order_pdf'
+      ),
+
+  # myshop/orders/admin.py
+  def order_pdf(obj):
+      url = reverse('orders:admin_order_pdf', args=[obj.id])
+      return mark_safe(f'<a href="{url}">PDF</a>')
+
+  order_pdf.short_description = 'Invoice'
+
+  class OrderAdmin(admin.ModelAdmin):
+      # ...
+          "updated",
+          order_detail,
+          order_pdf,
+      ]
+  ```
+
+- Now we have a pretty good looking PDF. We want to email it. Like usual with
+  email we want to do it asynchronous:
+
+  ```py
+  # myshop/payment/tasks.py
+  from io import BytesIO
+
+  import weasyprint
+  from celery import shared_task
+  from django.contrib.staticfiles import finders
+  from django.core.mail import EmailMessage
+  from django.template.loader import render_to_string
+
+  from orders.models import Order
+
+  @shared_task
+  def payment_completed(order_id):
+      """
+      Task to send an email notification when an order is successfully paid.
+      """
+      order = Order.objects.get(id=order_id)
+      subject = f"My Shop - Invoice no. {order.id}"
+      message = "Please, find attached the invoice for your recent purchase."
+      email = EmailMessage(subject, message, "admin@myshop.com", [order.email])
+      html = render_to_string("orders/order/pdf.html", {"order": order})
+      out = BytesIO()
+      stylesheets = [weasyprint.CSS(finders.find("css/pdf.css"))]
+      weasyprint.HTML(string=html).write_pdf(out, stylesheets=stylesheets)
+      email.attach(f"order_{order.id}.pdf", out.getvalue(), "application/pdf")
+      email.send()
+
+  # myshop/payment/webhooks.py
+  from .tasks import payment_completed
+
+  def stripe_webhook(request):
+      # ...
+              payment_completed.delay(order.id)
+      return HttpResponse(status=200)
+  ```
+
+- We also added some lines to `myshop/settings.py` to cleanup the output:
+
+  ```py
+  # myshop/myshop/settings.py
+  LOGGING = {
+      "version": 1,
+      "disable_existing_loggers": False,
+      "loggers": {"fontTools": {"level": "ERROR"}},
+  }
+
+  EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+  EMAIL_FILE_PATH = BASE_DIR / "sent_emails"
+
+  # myshop/orders/tasks.pyfrom celery.utils.log import get_task_logger
+  logger = get_task_logger(__name__)
+  # ...at the end of payment_completed:
+  logger.info("Invoice emailed for order %s", order.id)
+  ```
+
+## Chapter 10 - Extending Your Shop
+
+- First we're going to add coupons by running `manage.py startapp cocupons`.
+
+  ```py
+  # myshop/coupons/models.py
+  from django.core.validators import MaxValueValidator, MinValueValidator
+  from django.db import models
+
+  class Coupon(models.Model):
+      code = models.CharField(max_length=50, unique=True)
+      valid_from = models.DateTimeField()
+      valid_to = models.DateTimeField()
+      discount = models.IntegerField(
+          validators=[MinValueValidator(0), MaxValueValidator(100)],
+          help_text="Percentage value (0 to 100)",
+      )
+      active = models.BooleanField()
+
+      def __str__(self):
+          return self.code
+
+  # myshop/coupons/admin.py
+  from django.contrib import admin
+
+  from .models import Coupon
+
+  @admin.register(Coupon)
+  class CouponAdmin(admin.ModelAdmin):
+      list_display = ["code", "valid_from", "valid_to", "discount", "active"]
+      list_filter = ["active", "valid_from", "valid_to"]
+      search_fields = ["code"]
+  ```
+
+- So now we need a way for customers to apply coupons to their purchase.
+  1. The user add products to the shopping cart.
+  2. The user can enter a coupon code in a form displayed on the shopping cart
+     details page.
+  3. When the user enters a coupon code and submits the form, you look for an
+     existing coupon with the given code that is currently valid. You have to
+     check that the coupon code matches the one entered by the user, that the
+     `active` attribute is `True`, and that the current datetime is between the
+     `valid_from` and `valid_to` values.
+  4. If a coupon is found, you save it in the user's session and display the
+     cart, including the discount applied to it and the updated total amount.
+  5. When the user places an order, you save the coupon to the given order.
+
+  ```py
+  # myshop/coupons/forms.py
+  from django import forms
+
+  class CouponApplyForm(forms.Form):
+      code = forms.CharField()
+
+  # myshop/coupons/views.py
+  from django.shortcuts import redirect
+  from django.utils import timezone
+  from django.views.decorators.http import require_POST
+
+  from .forms import CouponApplyForm
+  from .models import Coupon
+
+  @require_POST
+  def coupon_apply(request):
+      now = timezone.now()
+      form = CouponApplyForm(request.POST)
+      if form.is_valid():
+          code = form.cleaned_data["code"]
+          try:
+              coupon = Coupon.objects.get(
+                  code__iexact=code, 
+                  valid_from__lte=now, 
+                  valid_to__gte=now, 
+                  active=True
+              )
+              request.session["coupon_id"] = coupon.id
+          except Coupon.DoesNotExist:
+              request.session["coupon_id"] = None
+      return redirect("cart:cart_detail")
+
+  # myshop/coupons/urls.py
+  from django.urls import path
+
+  from . import views
+
+  app_name = 'coupons'
+  urlpatterns = [
+      path('apply/', views.coupon_apply, name='apply')
+  ]
+
+  # myshop/myshop/urls.py
+      path("coupons/", include("coupons.urls", namespace="coupons")),
+
+  # myshop/cart/cart.py
+  from coupon.models import Coupon
+
+  class Cart:
+      def __init__(self, request):
+          # ...
+        self.cart = cart
+        self.coupon_id = self.session.get("coupon_id")
+    # ...
+    @property
+    def coupon(self):
+        if self.coupon_id:
+            try:
+                return Coupon.objects.get(id=self.coupon_id)
+            except Ccoupon.DoesNotExist:
+                pass
+        return None
+
+    def get_discount(self):
+        if self.coupon:
+            return (
+                self.coupon.discount / Decimal(100)
+            ) * self.get_total_price()
+        return Decimal(0)
+
+    def get_total_price_after_discount(self):
+        return self.get_total_price() - self.get_discount()
+
+  # myshop/cart/views.py
+  from coupons.forms import CouponApplyForm
+
+  def cart_detail(request):
+      cart = Cart(request)
+      for item in cart:
+          item["update_quantity_form"] = CartAddProductForm(
+              initial={"quantity": item["quantity"], "override": True}
+          )
+      coupon_apply_form = CouponApplyForm()
+      return render(
+          request, 
+          "cart/detail.html", 
+          {
+              "cart": cart,
+              "coupon_apply_form": coupon_apply_form
+          }
+      )
+
+  # myshop/cart/templates/cart/detail.html
+  # replace these five lines:
+        <tr class="total">
+          <td>Total</td>
+          <td colspan="4"></td>
+          <td class="num">${{ cart.get_total_price }}</td>
+        </tr>
+  # with:
+        {% if cart.coupon %}
+          <tr class="subtotal">
+            <td>Subtotal</td>
+            <td colspan="4"></td>
+            <td class="num">${{ cart.get_total_price|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td>
+              "{{ cart.coupon.code }}" coupon
+              ({{ cart.coupon.discount }}% off)
+            </td>
+            <td colspan="4"></td>
+            <td class="num neg">
+              - ${{ cart.get_discount|floatformat:2 }}
+            </td>
+          </tr>
+        {% endif %}
+        <tr class="total">
+          <td>Total</td>
+          <td colspan="4"></td>
+          <td class="num">
+            ${{ cart.get_total_price_after_discount|floatformat:2 }}
+          </td>
+        </tr>
+  ```

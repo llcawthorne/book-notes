@@ -2854,3 +2854,242 @@
   exceptions without IO. You almost never want `thrown`,
 - Note that `Exception` instances are derivable by `instance Exception Type`.
   If your type takes an argument, it is included as extra information.
+
+## Chapter 31 - Final Project
+
+- We are going to write a finger server, but first a little `Debug.hs` program
+  to display working with network sockets by echoing inputs:
+- Note the `network` library has changed since the book is published, so this
+  doesn't match the book.
+
+  ```hs
+  module Main where
+
+  import Control.Monad (forever)
+  import Network.Socket hiding (recv)
+  import Network.Socket.ByteString (recv, sendAll)
+
+  logAndEcho :: Socket -> IO ()
+  logAndEcho sock = forever $ do
+    (soc, _) <- accept sock
+    printAndKickback soc
+    close soc
+
+    where printAndKickback conn = do
+            msg <- recv conn 1024
+            print msg
+            sendAll conn msg
+
+  main :: IO ()
+  main = withSocketsDo $ do
+    addrinfos <- getAddrInfo
+                 (Just (defaultHints
+                   {addrFlags =
+                    [AI_PASSIVE]}))
+                 Nothing (Just "79")
+
+    let serveraddr = head addrinfos
+    sock <- socket (addrFamily serveraddr)
+                   Stream defaultProtocol
+
+    bind sock (addrAddress serveraddr)
+    listen sock 1
+    logAndEcho sock
+    close sock
+  ```
+
+- First, let's analyze `logAndEcho`.
+  We are using `forever` to keep the socket open indefinitely. The `accept`
+  command blocks until a client connects to the server, and `soc` is the result
+  of `accept`-ing a connection for communicating with the client. The server
+  will receive up to 1024 bytes of text from the client, print the text
+  literally, then echo the text back to the client across the connection.
+  We close `soc` to close the active connection but not `sock` since we still
+  want to listen for other connections on the server socket. Because we're
+  looping with `forever`, the next action after closing the socket is to block
+  and wait for another connection to `accept`.
+- Now let's look at `main`. `withSocketsDo` does nothing except on Windows where
+  it is required to use the socket API. The `addrinfos` is mostly ceremony but 
+  the
+  `Just "79"` portion is the port we are listening on. Note that we'll need to
+  run as Administrator or root to open a server of port 79. The next bit uses
+  `socket` to bind to the address and port we specified. Then we `listen` on
+  the socket we are bound to. If `logAndEcho` finishes (remember, it's running
+  forever), we close the socket and exit.
+- We can run our echo server with ``sudo `stack exec which debug` ``.
+- The code is pretty self explanatory, so I'll just present the entire `Main.h`
+  file for `fingerd` (even though you could view it in the repository).
+
+  ```hs
+  {-# LANGUAGE OverloadedStrings #-}
+  {-# LANGUAGE QuasiQuotes       #-}
+  {-# LANGUAGE RecordWildCards   #-}
+  module Main (main) where
+
+  import Control.Exception
+  import Control.Monad (forever)
+  import Data.List (intersperse)
+
+  import Data.Text(Text)
+  import qualified Data.Text as T
+  import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+  import Data.Typeable
+  import Database.SQLite.Simple hiding (bind, close)
+  import qualified Database.SQLite.Simple as SQLite
+
+  import Database.SQLite.Simple.Types
+  import Network.Socket hiding (recv)
+  import Data.ByteString (ByteString)
+
+  import qualified Data.ByteString as BS
+  import Network.Socket.ByteString (recv, sendAll)
+  import Text.RawString.QQ
+
+  data User =
+    User {
+        userId   :: Integer
+      , username :: Text
+      , shell :: Text
+
+      , homeDirectory :: Text
+      , realName :: Text
+      , phone :: Text
+    } deriving (Eq, Show)
+
+  instance FromRow User where
+    fromRow = User <$> field
+                   <*> field
+                   <*> field
+                   <*> field
+                   <*> field
+                   <*> field
+
+  instance ToRow User where
+    toRow (User id_ username shell homeDir realName phone) =
+      toRow (id_, username, shell, homeDir, realName, phone)
+
+  createUsers :: Query
+  createUsers = [r|
+  CREATE TABLE IF NOT EXISTS users
+    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+     username TEXT UNIQUE,
+     shell TEXT, homeDirectory TEXT,
+     realName TEXT, phone TEXT)
+  |]
+
+  insertUser :: Query
+  insertUser =
+    "INSERT INTO users\
+    \ VALUES (?, ?, ?, ?, ?, ?)"
+
+  allUsers :: Query
+  allUsers =
+    "SELECT * from users"
+
+  getUserQuery :: Query
+  getUserQuery =
+    "SELECT * from users where username = ?"
+
+  data DuplicateData = DuplicateData
+    deriving (Eq, Show, Typeable)
+
+  instance Exception DuplicateData
+
+  type UserRow = (Null, Text, Text, Text, Text, Text)
+
+  getUser :: Connection -> Text -> IO (Maybe User)
+  getUser conn username = do
+    results <- query conn getUserQuery (Only username)
+    case results of
+      [] -> return $ Nothing
+      [user] -> return $ Just user
+      _ -> throwIO DuplicateData
+
+  createDatabase :: IO ()
+  createDatabase = do
+    conn <- open "finger.db"
+    execute_ conn createUsers
+    execute conn insertUser meRow
+
+    rows <- query_ conn allUsers
+    mapM_ print (rows :: [User])
+    SQLite.close conn
+
+    where meRow :: UserRow
+          meRow = (Null, "callen", "/bin/zsh",
+                   "/home/callen", "Chris Allen", "555-123-4567")
+
+  returnUsers :: Connection -> Socket -> IO ()
+  returnUsers dbConn soc = do
+    rows <- query_ dbConn allUsers
+
+    let usernames = map username rows
+        newlineSeparated = T.concat $ intersperse "\n" usernames
+
+    sendAll soc (encodeUtf8 newlineSeparated)
+
+  formatUser :: User -> ByteString
+  formatUser (User _ username shell homeDir realName _) = BS.concat
+
+    ["Login: ", e username, "\t\t\t\t",
+     "Name: ", e realName, "\n",
+     "Directory: ", e homeDir, "\t\t\t",
+     "Shell: ", e shell, "\n"]
+    where e = encodeUtf8
+
+  returnUser :: Connection -> Socket -> Text -> IO ()
+  returnUser dbConn soc username = do
+    -- the literal `username` text ends with `\r\n` so we strip it
+    maybeUser <- getUser dbConn (T.strip username)
+
+    case maybeUser of
+      Nothing -> do
+        putStrLn ("Couldn't find matching user\
+                  \ for username: " ++ (show username))
+        return ()
+
+      Just user -> sendAll soc (formatUser user)
+
+  handleQuery :: Connection -> Socket -> IO ()
+  handleQuery dbConn soc = do
+    msg <- recv soc 1024
+
+    case msg of
+      "\r\n" -> returnUsers dbConn soc
+      name -> returnUser dbConn soc (decodeUtf8 name)
+
+  handleQueries :: Connection -> Socket -> IO ()
+  handleQueries dbConn sock = forever $ do
+
+    (soc, _) <- accept sock
+    putStrLn "Got connection, handling query"
+
+    handleQuery dbConn soc
+    close soc
+
+  main :: IO ()
+  main = withSocketsDo $ do
+    addrinfos <-
+      getAddrInfo
+      (Just (defaultHints
+        {addrFlags = [AI_PASSIVE]}))
+      Nothing (Just "79")
+
+    let serveraddr = head addrinfos
+    sock <- socket (addrFamily serveraddr)
+            Stream defaultProtocol
+    bind sock (addrAddress serveraddr)
+
+    listen sock 1
+    -- only one connection open at a time
+    conn <- open "finger.db"
+    handleQueries conn sock
+
+    SQLite.close conn
+    close sock
+  ```
+
+- Note that you need to run `createDatabase` by hand. You can run a shell in
+  the context of this program with `stack ghci --main-is fingerd:exe:fingerd`.
+  `stack build` will build everything, and again we need to run this with `sudo`
+  like ``sudo `stack exec which fingerd`` ` because it binds to a low port.

@@ -1,0 +1,2 @@
+db: docker start -a blog_db
+web: until docker exec blog_db pg_isready -q; do sleep 1; done; python manage.py runserver

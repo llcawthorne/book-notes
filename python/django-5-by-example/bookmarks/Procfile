@@ -1,0 +1,2 @@
+redis: docker start -a redis
+web: python manage.py runserver_plus --cert-file cert.crt
