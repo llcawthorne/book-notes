@@ -1,11 +1,12 @@
 {% extends "admin/base_site.html" %}
+{% load money %}
 {% block title %}
   Order {{ order.id }} {{ block.super }}
 {% endblock %}
 {% block breadcrumbs %}
-  <div class+"breadcrumbs">
+  <div class="breadcrumbs">
     <a href="{% url "admin:index" %}">Home</a> &rsaquo;
-    <a href="{% url "admin:orders_order_changelist" %}>Orders</a> &rsaquo;
+    <a href="{% url "admin:orders_order_changelist" %}">Orders</a> &rsaquo;
     <a href="{% url "admin:orders_order_change" order.id %}">
       Order {{ order.id }}
     </a>
@@ -13,7 +14,7 @@
   </div>
 {% endblock %}
 {% block content %}
-  <div class+"module">
+  <div class="module">
     <h1>Order {{ order.id }}</h1>
     <ul class="object-tools">
       <li>
@@ -46,7 +47,7 @@
       </tr>
       <tr>
         <th>Total amount</th>
-        <td>${{ order.get_total_cost }}</td>
+        <td>{{ order.get_total_cost|usd }}</td>
       </tr>
       <tr>
         <th>Status</th>
@@ -79,14 +80,35 @@
         {% for item in order.items.all %}
           <tr class="row{% cycle "1" "2" %}">
             <td>{{ item.product.name }}</td>
-            <td class="num">${{ item.price }}</td>
+            <td class="num">{{ item.price|usd }}</td>
             <td class="num">{{ item.quantity }}</td>
-            <td class="num">${{ item.get_cost }}</td>
+            <td class="num">{{ item.get_cost|usd }}</td>
           </tr>
         {% endfor %}
+        {% if order.coupon %}
+          <tr class="subtotal">
+            <td colspan="3">Subtotal</td>
+            <td class="num">
+              {{ order.get_total_cost_before_discount|usd }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="3">
+              "{{ order.coupon.code }}" coupon
+              ({{ order.discount }}% off)
+            </td>
+            <td class="num neg">
+              - {{ order.get_discount|usd }}
+            </td>
+          </tr>
+        {% endif %}
+        <tr>
+          <td colspan="3">Shipping</td>
+          <td class="num">{{ order.shipping_cost|usd }}</td>
+        </tr>
         <tr class="total">
           <td colspan="3">Total</td>
-          <td class="num">${{ order.get_total_cost }}</td>
+          <td class="num">{{ order.get_total_cost|usd }}</td>
         </tr>
       </tbody>
     </table>

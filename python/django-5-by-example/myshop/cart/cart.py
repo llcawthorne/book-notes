@@ -1,6 +1,9 @@
-from decimal import Decimal
+import copy
+from decimal import ROUND_HALF_UP, Decimal
 
-from coupon.models import Coupon
+from coupons.models import Coupon
+
+from .shipping import shipping_cost
 from django.conf import settings
 
 from shop.models import Product
@@ -26,7 +29,7 @@ class Cart:
         """
         product_ids = self.cart.keys()
         products = Product.objects.filter(id__in=product_ids)
-        cart = self.cart.copy()
+        cart = copy.deepcopy(self.cart)
         for product in products:
             cart[str(product.id)]["product"] = product
         for item in cart.values():
@@ -65,6 +68,7 @@ class Cart:
     def clear(self):
         # remove cart from session
         del self.session[settings.CART_SESSION_ID]
+        self.session.pop("coupon_id", None)
         self.save()
 
     def get_total_price(self):
@@ -80,15 +84,25 @@ class Cart:
     def coupon(self):
         if self.coupon_id:
             try:
-                return Coupon.objects.get(id=self.coupon_id)
-            except Ccoupon.DoesNotExist:
+                return Coupon.objects.valid().get(id=self.coupon_id)
+            except Coupon.DoesNotExist:
                 pass
         return None
 
     def get_discount(self):
         if self.coupon:
-            return (self.coupon.discount / Decimal(100)) * self.get_total_price()
+            discount = (self.coupon.discount / Decimal(100)) * self.get_total_price()
+            return discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         return Decimal(0)
 
     def get_total_price_after_discount(self):
         return self.get_total_price() - self.get_discount()
+
+    def get_total_weight(self):
+        return sum(item["product"].weight * item["quantity"] for item in self)
+
+    def get_shipping_cost(self):
+        return shipping_cost(self.get_total_weight())
+
+    def get_total_price_with_shipping(self):
+        return self.get_total_price_after_discount() + self.get_shipping_cost()

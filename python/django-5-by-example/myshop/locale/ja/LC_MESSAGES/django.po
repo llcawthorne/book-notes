@@ -1,0 +1,232 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-11 19:33+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: cart/forms.py:9 cart/templates/cart/detail.html:13
+#: payment/templates/payment/process.html:12
+msgid "Quantity"
+msgstr "数量"
+
+#: cart/templates/cart/detail.html:4 cart/templates/cart/detail.html:7
+msgid "Your shopping cart"
+msgstr "ショッピングカート"
+
+#: cart/templates/cart/detail.html:11 payment/templates/payment/process.html:9
+msgid "Image"
+msgstr "画像"
+
+#: cart/templates/cart/detail.html:12 payment/templates/payment/process.html:10
+msgid "Product"
+msgstr "商品"
+
+#: cart/templates/cart/detail.html:14 cart/templates/cart/detail.html:40
+msgid "Remove"
+msgstr "削除"
+
+#: cart/templates/cart/detail.html:15
+msgid "Unit price"
+msgstr "単価"
+
+#: cart/templates/cart/detail.html:16 payment/templates/payment/process.html:11
+msgid "Price"
+msgstr "価格"
+
+#: cart/templates/cart/detail.html:34
+msgid "Update"
+msgstr "更新"
+
+#: cart/templates/cart/detail.html:51 payment/templates/payment/process.html:31
+msgid "Subtotal"
+msgstr "小計"
+
+#: cart/templates/cart/detail.html:57 payment/templates/payment/process.html:39
+#, python-format
+msgid "\"%(code)s\" coupon (%(discount)s%% off)"
+msgstr "クーポン「%(code)s」（%(discount)s%%オフ）"
+
+#: cart/templates/cart/detail.html:68 payment/templates/payment/process.html:13
+#: payment/templates/payment/process.html:55
+msgid "Total"
+msgstr "合計"
+
+#: cart/templates/cart/detail.html:76
+msgid "Apply a coupon"
+msgstr "クーポンを使う"
+
+#: cart/templates/cart/detail.html:79
+msgid "Apply"
+msgstr "適用"
+
+#: cart/templates/cart/detail.html:83
+msgid "Empty your cart?"
+msgstr "カートを空にしますか？"
+
+#: cart/templates/cart/detail.html:87
+msgid "Empty cart"
+msgstr "カートを空にする"
+
+#: cart/templates/cart/detail.html:93
+msgid "Continue shopping"
+msgstr "買い物を続ける"
+
+#: cart/templates/cart/detail.html:96
+msgid "Checkout"
+msgstr "レジに進む"
+
+#: cart/templates/cart/detail.html:101
+#: shop/templates/shop/product/detail.html:24
+msgid "People who bought this also bought"
+msgstr "この商品を買った人はこんな商品も買っています"
+
+#: coupons/forms.py:6
+msgid "Coupon"
+msgstr "クーポン"
+
+#: myshop/settings.py:166
+msgid "English"
+msgstr "英語"
+
+#: myshop/settings.py:167
+msgid "Spanish (Spain)"
+msgstr "スペイン語（スペイン）"
+
+#: myshop/settings.py:168
+msgid "Spanish (Mexico)"
+msgstr "スペイン語（メキシコ）"
+
+#: myshop/settings.py:169
+msgid "German"
+msgstr "ドイツ語"
+
+#: myshop/settings.py:170
+msgid "Japanese"
+msgstr "日本語"
+
+#: myshop/urls.py:30
+msgid "cart/"
+msgstr "kato/"
+
+#: myshop/urls.py:31
+msgid "orders/"
+msgstr "chumon/"
+
+#: myshop/urls.py:32
+msgid "payment/"
+msgstr "shiharai/"
+
+#: myshop/urls.py:33
+msgid "coupons/"
+msgstr "kupon/"
+
+#: payment/templates/payment/canceled.html:3
+msgid "Payment canceled"
+msgstr "お支払いキャンセル"
+
+#: payment/templates/payment/canceled.html:5
+msgid "Your payment has not been processed"
+msgstr "お支払いは処理されませんでした"
+
+#: payment/templates/payment/canceled.html:6
+msgid "There was a problem processing your payment."
+msgstr "お支払いの処理中に問題が発生しました。"
+
+#: payment/templates/payment/completed.html:3
+msgid "Payment successful"
+msgstr "お支払い完了"
+
+#: payment/templates/payment/completed.html:5
+msgid "Your payment was successful"
+msgstr "お支払いが完了しました"
+
+#: payment/templates/payment/completed.html:6
+msgid "Your payment has been processed successfully."
+msgstr "お支払いは正常に処理されました。"
+
+#: payment/templates/payment/process.html:3
+msgid "Pay your order"
+msgstr "ご注文のお支払い"
+
+#: payment/templates/payment/process.html:5
+msgid "Order summary"
+msgstr "ご注文内容"
+
+#: payment/templates/payment/process.html:50 payment/views.py:60
+msgid "Shipping"
+msgstr "送料"
+
+#: payment/templates/payment/process.html:64
+msgid "Pay now"
+msgstr "今すぐ支払う"
+
+#: payment/urls.py:9
+msgid "process/"
+msgstr "shori/"
+
+#: payment/urls.py:10
+msgid "completed/"
+msgstr "kanryo/"
+
+#: payment/urls.py:11
+msgid "canceled/"
+msgstr "kyanseru/"
+
+#: shop/templates/shop/base.html:8 shop/templates/shop/base.html:15
+msgid "My shop"
+msgstr "マイショップ"
+
+#: shop/templates/shop/base.html:21
+msgid "Language"
+msgstr "言語"
+
+#: shop/templates/shop/base.html:36
+msgid "Your cart"
+msgstr "カート"
+
+#: shop/templates/shop/base.html:38
+#, python-format
+msgid "%(items)s item, %(total)s"
+msgid_plural "%(items)s items, %(total)s"
+msgstr[0] "%(items)s点、%(total)s"
+
+#: shop/templates/shop/base.html:45
+msgid "Your cart is empty."
+msgstr "カートは空です。"
+
+#: shop/templates/shop/product/detail.html:19
+msgid "Add to cart"
+msgstr "カートに追加"
+
+#: shop/templates/shop/product/list.html:7
+#: shop/templates/shop/product/list.html:29
+msgid "Products"
+msgstr "商品一覧"
+
+#: shop/templates/shop/product/list.html:12
+msgid "Categories"
+msgstr "カテゴリー"
+
+#: shop/templates/shop/product/list.html:15
+msgid "All"
+msgstr "すべて"
+
+#. Translators choose the order,
+#. e.g. "60,00 US$" in Spain and Germany, "US$60.00" in Mexico and Japan.
+#: shop/templatetags/money.py:13
+#, python-format
+msgid "$%(amount)s"
+msgstr "US$%(amount)s"

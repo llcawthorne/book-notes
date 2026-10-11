@@ -3003,7 +3003,7 @@
 
 ## Chapter 8 - Building an Online Shop
 
-- New project, so we startproject and startapp then start defining out model:
+- New project, so we startproject and startapp then start defining our model:
 
   ```py
   # myshop/shop/models.py
@@ -3089,8 +3089,8 @@
           request,
           "shop/product/list.html",
           {
-              "category": category, 
-              "categories": categories, 
+              "category": category,
+              "categories": categories,
               "products": products},
       )
 
@@ -3107,8 +3107,8 @@
   urlpatterns = [
       path("", views.product_list, name="product_list"),
       path(
-          "<slug:category_slug>/", 
-          views.product_list, 
+          "<slug:category_slug>/",
+          views.product_list,
           name="product_list_by_category"),
       path(
           "<int:id>/<slug:slug>",
@@ -3119,7 +3119,7 @@
 
   # myshop/myshop/urls.py
   from django.contrib import admin
-  from django.urls import path
+  from django.urls import include, path
 
   urlpatterns = [
       path("admin/", admin.site.urls),
@@ -3248,9 +3248,9 @@
   available through the `request` object as `request.session`. You treat it like
   a Python dictionary like `request.session['foo'] = 'bar'`. You would retrieve
   foo's value with `request.session.get('foo')` or delete it via
-  `del request.session['foo']`. When a user authenticates, their anonymous
-  session is lost and a new session created. You would need to manually copy
-  over data to preserve it after `login`.
+  `del request.session['foo']`. When a user logs in, Django gives the session a
+  new key (to prevent session fixation) but keeps its data, so an anonymous
+  cart survives `login`. Logging out flushes the session.
 - `SESSION_ENGINE` allows you to specify sessions as stored in the database (the
   default), file-based, cached (best performance but requires a CACHE), cached
   database sessions, and cookie-based sessions.
@@ -3268,6 +3268,7 @@
   CART_SESSION_ID = "cart"
 
   # myshop/cart/cart.py
+  import copy
   from decimal import Decimal
 
   from django.conf import settings
@@ -3292,7 +3293,9 @@
           """
           product_ids = self.cart.keys()
           products = Product.objects.filter(id__in=product_ids)
-          cart = self.cart.copy()
+          # deepcopy, so the Product objects and Decimals added below don't end
+          # up in the session's own dictionaries, which must stay JSON-serializable
+          cart = copy.deepcopy(self.cart)
           for product in products:
               cart[str(product.id)]['product'] = product
           for item in cart.values():
@@ -3354,7 +3357,7 @@
 
   class CartAddProductForm(forms.Form):
       quantity = forms.TypedChoiceField(
-          choices=PRODUCT_QUANTITY_CHOICES, 
+          choices=PRODUCT_QUANTITY_CHOICES,
           coerce=int
       )
       override = forms.BooleanField(
@@ -3419,7 +3422,7 @@
             <tr>
               <td>
                 <a href="{{ product.get_absolute_url }}">
-                  <img src="{% if product.image %}{{ product.image.url }}"
+                  <img src="{% if product.image %}{{ product.image.url }}
                   {% else %}{% static "img/no_image.png" %}{% endif %}">
                 </a>
               </td>
@@ -3458,7 +3461,7 @@
   urlpatterns = [
       path("", views.cart_detail, name="cart_detail"),
       path("add/<int:product_id>/", views.cart_add, name="cart_add"),
-      path("remove/<int:product_id/>", views.cart_remove, name="cart_remove"),
+      path("remove/<int:product_id>/", views.cart_remove, name="cart_remove"),
   ]
 
   # myshop/myshop/urls.py
@@ -3472,12 +3475,12 @@
       product = get_object_or_404(Product, id=id, slug=slug, available=True)
       cart_product_form = CartAddProductForm()
       return render(
-          request, 
-          "shop/product/detail.html", 
+          request,
+          "shop/product/detail.html",
           {"product": product, "cart_product_form": cart_product_form}
       )
 
-  # myshop/shop/templates/shop/product.detail.html
+  # myshop/shop/templates/shop/product/detail.html
   # ...
       <p class="price">${{ product.price }}</p>
       <form action="{% url "cart:cart_add" product.id %}" method="post">
@@ -3519,7 +3522,7 @@
 
 - A context processor is a Python function that takes the `request` object as an
   argument and returns a dictionary that gets added to the request context. They
-  are used when you need to make something globally avilable to all templates.
+  are used when you need to make something globally available to all templates.
   We want to add the current cart in the request context.
 
   ```py
@@ -3647,7 +3650,7 @@
 - An inline lets you include a model on the same edit page as its related model.
 - So the plan with orders is a three step process:
   1. Present a user with an order form to fill in their data.
-  2. Create a new `Order` instance with the data entered, and create an 
+  2. Create a new `Order` instance with the data entered, and create an
      associated `OrderItem` instance for each item in the cart.
   3. Clear all the cart's contents and redirect the user to a success page.
 
@@ -3694,9 +3697,9 @@
               )
       else:
           form = OrderCreateForm()
-          return render(
-              request, 'orders/order/create.html', {'cart': cart, 'form': form}
-          )
+      return render(
+          request, 'orders/order/create.html', {'cart': cart, 'form': form}
+      )
 
   # myshop/orders/urls.py
   from django.urls import path
@@ -3772,7 +3775,7 @@
   require a retry policy. To implement asynchronous tasks in this project, we
   will use Celery for managing task queues and RabbitMQ as the message broker.
 - First we install celery: `pip install celery==5.4.0`. And we pull the RabbitMQ
-  image via `docker pull rabbitmq:3.13.1-management1.` To run RabbitMQ,
+  image via `docker pull rabbitmq:3.13.1-management`. To run RabbitMQ,
   `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13.1-management`.
   Then we can access RabbitMQ's management interface at `http://127.0.0.1:15672`
   in a browser. Use `guest` for both username and password.
@@ -3794,16 +3797,17 @@
   ```
 
 - Now we can start a celery worker from another shell with:
-  `celery -A myshop worker -l info --pool=threads`. 
+  `celery -A myshop worker -l info --pool=threads`.
   Now in your RabbitMQ Admin you should show
   some graphs, several connections, and several queues.
-- The `CELERY_ALWAYS_EAGER` setting allows you to execute tasks locally in a
+- The `CELERY_TASK_ALWAYS_EAGER` setting (`task_always_eager` with the
+  `CELERY` namespace) allows you to execute tasks locally in a
   synchronous manner instead of sending them to the queue. This is useful for
   running unit tests or executing the application without running Celery.
 - Define tasks for Celery in a `tasks.py` file in your app directory:
 
   ```py
-  # myshop/order/tasks.py
+  # myshop/orders/tasks.py
   from celery import shared_task
   from django.core.mail import send_mail
   from .models import Order
@@ -3818,7 +3822,7 @@
       subject = f"Order nr. {order.id}"
       message = (
           f"Dear {order.first_name},\n\n"
-          f"You have successfully placed an order."
+          f"You have successfully placed an order. "
           f"Your order ID is {order.id}."
       )
       mail_sent = send_mail(subject, message, "admin@myshop.com", [order.email])
@@ -3837,8 +3841,8 @@
 
 - It is recommended to only pass IDs to task functions and retrieve objects from
   the database when the task is executed.
-- You call the `delay()` method of a task to execute is asynchronously.
-- You can also monitor Celery with Flower. `pip install flower==2.0.1'` then
+- You call the `delay()` method of a task to execute it asynchronously.
+- You can also monitor Celery with Flower. `pip install flower==2.0.1` then
   from a new shell `celery -A myshop flower` and browsing to
   `http://localhost:5555/`. If this wasn't a development box, we'd run Flower
   with `celery -A myshop flower --basic-auth=user:pwd` where `user` and `pwd`
@@ -3866,7 +3870,7 @@
   STRIPE_API_VERSION = '2024-04-10'
   ```
 
-- `./manage.py startapp payments` and add it to `INSTALLED_APPS`.
+- `./manage.py startapp payment` and add it to `INSTALLED_APPS`.
 
   ```py
   # myshop/orders/views.py
@@ -3908,6 +3912,7 @@
           session_data = {
               'mode': 'payment',
               'client_reference_id': order.id,
+              'customer_email': order.email,
               'success_url': success_url,
               'cancel_url': cancel_url,
               'line_items': []
@@ -3974,7 +3979,7 @@
           <tr class="row{% cycle "1" "2" %}">
             <td>
               <img src="{% if item.product.image %}{{ item.product.image.url }}
-              {% else %}{% static "img/no_image.png" %}{% endif %}"
+              {% else %}{% static "img/no_image.png" %}{% endif %}">
             </td>
           <td>{{ item.product.name }}</td>
           <td class="num">${{ item.price }}</td>
@@ -4011,19 +4016,19 @@
   {% endblock %}
   ```
 
-- Stripe has card number for testing:
-  - Successfuly payment: 4242 4242 4242 4242, CVC any three, Expiry any future
+- Stripe has card numbers for testing:
+  - Successful payment: 4242 4242 4242 4242, CVC any three, Expiry any future
   - Failed payment: 4000 0000 0000 0002, CVC any three, Expiry any future date
-  - Requires 3D: 4000 0025 0000 3155, CVC any three, Expiry any future
+  - Requires 3D Secure: 4000 0025 0000 3155, CVC any three, Expiry any future
 - You can see your successful payments at:
   <https://dashboard.stripe.com/test/payments>
 - You can add a webhook to get notified of Stripe payments at:
   <https://dashboard.stripe.com/test/webhooks>. Click on "Test with a local
   listener".
-- First run `brew install stripe-cli` then `stripe login` and run 
+- First run `brew install stripe-cli` then `stripe login` and run
   `stripe listen --print-secret` to get the secret
   and store it as STRIPE_WEBHOOK_SECRET in your .env, then add
-  `STRIPE_WEBHOOK_SECRET = config("STIPE_WEBHOOK_SECRET")` to 
+  `STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")` to
   `myshop/settings.py`. Then we'll add our webhook:
 
   ```py
@@ -4068,16 +4073,19 @@
   ```
 
 - At this point I had ten terminal windows open, so I did `pip install honcho`,
-  and also `pip install watchfiles`, then wrote a `Procefile`, and ran 
+  and also `pip install watchfiles`, then wrote a `Procfile`, and ran
   everything with `honcho start`. `celery` and `flower` use `watchfiles`.
+  `stripe listen` uses the secret key from `.env` (honcho loads it), since a
+  `stripe login` session expires and kills the whole stack when it does.
 
   ```py
   # myshop/Procfile
   rabbitmq: docker run --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13.1-management
+  redis: docker start -a redis
   celery: watchfiles --filter python "celery -A myshop worker -l info --pool=threads" .
   flower: watchfiles --filter python "celery -A myshop flower" .
   web: python manage.py runserver
-  stripe: stripe listen --all-snapshot --forward-to 127.0.0.1:8000/payment/webhook/
+  stripe: stripe listen --api-key $STRIPE_SECRET_KEY --all-snapshot --forward-to 127.0.0.1:8000/payment/webhook/
   ```
 
 - So Stripe payments have a payment ID, and we want to associate that with our
@@ -4169,7 +4177,7 @@
       return response
 
   export_to_csv.short_description = "Export to CSV"
-  ```
+
   class OrderAdmin(admin.ModelAdmin):
       # ...
       inlines = [OrderItemInline]
@@ -4185,7 +4193,7 @@
   # myshop/orders/views.py
   from django.contrib.admin.views.decorators import staff_member_required
   from django.shortcuts import get_object_or_404, redirect, render
-  
+
   from .models import Order, OrderItem
 
   @staff_member_required
@@ -4208,9 +4216,9 @@
     Order {{ order.id }} {{ block.super }}
   {% endblock %}
   {% block breadcrumbs %}
-    <div class+"breadcrumbs">
+    <div class="breadcrumbs">
       <a href="{% url "admin:index" %}">Home</a> &rsaquo;
-      <a href="{% url "admin:orders_order_changelist" %}>Orders</a> &rsaquo;
+      <a href="{% url "admin:orders_order_changelist" %}">Orders</a> &rsaquo;
       <a href="{% url "admin:orders_order_change" order.id %}">
         Order {{ order.id }}
       </a>
@@ -4218,7 +4226,7 @@
     </div>
   {% endblock %}
   {% block content %}
-    <div class+"module">
+    <div class="module">
       <h1>Order {{ order.id }}</h1>
       <ul class="object-tools">
         <li>
@@ -4313,9 +4321,11 @@
   ```
 
 - We're going to use WeasyPrint to change our HTML to PDF. The requirements are
-  at <https://doc.courtboullion.org/weasyprint/stable/first_steps.html>, but
-  for OS X it's as simple a `brew install weasyprint` then 
-  `pip install WweasyPrint==61.2`. Then we make a special template:
+  at <https://doc.courtbouillon.org/weasyprint/stable/first_steps.html>, but
+  for OS X it's as simple as `brew install weasyprint` then
+  `pip install WeasyPrint==61.2`. WeasyPrint 61.2 breaks with newer pydyf
+  releases, so also `pip install "pydyf<0.11"`. Then we make a special
+  template:
 
   ```py
   # myshop/orders/templates/orders/order/pdf.html
@@ -4419,7 +4429,7 @@
   ```
 
 - Now we have a pretty good looking PDF. We want to email it. Like usual with
-  email we want to do it asynchronous:
+  email we want to do it asynchronously:
 
   ```py
   # myshop/payment/tasks.py
@@ -4471,7 +4481,9 @@
   EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
   EMAIL_FILE_PATH = BASE_DIR / "sent_emails"
 
-  # myshop/orders/tasks.pyfrom celery.utils.log import get_task_logger
+  # myshop/payment/tasks.py
+  from celery.utils.log import get_task_logger
+
   logger = get_task_logger(__name__)
   # ...at the end of payment_completed:
   logger.info("Invoice emailed for order %s", order.id)
@@ -4479,12 +4491,20 @@
 
 ## Chapter 10 - Extending Your Shop
 
-- First we're going to add coupons by running `manage.py startapp cocupons`.
+- First we're going to add coupons by running `manage.py startapp coupons`.
 
   ```py
   # myshop/coupons/models.py
   from django.core.validators import MaxValueValidator, MinValueValidator
   from django.db import models
+  from django.utils import timezone
+
+  class CouponQuerySet(models.QuerySet):
+      def valid(self):
+          now = timezone.now()
+          return self.filter(
+              active=True, valid_from__lte=now, valid_to__gte=now
+          )
 
   class Coupon(models.Model):
       code = models.CharField(max_length=50, unique=True)
@@ -4495,6 +4515,8 @@
           help_text="Percentage value (0 to 100)",
       )
       active = models.BooleanField()
+
+      objects = CouponQuerySet.as_manager()
 
       def __str__(self):
           return self.code
@@ -4512,7 +4534,7 @@
   ```
 
 - So now we need a way for customers to apply coupons to their purchase.
-  1. The user add products to the shopping cart.
+  1. The user adds products to the shopping cart.
   2. The user can enter a coupon code in a form displayed on the shopping cart
      details page.
   3. When the user enters a coupon code and submits the form, you look for an
@@ -4533,7 +4555,6 @@
 
   # myshop/coupons/views.py
   from django.shortcuts import redirect
-  from django.utils import timezone
   from django.views.decorators.http import require_POST
 
   from .forms import CouponApplyForm
@@ -4541,17 +4562,11 @@
 
   @require_POST
   def coupon_apply(request):
-      now = timezone.now()
       form = CouponApplyForm(request.POST)
       if form.is_valid():
           code = form.cleaned_data["code"]
           try:
-              coupon = Coupon.objects.get(
-                  code__iexact=code, 
-                  valid_from__lte=now, 
-                  valid_to__gte=now, 
-                  active=True
-              )
+              coupon = Coupon.objects.valid().get(code__iexact=code)
               request.session["coupon_id"] = coupon.id
           except Coupon.DoesNotExist:
               request.session["coupon_id"] = None
@@ -4571,32 +4586,41 @@
       path("coupons/", include("coupons.urls", namespace="coupons")),
 
   # myshop/cart/cart.py
-  from coupon.models import Coupon
+  from decimal import ROUND_HALF_UP, Decimal
+
+  from coupons.models import Coupon
 
   class Cart:
       def __init__(self, request):
           # ...
-        self.cart = cart
-        self.coupon_id = self.session.get("coupon_id")
-    # ...
-    @property
-    def coupon(self):
-        if self.coupon_id:
-            try:
-                return Coupon.objects.get(id=self.coupon_id)
-            except Ccoupon.DoesNotExist:
-                pass
-        return None
+          self.cart = cart
+          self.coupon_id = self.session.get("coupon_id")
+      # ...
+      def clear(self):
+          # remove cart from session
+          del self.session[settings.CART_SESSION_ID]
+          self.session.pop("coupon_id", None)
+          self.save()
 
-    def get_discount(self):
-        if self.coupon:
-            return (
-                self.coupon.discount / Decimal(100)
-            ) * self.get_total_price()
-        return Decimal(0)
+      @property
+      def coupon(self):
+          if self.coupon_id:
+              try:
+                  return Coupon.objects.valid().get(id=self.coupon_id)
+              except Coupon.DoesNotExist:
+                  pass
+          return None
 
-    def get_total_price_after_discount(self):
-        return self.get_total_price() - self.get_discount()
+      def get_discount(self):
+          if self.coupon:
+              discount = (
+                  self.coupon.discount / Decimal(100)
+              ) * self.get_total_price()
+              return discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+          return Decimal(0)
+
+      def get_total_price_after_discount(self):
+          return self.get_total_price() - self.get_discount()
 
   # myshop/cart/views.py
   from coupons.forms import CouponApplyForm
@@ -4609,8 +4633,8 @@
           )
       coupon_apply_form = CouponApplyForm()
       return render(
-          request, 
-          "cart/detail.html", 
+          request,
+          "cart/detail.html",
           {
               "cart": cart,
               "coupon_apply_form": coupon_apply_form
@@ -4649,4 +4673,1577 @@
             ${{ cart.get_total_price_after_discount|floatformat:2 }}
           </td>
         </tr>
+      </tbody>
+    </table>
+    <p>Apply a coupon:</p>
+    <form action="{% url "coupons:apply" %}" method="post" class="coupon-form">
+      {{ coupon_apply_form.as_p }}
+      <p><input type="submit" value="Apply"></p>
+      {% csrf_token %}
+    </form>
+  ```
+
+- So we can input our coupon codes now, but they still need to apply to the
+  order:
+
+  ```py
+  # myshop/orders/templates/orders/order/create.html
+  # replace
+      <ul>
+        {% for item in cart %}
+          <li>
+            {{ item.quantity }}x {{ item.product.name }}
+            <span>${{ item.total_price }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+  # with
+      <ul>
+        {% for item in cart %}
+          <li>
+            {{ item.quantity }}x {{ item.product.name }}
+            <span>${{ item.total_price|floatformat:2 }}</span>
+          </li>
+        {% endfor %}
+        {% if cart.coupon %}
+          <li>
+            "{{ cart.coupon.code }}" ({{ cart.coupon.discount }}% off)
+            <span class="neg">- ${{ cart.get_discount|floatformat:2 }}</span>
+          </li>
+        {% endif %}
+      </ul>
+  # and replace
+      <p>Total: ${{ cart.get_total_price }}</p>
+  # with
+      <p>Total: ${{ cart.get_total_price_after_discount|floatformat:2 }}</p>
+
+  # myshop/orders/models.py
+  from decimal import ROUND_HALF_UP, Decimal
+  from django.core.validators import MaxValueValidator, MinValueValidator
+
+  from coupons.models import Coupon
+
+  class Order(models.Model):
+      # ...
+      coupon = models.ForeignKey(
+          Coupon,
+          related_name='orders',
+          null=True,
+          blank=True,
+          on_delete=models.SET_NULL
+      )
+      discount = models.IntegerField(
+          default=0,
+          validators=[MinValueValidator(0), MaxValueValidator(100)]
+      )
+
+      class Meta:
+      # ...
+
+      # rename the old get_total_cost to get_total_cost_before_discount
+      def get_total_cost_before_discount(self):
+          return sum(item.get_cost() for item in self.items.all())
+
+      def get_discount(self):
+          total_cost = self.get_total_cost_before_discount()
+          if self.discount:
+              discount = total_cost * (self.discount / Decimal(100))
+              return discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+          return Decimal(0)
+
+      def get_total_cost(self):
+          total_cost = self.get_total_cost_before_discount()
+          return total_cost - self.get_discount()
+
+  # myshop/orders/views.py
+  def order_create(request):
+      # ...
+              order = form.save(commit=False)
+              if cart.coupon:
+                  order.coupon = cart.coupon
+                  order.discount = cart.coupon.discount
+              order.save()
+              for item in cart:
+  # ...
+
+  # myshop/payment/templates/payment/process.html
+  # find:
+        <tr class="total">
+          <td colspan="4">Total</td>
+          <td class="num">${{ order.get_total_cost }}</td>
+        </tr>
+  # and replace it with:
+        {% if order.coupon %}
+          <tr class="subtotal">
+            <td>Subtotal</td>
+            <td colspan="3"></td>
+            <td class="num">
+              ${{ order.get_total_cost_before_discount|floatformat:2 }}
+            </td>
+          </tr>
+          <tr>
+            <td>
+              "{{ order.coupon.code }}" coupon
+              ({{ order.discount }}% off)
+            </td>
+            <td colspan="3"></td>
+            <td class="num neg">
+              - ${{ order.get_discount|floatformat:2 }}
+            </td>
+          </tr>
+        {% endif %}
+        <tr class="total">
+          <td>Total</td>
+          <td colspan="3"></td>
+          <td class="num">
+            ${{ order.get_total_cost|floatformat:2 }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+  # myshop/payment/views.py
+  def payment_process(request):
+      # ...
+          if order.coupon:
+              stripe_coupon = stripe.Coupon.create(
+                  name=order.coupon.code,
+                  percent_off=order.discount,
+                  duration='once'
+              )
+              session_data['discounts'] = [{'coupon': stripe_coupon.id}]
+
+          session = stripe.checkout.Session.create(**session_data)
+          return redirect(session.url, code=303)
+      else:
+          return render(request, "payment/process.html", locals())
+
+  # myshop/orders/templates/admin/orders/order/detail.html
+              <td class="num">${{ item.price }}</td>
+              <td class="num">{{ item.quantity }}</td>
+              <td class="num">${{ item.get_cost }}</td>
+            </tr>
+          {% endfor %}
+          {% if order.coupon %}
+            <tr class="subtotal">
+              <td colspan="3">Subtotal</td>
+              <td class="num">
+                ${{ order.get_total_cost_before_discount|floatformat:2 }}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3">
+                "{{ order.coupon.code }}" coupon
+                ({{ order.discount }}% off)
+              </td>
+              <td class="num neg">
+                - ${{ order.get_discount|floatformat:2 }}
+              </td>
+            </tr>
+          {% endif %}
+          <tr class="total">
+            <td colspan="3">Total</td>
+            <td class="num">${{ order.get_total_cost }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endblock %}
+
+  # myshop/orders/templates/orders/order/pdf.html
+        <tbody>
+          {% for item in order.items.all %}
+            <tr class="row{% cycle "1" "2" %}">
+              <td>{{ item.product.name }}</td>
+              <td class="num">${{ item.price }}</td>
+              <td class="num">{{ item.quantity }}</td>
+              <td class="num">${{ item.get_cost }}</td>
+            </tr>
+          {% endfor %}
+          {% if order.coupon %}
+            <tr class="subtotal">
+              <td colspan="3">Subtotal</td>
+              <td class="num">
+                ${{ order.get_total_cost_before_discount|floatformat:2 }}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3">
+                "{{ order.coupon.code }}" coupon
+                ({{ order.discount }}% off)
+              </td>
+              <td class="num neg">
+                - ${{ order.get_discount|floatformat:2 }}
+              </td>
+            </tr>
+          {% endif %}
+          <tr class="total">
+            <td colspan="3">Total</td>
+            <td class="num">${{ order.get_total_cost }}</td>
+          </tr>
+  ```
+
+- Notice how we're setting `on_delete=models.SET_NULL` in
+  `myshop/orders/models.py` so if the coupon is deleted we no longer associate
+  with it in the model, but the applied discount is preserved.
+- I pointed out how bad `coupons` is as a standalone app since it has so many
+  cross-cutting concerns. AI said there are ways to make a coupon app more
+  standalone, but the real problem is that the book splits every noun into a
+  separate app. Many experienced Django developers use fewer, bigger apps, like
+  a shop or checkout app for the whole shopping experience, since cart, orders,
+  coupons, and payment tend to change together anyway. An app makes sense for a
+  self-contained concept like accounts, where your code depends on the app but
+  not the other way around, so you could pluck it out and use it elsewhere.
+- Not in the book: the only way to empty the cart was to place an order, so we
+  added an Empty cart button. It's a POST form (like the Remove buttons) so
+  links and crawlers can't empty a cart, `onsubmit="return confirm(...)"` asks
+  first, and it only shows when the cart has items. Since `clear()` now drops
+  the coupon too, emptying the cart also resets the coupon, and then we send
+  the user back to the product list.
+
+  ```py
+  # myshop/cart/views.py
+  @require_POST
+  def cart_clear(request):
+      Cart(request).clear()
+      return redirect("shop:product_list")
+
+  # myshop/cart/urls.py
+      path("clear/", views.cart_clear, name="cart_clear"),
+
+  # myshop/cart/templates/cart/detail.html
+  # above <p class="text-right"> with Continue shopping and Checkout:
+    {% if cart|length %}
+      <form action="{% url "cart:cart_clear" %}" method="post"
+            class="cart-clear" onsubmit="return confirm('Empty your cart?')">
+        <input type="submit" value="Empty cart" class="light">
+        {% csrf_token %}
+      </form>
+    {% endif %}
+  ```
+
+- Next, we're going to add a Redis backed recommendation engine. A
+  recommendation engine is a system that predicts the preference or rating that
+  a user would give to an item. We're going to recommend items often bought
+  together, on the product detail page and the cart detail page. We store one
+  key in Redis per product, and its value is a sorted set of the IDs of the
+  other products bought with it, each paired with a score: the number of orders
+  containing both. When an order is paid, for each product in it we add 1 to
+  the score of every other product in that order. Since it's a sorted set,
+  Redis keeps the members ordered by score, so the recommendations are just the
+  top scores.
+  For example, with tea (ID 1), mug (ID 2), and honey (ID 3), after orders
+  {tea, mug} and {tea, mug, honey}:
+  - `product:1:purchased_with` → 2: 2, 3: 1
+  - `product:2:purchased_with` → 1: 2, 3: 1
+  - `product:3:purchased_with` → 1: 1, 2: 1
+
+  ```py
+  # myshop/myshop/settings.py
+  REDIS_HOST = 'localhost'
+  REDIS_PORT = 6379
+  REDIS_DB = 1
+
+  # myshop/shop/recommender.py
+  import redis
+  from django.conf import settings
+
+  from .models import Product
+
+  r = redis.Redis(
+      host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB
+  )
+
+
+  class Recommender:
+      def get_product_key(self, id):
+          return f"product:{id}:purchased_with"
+
+      def products_bought(self, products):
+          product_ids = [p.id for p in products]
+          for product_id in product_ids:
+              for with_id in product_ids:
+                  # get the other products bought with each product
+                  if product_id != with_id:
+                      # increment score for products purchased together
+                      r.zincrby(self.get_product_key(product_id), 1, with_id)
+
+      def suggest_products_for(self, products, max_results=6):
+          product_ids = [p.id for p in products]
+          if len(products) == 1:
+              suggestions = r.zrange(
+                  self.get_product_key(product_ids[0]), 0, -1, desc=True
+              )[:max_results]
+          else:
+              # generate a temporary key
+              flat_ids = "_".join([str(id) for id in product_ids])
+              tmp_key = f"tmp_{flat_ids}"
+              # multiple products, combine scores of all products
+              # store the resulting sorted set in a temporary key
+              keys = [self.get_product_key(id) for id in product_ids]
+              r.zunionstore(tmp_key, keys)
+              # remove ids for the products the recommendation is for
+              r.zrem(tmp_key, *product_ids)
+              # get the product ids by their score, descendant sort
+              suggestions = r.zrange(
+                  tmp_key, 0, -1, desc=True
+              )[:max_results]
+              # remove the temporary key
+              r.delete(tmp_key)
+          suggested_products_ids = [int(id) for id in suggestions]
+          # get suggested products and sort by order of appearance
+          suggested_products = list(
+              Product.objects.filter(id__in=suggested_products_ids)
+          )
+          suggested_products.sort(
+              key=lambda x: suggested_products_ids.index(x.id)
+          )
+          return suggested_products
+
+      def clear_purchases(self):
+          for id in Product.objects.values_list('id', flat=True):
+              r.delete(self.get_product_key(id))
+  ```
+
+- In `suggest_products_for()` we get the product IDs for the given `Product`
+  objects. If only one is given, we retrieve the IDs of the products bought
+  together with it, ordered by the number of times they were bought together,
+  using the ZRANGE command. These commands start with Z because they work on
+  sorted sets: Z is sorted set, S is plain set, H is hash, and L is list. If
+  we're given more than one `Product`, we generate a temporary Redis key built
+  with the IDs of the products, and combine and sum the scores of the items in
+  each product's sorted set. This is done with the ZUNIONSTORE command, which
+  performs a union of the sorted sets with the given keys and stores the summed
+  scores in a new Redis key. The union can include the products we're getting
+  recommendations for (tea's set contains mug, and mug's set contains tea), so
+  we remove them from the result with ZREM. Then we retrieve the product IDs
+  from the temporary key ordered by score with ZRANGE, and delete the temporary
+  key with DEL. Finally we get the `Product` objects with those IDs and sort
+  them back into the sorted set's order, since `filter(id__in=...)` returns
+  them in database order.
+- If we wanted to fire up Redis and remove it when we're done, we could run:
+  `docker run -it --rm --name redis -p 6379:6379 redis:7.2.4`, but `--rm`
+  throws away the data (the recommendation scores) when it stops. Without
+  `--rm` the container sticks around, so `docker start redis` brings it back
+  with its data. That's what we did for bookmarks, so the container already
+  exists. The Procfile uses `docker start -a redis`: `-a` attaches, keeping it
+  in the foreground. Otherwise `docker start` returns right away and honcho
+  thinks Redis exited and shuts everything down.
+
+  ```py
+  # First we need some purchase data
+  # Make sure you start Redis!
+  $ ./manage.py shell
+  >>> from decimal import Decimal
+  >>> from shop.models import Category, Product
+  >>> tea = Category.objects.get(slug="tea")
+  >>> Product.objects.create(
+  ...     category=tea, name="Black Tea", slug="black-tea", price=Decimal("9.99")
+  ... )
+
+  >>> black_tea = Product.objects.get(name='Black Tea')
+  >>> red_tea = Product.objects.get(name='Red Tea')
+  >>> green_tea = Product.objects.get(name='Green Tea')
+  >>> tea_powder = Product.objects.get(name='Tea Powder')
+
+  >>> from shop.recommender import Recommender
+  >>> r = Recommender()
+  >>> r.products_bought([black_tea, red_tea])
+  >>> r.products_bought([black_tea, green_tea])
+  >>> r.products_bought([red_tea, black_tea, tea_powder])
+  >>> r.products_bought([green_tea, tea_powder])
+  >>> r.products_bought([black_tea, tea_powder])
+  >>> r.products_bought([red_tea, green_tea])
+
+  # We have now stored the following scores:
+  # black_tea:  red_tea (2), tea_powder(2), green_tea(1)
+  # red_tea:    black_tea (2), tea_powder(1), green_tea (1)
+  # green_tea:  black_tea(1), tea_powder (1), red_tea(1)
+  # tea_powder: black_tea(2), red_tea (1), green_tea (1)
+
+  >>> r.suggest_products_for([black_tea])
+  [<Product: Tea Powder>, <Product: Red Tea>, <Product: Green Tea>]
+  >>> r.suggest_products_for([red_tea])
+  [<Product: Black Tea>, <Product: Tea Powder>, <Product: Green Tea>]
+  >>> r.suggest_products_for([green_tea])
+  [<Product: Black Tea>, <Product: Tea Powder>, <Product: Red Tea>]
+  >>> r.suggest_products_for([tea_powder])
+  [<Product: Black Tea>, <Product: Red Tea>, <Product: Green Tea>]
+  >>> r.suggest_products_for([black_tea, red_tea])
+  [<Product: Tea Powder>, <Product: Green Tea>]
+  >>> r.suggest_products_for([green_tea, red_tea])
+  [<Product: Black Tea>, <Product: Tea Powder>]
+  >>> r.suggest_products_for([tea_powder, black_tea])
+  [<Product: Red Tea>, <Product: Green Tea>]
+  >>> r.suggest_products_for([black_tea, red_tea, green_tea])
+  [<Product: Tea Powder>]
+
+  # myshop/payment/webhooks.py
+  from shop.models import Product
+  from shop.recommender import Recommender
+
+  @csrf_exempt
+  def stripe_webhook(request):
+      # ...
+              order.save()
+              product_ids = order.items.values_list('product_id')
+              products = Product.objects.filter(id__in=product_ids)
+              r = Recommender()
+              r.products_bought(products)
+              payment_completed.delay(order.id)
+      return HttpResponse(status=200)
+
+  # myshop/shop/views.py
+  from .recommender import Recommender
+
+  def product_detail(request, id, slug):
+      product = get_object_or_404(Product, id=id, slug=slug, available=True)
+      cart_product_form = CartAddProductForm()
+      r = Recommender()
+      recommended_products = r.suggest_products_for([product], 4)
+      return render(
+          request,
+          "shop/product/detail.html",
+          {
+              "product": product,
+              "cart_product_form": cart_product_form,
+              "recommended_products": recommended_products,
+          },
+      )
+
+  # myshop/shop/templates/shop/product/detail.html
+      {{ product.description|linebreaks }}
+      {% if recommended_products %}
+        <div class="recommendations">
+          <h3>People who bought this also bought</h3>
+          {% for p in recommended_products %}
+            <div class="item">
+              <a href="{{ p.get_absolute_url }}">
+                <img src="{% if p.image %}{{ p.image.url }}{% else %}
+                          {% static "img/no_image.png" %}{% endif %}">
+              </a>
+              <p><a href="{{ p.get_absolute_url }}">{{ p.name }}</a></p>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  {% endblock %}
+
+  # myshop/cart/views.py
+  from shop.recommender import Recommender
+
+  def cart_detail(request):
+      # ...
+      coupon_apply_form = CouponApplyForm()
+      r = Recommender()
+      cart_products = [item['product'] for item in cart]
+      if(cart_products):
+          recommended_products = r.suggest_products_for(
+              cart_products, max_results=4
+          )
+      else:
+          recommended_products = []
+      return render(
+          request,
+          "cart/detail.html",
+          {
+              "cart": cart,
+              "coupon_apply_form": coupon_apply_form,
+              "recommended_products": recommended_products
+          },
+      )
+
+  # myshop/cart/templates/cart/detail.html
+  # at the end, after the Continue shopping/Checkout buttons:
+    </p>
+    {% if recommended_products %}
+      <div class="recommendations cart">
+        <h3>People who bought this also bought</h3>
+        {% for p in recommended_products %}
+          <div class="item">
+            <a href="{{ p.get_absolute_url }}">
+              <img src="{% if p.image %}{{ p.image.url }}{% else %}
+                        {% static "img/no_image.png" %}{% endif %}">
+            </a>
+            <p><a href="{{ p.get_absolute_url }}">{{ p.name }}</a></p>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endblock %}
+  ```
+
+## Chapter 11 - Adding Internationalization to Your Shop
+
+- **Internationalization** (i18n) is the process of adapting software for the
+  potential use of different languages and locales so that it isn't hardwired
+  to a specific language or locale.
+- **Localization** (l10n) is the process of actually translating the software
+  and adapting it to a particular locale. Django itself is translated into more
+  than 50 languages using its internationalization framework.
+- The internationalization framework allows you to easily mark strings for
+  translations both in Python code and in templates. The translations live in
+  a *message file* with a `.po` extension that is a plain text file representing
+  a language. Once the translation is done the text is compiled to an `.mo` file
+  for rapid access to translated strings.
+- Internationalization and localization settings
+  - `USE_I18N` is a Boolean that defaults to `True` and says whether to use
+    Django's translation system.
+  - `USE_TZ` is a Boolean that defaults to `True` and controls whether datetimes
+    are timezone aware.
+  - `LANGUAGE_CODE` is the default language code such as `en-us` or `en-gb`. All
+    codes are available at
+    <http://www.i18nguy.com/unicode/language-identifiers.html>.
+  - `LANGUAGES` is a list of the available languages for the project, each a
+    tuple of a language code and a language name. Your languages are a subset of all the `LANGUAGES` defined in
+    `django.conf.global_settings`.
+  - `LOCALE_PATHS` is a list of directories where Django looks for message
+    files.
+  - `TIME_ZONE` is a string representing the current timezone of the project. It
+    defaults to `UTC`.
+- Internationalization management commands
+  - `makemessages` runs over the source tree to find all the strings marked for
+    translation and creates or updates the `.po` message files in the `locale`
+    directory. A single `.po` file is created for each language.
+  - `compilemessages` compiles the existing `.po` message files to `.mo` files.
+- Django requires the GNU `gettext` toolkit to generate and compile translation
+  files. On OS X, this can be installed with `brew install gettext`.
+- How to add translations to a Django project
+  1. Mark the strings for translation in your Python code and templates.
+  2. Run the `makemessages` command to create or update message files that
+     include all the translation strings from your code.
+  3. Translate the strings contained in the message files.
+  4. Compile the message files using the `compilemessages` command.
+- How Django determines the current language
+  1. If you are using `i18n_patterns`, it looks for the language prefix in the
+     requested URL.
+  2. If no language prefix is found, it looks for an existing cookie with the
+     current language. The name of the cookie defaults to `django_language` but
+     can be changed with the `LANGUAGE_COOKIE_NAME` setting. (Django 4.0
+     removed the old `LANGUAGE_SESSION_KEY` session lookup.)
+  3. If no cookie is found, it looks for the `Accept-Language` HTTP header of
+     the request.
+  4. If the `Accept-Language` header does not specify a language, Django uses
+     the language defined in the `LANGUAGE_CODE` setting.
+- If you disable the `LocaleMiddleware`, Django will only use whatever is
+  defined by the `LANGUAGE_CODE` setting. The middleware needs to be enabled.
+
+  ```py
+  # myshop/myshop/settings.py
+  # add these
+  LANGUAGES = [
+      ('en', 'English'),
+      ('es', 'Spanish'),
+  ]
+
+  LOCALE_PATHS = [
+      BASE_DIR / 'locale',
+  ]
+
+  # and update these settings
+  LANGUAGE_CODE = "en"
+
+  MIDDLEWARE = [
+      "django.middleware.security.SecurityMiddleware",
+      "django.contrib.sessions.middleware.SessionMiddleware",
+      "django.middleware.locale.LocaleMiddleware",
+      "django.middleware.common.CommonMiddleware",
+      "django.middleware.csrf.CsrfViewMiddleware",
+      "django.contrib.auth.middleware.AuthenticationMiddleware",
+      "django.contrib.messages.middleware.MessageMiddleware",
+      "django.middleware.clickjacking.XFrameOptionsMiddleware",
+  ]
+
+  # in main myshop folder, not in the myshop subdirectory
+  $ mkdir -p locale/en
+  $ mkdir -p locale/es
+  ```
+
+- Django supports standard translations, lazy translations (executed on access),
+  translations including variables, and plural forms in translations. For
+  translating literals we use `gettext()` from `django.utils.translation`. It
+  is the convention to import this function as the shorter alias `_` (the
+  underscore character). Django has `gettext_lazy()` instead of `gettext()` for
+  lazy translations. Lazy translations are useful when the strings marked for
+  translation are in paths that are executed when modules are loaded; for
+  example in the `settings.py` file because settings must be defined before the
+  translation system is fully ready. Models, forms, URLs, settings and class
+  attributes are normally lazy. The rule of thumb is if a string should appear
+  in Spanish and it’s defined outside a function, it needs `gettext_lazy`.
+  Plain `gettext` there would lock in whichever language was active when the
+  server started. Translation with variables lets a translation
+  reorder placeholders, like month and day, so always use named placeholders
+  like `%(month)s` instead of positional ones like `%s`. For plural forms,
+  Django provides `ngettext()` and `ngettext_lazy()`. They take an argument
+  indicating the number of objects.
+
+  ```py
+  # standard translation
+  from django.utils.translation import gettext as _
+  output = _('Text to be translated.')
+
+  # lazy translation
+  from django.utils.translation import gettext_lazy as _
+  LANGUAGES = [
+      ("en", _("English")),
+      ("es", _("Spanish")),
+  ]
+
+  # translation with variables
+  # this will display "Today is April 14" or "Hoy es 14 de abril".
+  from django.utils.translation import gettext as _
+  month = _('April')
+  day = '14'
+  output = _('Today is %(month)s %(day)s') % {'month': month, 'day': day}
+
+  # plural forms
+  # in the following, ngettext will use the first string for count 1 and the
+  # second string for any other number
+  from django.utils.translation import ngettext
+  output = ngettext(
+      'there is %(count)d product',     # Singular form
+      'there are %(count)d products',   # Plural form
+      count                             # Numeric value to determine form
+  ) % {'count': count}
+  ```
+
+- So now we know all the ground rules we need to add translations.
+
+  ```py
+  # myshop/myshop/settings.py
+  from django.utils.translation import gettext_lazy as _
+
+  LANGUAGES = [
+      ("en", _("English")),
+      ("es", _("Spanish")),
+  ]
+
+  # then to make the message files we can run
+  $ django-admin makemessages --all
+
+  # myshop/locale/es/LC_MESSAGES/django.po
+  # Now let's define some msgstr values in our translation file
+  #: myshop/settings.py:163
+  msgid "English"
+  msgstr "Inglés"
+
+  #: myshop/settings.py:164
+  msgid "Spanish"
+  msgstr "Español"
+
+  # and run compilemessages
+  # Note: this can also be done through ./manage.py. The book makes the rather
+  # arbitrary decision to use django-admin. django-admin is only required for
+  # startproject when you don't have a settings.py defined. manage.py is
+  # actually a very thin wrapper around django-admin that just sets your
+  # settings module. settings.py is unnecessary for makemessages/compilemessages
+  # so you can use django-admin directly but manage.py works fine.
+  $ django-admin compilemessages
+  ```
+
+- That's the process. Now let's translate more:
+
+  ```py
+  # myshop/orders/models.py
+  from django.utils.translation import gettext_lazy as _
+
+  class Order(models.Model):
+      first_name = models.CharField(_("first name"), max_length=50)
+      last_name = models.CharField(_("last name"), max_length=50)
+      email = models.EmailField(_("e-mail"))
+      address = models.CharField(_("address"), max_length=250)
+      postal_code = models.CharField(_("postal code"), max_length=20)
+      city = models.CharField(_("city"), max_length=100)
+
+  # now we create directories in orders to hold its translations
+  # having per app locales makes sense for reusable apps, but if we didn't
+  # create this it would use the project locale folder.
+  $ mkdir -p orders/locale/en
+  $ mkdir -p orders/locale/es
+  $ ./manage.py makemessages --all
+
+  # myshop/orders/locale/es/LC_MESSAGES/django.po
+  #: orders/models.py:12
+  msgid "first name"
+  msgstr "nombre"
+
+  #: orders/models.py:13
+  msgid "last name"
+  msgstr "apellidos"
+
+  #: orders/models.py:14
+  msgid "e-mail"
+  msgstr "e-mail"
+
+  #: orders/models.py:15
+  msgid "address"
+  msgstr "dirección"
+
+  #: orders/models.py:16
+  msgid "postal code"
+  msgstr "código postal"
+
+  #: orders/models.py:17
+  msgid "city"
+  msgstr "ciudad"
+  ```
+
+- The book only translates the fields the customer sees, probably to keep the
+  book shorter. Django already translates the admin's own text, so a Spanish
+  admin just needs your strings marked too. `verbose_name` is used anywhere a
+  field is displayed. For `ForeignKey`, `ManyToManyField`, and `OneToOneField`
+  the first positional argument is the related model, so pass it as
+  `verbose_name=_('name')`. A fully translated admin also needs
+  `Meta.verbose_name` and `verbose_name_plural`, `help_text`, `choices`,
+  `short_description` on custom columns and actions, `__str__` (with
+  `_('Order %(id)s') % {'id': self.id}`, never an f-string inside `_()`), and
+  custom admin templates, so it's more work than it looks.
+- Also note that I'm not going to list every line in a translation file anymore
+  but only where we change code. You get the idea of how a translation file
+  works. You can also use poedit (`brew install poedit`) to manage translation
+  files instead of editing them by hand.
+
+  ```py
+  # myshop/cart/forms.py
+  from django import forms
+  from django.utils.translation import gettext_lazy as _
+
+  PRODUCT_QUANTITY_CHOICES = [(i, str(i)) for i in range(1, 21)]
+
+  class CartAddProductForm(forms.Form):
+      quantity = forms.TypedChoiceField(
+          choices=PRODUCT_QUANTITY_CHOICES,
+          coerce=int,
+          label=_('Quantity')
+      )
+      override = forms.BooleanField(
+          required=False, initial=False, widget=forms.HiddenInput
+      )
+
+  # myshop/coupons/forms.py
+  from django import forms
+  from django.utils.translation import gettext_lazy as _
+
+  class CouponApplyForm(forms.Form):
+      code = forms.CharField(label=_('Coupon'))
+  ```
+
+- After adding `{% load i18n %}` to the top of your template, you can use the
+  `{% translate %}` and `{% blocktranslate %}` template tags to translate the
+  strings within templates. `translate` cannot handle content with variables.
+
+  ```py
+  {% translate "Text to be translated" %}
+  {% translate "Hello!" as greeting %}
+  <h1>{{ greeting }}</h1>
+  {% blocktranslate %}Hello {{ name }}!{% endblocktranslate %}
+  # You cannot access expressions or object attributes inside `blocktranslate`
+  {% blocktranslate with name=user.name|capfirst %}
+    Hello {{ name }}!
+  {% endblocktranslate %}
+
+  # myshop/shop/templates/shop/base.html
+  {% load i18n static %}
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>{% block title %}{% translate "My shop" %}{% endblock %}</title>
+      <link href="{% static "css/base.css" %}" rel="stylesheet">
+    </head>
+    <body>
+      <div id="header">
+        <a href="/" class="logo">{% translate "My shop" %}</a>
+      </div>
+      <div id="subheader">
+        <div class="cart">
+          {% with total_items=cart|length %}
+            {% if total_items > 0 %}
+            {% translate "Your cart" %}:
+              <a href="{% url "cart:cart_detail" %}">
+                {% blocktranslate trimmed with total=cart.get_total_price count items=total_items %}
+                  {{ items }} item, ${{ total }}
+                {% plural %}
+                  {{ items }} items, ${{ total }}
+                {% endblocktranslate %}
+              </a>
+            {% elif not order %}
+              {% translate "Your cart is empty." %}
+            {% endif %}
+          {% endwith %}
+        </div>
+      </div>
+      <div id="content">
+        {% block content %}
+        {% endblock %}
+      </div>
+    </body>
+  </html>
+
+  # Note above the blocktranslate for the cart's summary. Now it is:
+  {% blocktranslate trimmed with total=cart.get_total_price count items=total_items %}
+    {{ items }} item, ${{ total }}
+  {% plural %}
+    {{ items }} items, ${{ total }}
+  {% endblocktranslate %}
+  # This was previously:
+  {{ total_items }} item{{ total_items|pluralize }},
+  ${{ cart.get_total_price }}
+
+  # myshop/shop/templates/shop/product/detail.html
+  {% extends "shop/base.html" %}
+  {% load i18n static %}
+  # ...
+        <input type="submit" value="{% translate "Add to cart" %}">
+  # ...
+          <h3>{% translate "People who bought this also bought" %}</h3>
+
+  # myshop/orders/templates/orders/order/create.html
+  {% extends "shop/base.html" %}
+  {% load i18n %}
+  {% block title %}
+    {% translate "Checkout" %}
+  {% endblock %}
+  {% block content %}
+    <h1>{% translate "Checkout" %}</h1>
+    <div class="order-info">
+      <h3>{% translate "Your order" %}</h3>
+  # ...
+            {% blocktranslate trimmed with code=cart.coupon.code discount=cart.coupon.discount %}
+              "{{ code }}" ({{ discount }}% off)
+            {% endblocktranslate %}
+  # ...
+      <p>
+        {% translate "Total" %}:
+        ${{ cart.get_total_price_after_discount|floatformat:2 }}
+      </p>
+  # ...
+      <p><input type="submit" value="{% translate "Place order" %}"></p>
+  # ...
+
+  # Notice how this:
+  "{{ cart.coupon.code }}" ({{ cart.coupon.discount }}% off)
+  # became this:
+  {% blocktranslate trimmed with code=cart.coupon.code discount=cart.coupon.discount %}
+    "{{ code }}" ({{ discount }}% off)
+  {% endblocktranslate %}
+
+  # myshop/shop/templates/shop/product/list.html
+  {% extends "shop/base.html" %}
+  {% load i18n static %}
+  {% block title %}
+    {% if category %}
+      {{ category.name }}
+    {% else %}
+      {% translate "Products" %}
+    {% endif %}
+  {% endblock %}
+  {% block content %}
+    <div id="sidebar">
+      <h3>{% translate "Categories" %}</h3>
+  # ...
+          <a href="{% url "shop:product_list" %}">{% translate "All" %}</a>
+  # ...
+    <div id="main" class="product-list">
+      <h1>
+        {% if category %}
+          {{ category.name }}
+        {% else %}
+          {% translate "Products" %}
+        {% endif %}
+      </h1>
+  # ...
+
+  # myshop/cart/templates/cart/detail.html
+  {% extends "shop/base.html" %}
+  {% load i18n static %}
+  {% block title %}
+    {% translate "Your shopping cart" %}
+  {% endblock %}
+  {% block content %}
+    <h1>{% translate "Your shopping cart" %}</h1>
+    <table class="cart">
+      <thead>
+        <tr>
+          <th>{% translate "Image" %}</th>
+          <th>{% translate "Product" %}</th>
+          <th>{% translate "Quantity" %}</th>
+          <th>{% translate "Remove" %}</th>
+          <th>{% translate "Unit price" %}</th>
+          <th>{% translate "Price" %}</th>
+  # ...
+                  <input type="submit" value="{% translate "Update" %}">
+  # ...
+                  <input type="submit" value="{% translate "Remove" %}">
+  # ...
+            <td>{% translate "Subtotal" %}</td>
+  # ...
+              {% blocktranslate trimmed with code=cart.coupon.code discount=cart.coupon.discount %}
+                "{{ code }}" coupon ({{ discount }}% off)
+              {% endblocktranslate %}
+  # ...
+          <td>{% translate "Total" %}</td>
+  # ...
+    <p>{% translate "Apply a coupon" %}:</p>
+  # ...
+      <p><input type="submit" value="{% translate "Apply" %}"></p>
+  # ...
+      {% translate "Empty your cart?" as confirm_message %}
+      <form action="{% url "cart:cart_clear" %}" method="post"
+            class="cart-clear"
+            onsubmit="return confirm('{{ confirm_message|escapejs }}')">
+        <input type="submit" value="{% translate "Empty cart" %}" class="light">
+  # ...
+      <a href="{% url "shop:product_list" %}" class="button light">
+        {% translate "Continue shopping" %}
+      </a>
+      <a href="{% url "orders:order_create" %}" class="button">
+        {% translate "Checkout" %}
+      </a>
+  # ...
+        <h3>{% translate "People who bought this also bought" %}</h3>
+  # ...
+
+  # myshop/orders/templates/orders/order/pdf.html
+  {% load i18n %}
+  <html>
+    <body>
+      <h1>{% translate "My shop" %}</h1>
+      <p>
+        {% translate "Invoice no." %} {{ order.id }}<br />
+  # ...
+      <h3>{% translate "Bill to" %}</h3>
+  # ...
+      <h3>{% translate "Items bought" %}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>{% translate "Product" %}</th>
+            <th>{% translate "Price" %}</th>
+            <th>{% translate "Quantity" %}</th>
+            <th>{% translate "Cost" %}</th>
+  # ...
+              <td colspan="3">{% translate "Subtotal" %}</td>
+  # ...
+                {% blocktranslate trimmed with code=order.coupon.code discount=order.discount %}
+                  "{{ code }}" coupon ({{ discount }}% off)
+                {% endblocktranslate %}
+  # ...
+            <td colspan="3">{% translate "Total" %}</td>
+  # ...
+      <span class="{% if order.paid %}paid{% else %}pending{% endif %}">
+        {% if order.paid %}
+          {% translate "Paid" %}
+        {% else %}
+          {% translate "Pending payment" %}
+        {% endif %}
+      </span>
+    </body>
+  </html>
+
+  # myshop/payment/templates/payment/process.html
+  {% extends "shop/base.html" %}
+  {% load i18n static %}
+  {% block title %}{% translate "Pay your order" %}{% endblock %}
+  {% block content %}
+    <h1>{% translate "Order summary" %}</h1>
+    <table class="cart">
+      <thead>
+        <tr>
+          <th>{% translate "Image" %}</th>
+          <th>{% translate "Product" %}</th>
+          <th>{% translate "Price" %}</th>
+          <th>{% translate "Quantity" %}</th>
+          <th>{% translate "Total" %}</th>
+  # ...
+            <td>{% translate "Subtotal" %}</td>
+  # ...
+              {% blocktranslate trimmed with code=order.coupon.code discount=order.discount %}
+                "{{ code }}" coupon ({{ discount }}% off)
+              {% endblocktranslate %}
+  # ...
+          <td>{% translate "Total" %}</td>
+  # ...
+      <input type="submit" value="{% translate "Pay now" %}">
+  # ...
+
+  # myshop/payment/templates/payment/completed.html
+  {% extends "shop/base.html" %}
+  {% load i18n %}
+  {% block title %}{% translate "Payment successful" %}{% endblock %}
+  {% block content %}
+    <h1>{% translate "Your payment was successful" %}</h1>
+    <p>{% translate "Your payment has been processed successfully." %}</p>
+  {% endblock %}
+
+  # myshop/payment/templates/payment/canceled.html
+  {% extends "shop/base.html" %}
+  {% load i18n %}
+  {% block title %}{% translate "Payment canceled" %}{% endblock %}
+  {% block content %}
+    <h1>{% translate "Your payment has not been processed" %}</h1>
+    <p>{% translate "There was a problem processing your payment." %}</p>
+  {% endblock %}
+  ```
+
+- We added `trimmed` to every `blocktranslate`. It strips the whitespace at the
+  start and end of the block and joins its lines with single spaces before the
+  text becomes the `msgid`. Without it, the newlines and indentation inside the
+  block are part of the `msgid`, so the same text indented differently in two
+  templates becomes two strings to translate, and reindenting a template (like
+  djlint does on save) silently changes the `msgid` so the page falls back to
+  English until you rerun `makemessages`. It also lets you wrap long text inside
+  the block across lines without changing what gets translated.
+- Not in the book: we added Mexican Spanish to `LANGUAGES` with
+  `("es-mx", _("Spanish (Mexico)"))`, and `makemessages -l es_MX` creates
+  `locale/es_MX/`. `es` stays the complete Spain catalog, and `es_MX` only
+  holds the strings that differ (*Agregar al carrito*, *Costo*, *orden*);
+  anything left untranslated falls back to `es`. Django also switches number
+  formats per region, so Mexico gets `$60.00` where Spain shows `$60,00`.
+- Two catalog gotchas from adding `es-mx`. A string left empty in `es_MX` can
+  be answered by another app's `es_MX` catalog before our `es` fallback, so
+  the admin's "Todos/as" beat our "All"; add those strings to `es_MX` too.
+  And Django keeps catalogs with different `Plural-Forms` rules separate,
+  checking the newest first, so Rosetta's two-form Spanish catalog shadowed
+  ours. Our `es` files use `nplurals=2; plural=(n != 1);` to merge with it.
+- Next we're going to enable the Rosetta translation interface. It makes it
+  easy to edit the `.po` files via an interface like the admin site and supports
+  collaborative editing by multiple users.
+
+  ```py
+  $ pip install django-rosetta==0.10.0
+
+  # myshop/myshop/settings.py
+  INSTALLED_APPS = [
+      # ...
+      'rosetta',
+  ]
+
+  # myshop/myshop/urls.py
+      path("rosetta/", include("rosetta.urls")),
+  ```
+
+- We use rosetta by going to `http://localhost:8000/rosetta` after logging in
+  at `admin/` as a superuser. Choose "THIRD PARTY" in the Filter to see all the
+  available message files.
+- Rosetta uses a different background color to display placeholders. When you
+  translate content, make sure that you keep the placeholders untranslated.
+- Rosetta compiles the message file when you save translations.
+- If you want people other than superusers to access translations, you should go
+  to <http://127.0.0.1:8000/admin/auth/group/add/> and add a translators group.
+- For a production server, you will need to reload your server after running
+  `compilemessages` or saving the translations with Rosetta for any changes to
+  take effect.
+- A `#, fuzzy` flag on a `.po` entry means "this translation is probably wrong,
+  check it". `compilemessages` skips fuzzy entries, so the page shows the
+  English text until someone reviews it and clears the flag (in Rosetta, uncheck
+  Fuzzy; in Poedit, it shows as "Needs work"). `makemessages` adds the flag
+  itself when an English string changes slightly: it keeps the old translation
+  as a guess, marked fuzzy, with the old `msgid` in a `#|` comment. New `.po`
+  files also start with a fuzzy header, which should be cleared since the
+  header holds the `Plural-Forms` rule that plural translations depend on.
+- Django offers URL internationalization support in the form of a language
+  prefix for URL patterns and translating URL patterns. This is important to
+  optimize your site for search engines.
+
+  ```py
+  # myshop/myshop/urls.py
+  from django.conf.urls.i18n import i18n_patterns
+
+  urlpatterns = i18n_patterns(
+      path("admin/", admin.site.urls),
+      path("cart/", include("cart.urls", namespace="cart")),
+      path("orders/", include("orders.urls", namespace="orders")),
+      path("payment/", include("payment.urls", namespace="payment")),
+      path("coupons/", include("coupons.urls", namespace="coupons")),
+      path("rosetta/", include("rosetta.urls")),
+      path("", include("shop.urls", namespace="shop")),
+  )
+  ```
+
+- You can combine non-translatable standard URL patterns and patterns under
+  `i18n_patterns` so that some patterns include a language prefix and others
+  don't. However, it is better to use translated URLs only to avoid the
+  possibility that a carelessly translated URL matches a non-translated URL
+  pattern.
+- You mark URLs for translation in the same way you would with literals, the
+  `gettext_lazy()` function (imported as `_`).
+
+  ```py
+  # myshop/myshop/urls.py
+  from django.utils.translation import gettext_lazy as _
+
+  urlpatterns = i18n_patterns(
+      path("admin/", admin.site.urls),
+      path(_("cart/"), include("cart.urls", namespace="cart")),
+      path(_("orders/"), include("orders.urls", namespace="orders")),
+      path(_("payment/"), include("payment.urls", namespace="payment")),
+      path(_("coupons/"), include("coupons.urls", namespace="coupons")),
+      path("rosetta/", include("rosetta.urls")),
+      path("", include("shop.urls", namespace="shop")),
+  )
+
+  # myshop/orders/urls.py
+  from django.utils.translation import gettext_lazy as _
+
+  urlpatterns = [
+      path(_("create/"), views.order_create, name="order_create"),
+  # ...
+
+  # myshop/payment/urls.py
+  from django.utils.translation import gettext_lazy as _
+
+  urlpatterns = [
+      path(_("process/"), views.payment_process, name="process"),
+      path(_("completed/"), views.payment_completed, name="completed"),
+      path(_("canceled/"), views.payment_canceled, name="canceled"),
+      path("webhook/", webhooks.stripe_webhook, name="stripe-webhook"),
+  ]
+  ```
+
+- Note we need a single URL without a language prefix for the webhook, so we
+  will remove `"webhook/"` from the `payment/urls.py` file and add it to the
+  `myshop/urls.py` separate from the `i18n_patterns` block.
+
+  ```py
+  # myshop/myshop/urls.py
+  from payment import webhooks
+
+  urlpatterns = i18n_patterns(
+      # ...
+  )
+
+  urlpatterns += [
+      path("payment/webhook/", webhooks.stripe_webhook, name="stripe-webhook"),
+  ]
+  ```
+
+- We don't need to translate URL patterns of the `shop` application as they are
+  all built with variables and do not include any other literals.
+- We can now run `./manage.py makemessages --all` and go to
+  `http://127.0.0.1:8000/en/rosetta` and click Myshop then UNTRANSLATED ONLY in
+  Filter and we will see only the five new strings. We should have a couple of
+  fuzzy translations too for the coupons and canceled URL fragments. We also
+  need to edit the `create/` translation in `orders`.
+- When translating URL fragments, be sure to include the `/`.
+- Next we want to provide a way to switch language manually:
+
+  ```py
+  # myshop/shop/templates/shop/base.html
+  # find
+      <div id="header">
+        <a href="/" class="logo">{% translate "My shop" %}</a>
+      </div>
+  # and replace it with
+      <div id="header">
+        <a href="/" class="logo">{% translate "My shop" %}</a>
+        {% get_current_language as LANGUAGE_CODE %}
+        {% get_available_languages as LANGUAGES %}
+        <form action="{% url "set_language" %}" method="post"
+              class="languages">
+          {% csrf_token %}
+          <input name="next" type="hidden" value="{{ request.get_full_path }}">
+          <label for="language">{% translate "Language" %}:</label>
+          <select id="language" name="language" onchange="this.form.submit()">
+            {% for code, name in LANGUAGES %}
+              <option value="{{ code }}"
+                      {% if code == LANGUAGE_CODE %}selected{% endif %}>
+                {{ name }}
+              </option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+
+  # myshop/myshop/urls.py
+  urlpatterns = i18n_patterns(
+      path("admin/", admin.site.urls),
+      path("i18n/", include("django.conf.urls.i18n")),
+      # ...
+  )
+  ```
+
+- Django's `set_language` view (from `django.conf.urls.i18n`) saves the chosen
+  language in a cookie and redirects to `next` translated into that language,
+  so `/en/cart/` becomes `/es/carro/` instead of jumping to the home page. The
+  `LANGUAGES` loop shows our own translated labels from `settings.py`. Django's
+  docs put `i18n/` outside `i18n_patterns`, but then `next` is resolved in the
+  cookie's language, and switching fails whenever that doesn't match the page's
+  URL prefix (like following a `/es/` link with an English browser). Inside
+  `i18n_patterns`, the form posts to `/es/i18n/setlang/`, so `next` is always
+  resolved in the page's own language.
+- There are several ways to handle translating models, but we will use
+  django-parler. It generates a separate table for each model that contains
+  translations. This table includes all the translated fields and a foreign key
+  for the original object that the translation belongs to along with a language
+  field since each row stores the content for a single language. Like usual,
+  we `pip install django-parler==2.3` and add it to `INSTALLED_APPS`. We also
+  need to add `PARLER_LANGUAGES` to `myshop/settings.py`.
+
+  ```py
+  # myshop/myshop/settings.py
+  PARLER_LANGUAGES = {
+      None: (
+          {"code": "en"},
+          {"code": "es"},
+          {"code": "es-mx", "fallbacks": ["es", "en"]},
+      ),
+      "default": {
+          "fallbacks": ["en"],
+          "hide_untranslated": False,
+      },
+  }
+  ```
+- django-parler provides a `TranslatableModel` model class and a
+  `TranslatedFields` wrapper to translate model fields.
+
+  ```py
+  # myshop/shop/models.py
+  class Category(TranslatableModel):
+      translations = TranslatedFields(
+          name=models.CharField(max_length=200, db_index=True),
+          slug=models.SlugField(max_length=200, unique=True),
+      )
+      class Meta:
+          # ordering = ["name"]
+          # indexes = [
+          #     models.Index(fields=["name"]),
+          # ]
+  # ...
+  class Product(TranslatableModel):
+      translations = TranslatedFields(
+          name=models.CharField(max_length=200, db_index=True),
+          slug=models.SlugField(max_length=200),
+          description=models.TextField(blank=True),
+      )
+      # ...
+      class Meta:
+          # ordering = ["name"]
+          indexes = [
+              # models.Index(fields=["id", "slug"]),
+              # models.Index(fields=["name"]),
+  # ...
+
+  # myshop/shop/admin.py
+  from parler.admin import TranslatableAdmin
+
+  @admin.register(Category)
+  class CategoryAdmin(TranslatableAdmin):
+      list_display = ["name", "slug"]
+
+      def get_prepopulated_fields(self, request, obj=None):
+          return {"slug": ("name",)}
+
+
+  @admin.register(Product)
+  class ProductAdmin(TranslatableAdmin):
+      list_display = ["name", "slug", "price", "available", "created", "updated"]
+      list_filter = ["available", "created", "updated"]
+      list_editable = ["price", "available"]
+
+      def get_prepopulated_fields(self, request, obj=None):
+          return {"slug": ("name",)}
+  ```
+
+- So `Product` is going to get a `ProductTranslation` model with the translated
+  fields, a `language_code`, and a `ForeignKey` called `master` pointing to the
+  original `Product`. There are some limitations to be aware of. It is not
+  possible to use a default order with a translated field and you cannot
+  include a translatable field in the `ordering` `Meta` options. You can filter
+  by translated fields in queries, however. You also cannot index a
+  translated field in the original model's `Meta`, since it no longer exists
+  there. That's why we adjusted the `Meta` values above, and added
+  `db_index=True` to `name` inside `TranslatedFields` instead. Ordering moves
+  into the views.
+- `makemigrations` generates one migration that creates the translation tables
+  and drops the old `name`, `slug`, and `description` columns, losing the data.
+  Split it into three: create the translation tables, a `RunPython` data
+  migration that copies the existing values in as `en` translations, then
+  remove the old fields. Also set the translation models' `bases` to
+  `(models.Model,)`, or Parler raises "does not appear to inherit from
+  TranslatableModel" while migrating.
+- Once we add the Spanish translations in the admin, we can play with it in
+  the shell through `./manage.py shell`:
+
+  ```py
+  >>> from shop.models import Product
+  >>> from django.utils.translation import activate
+  >>> activate('es')
+  >>> product=Product.objects.first()
+  >>> product.name
+  'Té verde'
+
+  # We could also use the language manager provided by django-parler
+  >>> product=Product.objects.language('en').first()
+  >>> product.name
+  'Green Tea'
+
+  # then we could set the language for our product without looking it up again
+  >>> product.set_current_language('es')
+  >>> product.name
+  'Té verde'
+
+  >>> Product.objects.filter(translations__name='Green Tea')
+  <TranslatableQuerySet [<Product: Té verde>]>
+  ```
+- So now we need to adapt our views:
+
+  ```py
+  # myshop/shop/views.py
+  from django.shortcuts import get_object_or_404, redirect, render
+
+  from cart.forms import CartAddProductForm
+
+  from .models import Category, Product
+  from .recommender import Recommender
+
+  def by_name(objects):
+      # Translated fields can't go in Meta.ordering, so sort by the name shown
+      # in the current language, which applies Parler's fallbacks.
+      return sorted(
+          objects,
+          key=lambda obj: obj.safe_translation_getter(
+              "name", default="", any_language=True
+          ).casefold(),
+      )
+
+  def product_list(request, category_slug=None):
+      category = None
+      categories = Category.objects.prefetch_related("translations")
+      products = Product.objects.filter(available=True).prefetch_related(
+          "translations"
+      )
+      if category_slug:
+          # Category slugs are unique across all languages, so a slug from any
+          # language finds the category. Redirect to the slug for the current
+          # language (es-mx falls back to es), which also fixes language
+          # switching, since set_language keeps the old slug in the URL.
+          category = get_object_or_404(
+              Category, translations__slug=category_slug
+          )
+          if category.slug != category_slug:
+              return redirect(category, permanent=True)
+          products = products.filter(category=category)
+      return render(
+          request,
+          "shop/product/list.html",
+          {
+              "category": category,
+              "categories": by_name(categories),
+              "products": by_name(products),
+          },
+      )
+
+  def product_detail(request, id, slug):
+      # Look up by id alone, then redirect any other slug to the current
+      # language's one, for the same reasons as the category lookup above.
+      product = get_object_or_404(Product, id=id, available=True)
+      if product.slug != slug:
+          return redirect(product, permanent=True)
+      cart_product_form = CartAddProductForm()
+      r = Recommender()
+      recommended_products = r.suggest_products_for([product], 4)
+      return render(
+          request,
+          "shop/product/detail.html",
+          {
+              "product": product,
+              "cart_product_form": cart_product_form,
+              "recommended_products": recommended_products,
+          },
+      )
+  ```
+
+- The final step in our localization is to handle dates, times, and numbers in
+  the format that aligns with the user's locale. The good news is that Django
+  just handles this! The bad news is we might not want it handled when
+  outputting JavaScript or JSON, which needs to provide a machine readable
+  format. Django provides a `{% localize %}` template tag that allows us to
+  turn localization on and off.
+
+  ```py
+  # Example of turning on and off localizations
+  {% load l10n %}
+  {% localize on %}
+    {{ value }}
+  {% endlocalize %}
+  {% localize off %}
+    {{ value }}
+  {% endlocalize %}
+  # You can also use template filters
+  {{ value|localize }}
+  {{ value|unlocalize }}
+  ```
+- `django-localflavor` is a third-party module that contains a collection of
+  utilities such as form fields or model fields that are specific for each
+  country. It's very useful for validating local regions, local phone numbers,
+  social security numbers, and so on. It is organized into a series of modules
+  named after ISO 3166 country codes. First
+  `pip install django-localflavor==4.0` and add it to `INSTALLED_APPS` as
+  `"localflavor"`. We are going to require a United States zip code:
+
+  ```py
+  # myshop/orders/forms.py
+  from django import forms
+  from django.utils.text import capfirst
+  from django.utils.translation import gettext_lazy as _
+  from localflavor.us.forms import USZipCodeField
+
+  from .models import Order
+
+  class OrderCreateForm(forms.ModelForm):
+      # A field declared on the form doesn't inherit the model field's
+      # verbose_name, so reuse the translated "postal code" label.
+      postal_code = USZipCodeField(label=capfirst(_("postal code")))
+      class Meta:
+          model = Order
+          fields = ["first_name", "last_name", "email", "address", "postal_code", "city"]
+  ```
+
+- You can find more information on `django-localflavor` at
+  <https://django-localflavor.readthedocs.io/en/latest/>.
+- Not in the book: we added German and Japanese, matching the languages in my
+  Rails Depot. That's `("de", _("German"))` and `("ja", _("Japanese"))` in
+  `LANGUAGES`, `{"code": "de"}` and `{"code": "ja"}` in `PARLER_LANGUAGES`,
+  `makemessages -l de -l ja`, every string translated (formal *Sie* German and
+  polite Japanese), and German and Japanese names, slugs, and descriptions for
+  the products and category. Japanese URL fragments and slugs use romaji
+  (`/ja/kato/`, `/ja/1/ryokucha`), since `<slug:...>` only matches ASCII. Both
+  languages' `Plural-Forms` already match Django's own catalogs, so no
+  shadowing this time. Prices stay in dollars.
+- Since Stripe always charges US dollars, every price goes through a `usd`
+  template filter so no language can misread it (Mexico's peso also uses `$`).
+  The filter localizes the number, then drops it into a translatable pattern,
+  so each catalog decides where "US$" goes: `$1,092.00` in English,
+  `1.092,00 US$` in German and Spain, `US$1,092.00` in Mexico and Japan. Every
+  template with prices gets `{% load money %}` (loads don't carry into child
+  templates), and `${{ price|floatformat:2 }}` becomes `{{ price|usd }}`. The
+  cart summary in `base.html` passes `total=cart.get_total_price|usd` and drops
+  the `$` from its `blocktranslate` text.
+
+  ```py
+  # myshop/shop/templatetags/money.py
+  from django import template
+  from django.utils.formats import number_format
+  from django.utils.translation import gettext as _
+
+  register = template.Library()
+
+  @register.filter
+  def usd(amount):
+      return _("$%(amount)s") % {
+          "amount": number_format(amount, 2, force_grouping=True)
+      }
+
+  # myshop/locale/de/LC_MESSAGES/django.po
+  msgid "$%(amount)s"
+  msgstr "%(amount)s US$"
+  ```
+- I also followed the AI prompt to add weight-based shipping. Products get a
+  `weight` in grams, the cart totals the weight and prices it, and the order
+  stores the `shipping_cost` at checkout (like `discount`, so later rate
+  changes don't alter past orders). `get_total_cost()` adds shipping after the
+  discount, since the coupon only applies to products. Stripe gets the same
+  amount as a fixed-amount `shipping_options` entry, and Stripe doesn't apply
+  the coupon to it either, so a test session for 6 green teas with `SUMMER`
+  charged $180.00 - $36.00 + $5.00 = $149.00, matching the order. The checkout,
+  order summary, invoice PDF, and admin order detail each got a Shipping row.
+  Honestly, flat-rate shipping would suit a tea shop; setting `STEP_RATE` to 0
+  gives you that.
+
+  ```py
+  # myshop/cart/shipping.py
+  import math
+  from decimal import Decimal
+
+  # The base rate covers the first BASE_WEIGHT grams, and each further
+  # STEP_WEIGHT grams (or part of it) adds STEP_RATE. Set STEP_RATE to 0 for
+  # flat-rate shipping.
+  BASE_RATE = Decimal("4.00")
+  BASE_WEIGHT = 500
+  STEP_RATE = Decimal("1.00")
+  STEP_WEIGHT = 500
+
+  def shipping_cost(weight):
+      steps = math.ceil(max(0, weight - BASE_WEIGHT) / STEP_WEIGHT)
+      return BASE_RATE + STEP_RATE * steps
+
+  # myshop/shop/models.py
+  class Product(TranslatableModel):
+      # ...
+      weight = models.PositiveIntegerField(
+          default=0, help_text="Weight in grams"
+      )
+
+  # myshop/cart/cart.py
+  from .shipping import shipping_cost
+  # ...
+      def get_total_weight(self):
+          return sum(item["product"].weight * item["quantity"] for item in self)
+
+      def get_shipping_cost(self):
+          return shipping_cost(self.get_total_weight())
+
+      def get_total_price_with_shipping(self):
+          return (
+              self.get_total_price_after_discount() + self.get_shipping_cost()
+          )
+
+  # myshop/orders/models.py
+  class Order(models.Model):
+      # ...
+      shipping_cost = models.DecimalField(
+          _("shipping cost"),
+          max_digits=10,
+          decimal_places=2,
+          default=Decimal("0.00"),
+      )
+      # ...
+      def get_total_cost(self):
+          total_cost = self.get_total_cost_before_discount()
+          return total_cost - self.get_discount() + self.shipping_cost
+
+  # myshop/orders/views.py, in order_create
+              order.shipping_cost = cart.get_shipping_cost()
+              order.save()
+
+  # myshop/payment/views.py, in payment_process
+  from django.utils.translation import gettext as _
+  # ...
+          if order.shipping_cost:
+              session_data["shipping_options"] = [
+                  {
+                      "shipping_rate_data": {
+                          "type": "fixed_amount",
+                          "fixed_amount": {
+                              "amount": int(
+                                  order.shipping_cost * Decimal("100")
+                              ),
+                              "currency": "usd",
+                          },
+                          "display_name": _("Shipping"),
+                      }
+                  }
+              ]
+
+  # myshop/orders/templates/orders/order/create.html
+        <li>
+          {% translate "Shipping" %}
+          <span>${{ cart.get_shipping_cost|floatformat:2 }}</span>
+        </li>
+      </ul>
+      <p>
+        {% translate "Total" %}:
+        ${{ cart.get_total_price_with_shipping|floatformat:2 }}
+      </p>
+
+  # myshop/payment/templates/payment/process.html, before the Total row
+        <tr>
+          <td>{% translate "Shipping" %}</td>
+          <td colspan="3"></td>
+          <td class="num">${{ order.shipping_cost }}</td>
+        </tr>
+  # pdf.html and admin/orders/order/detail.html get the same row with
+  # <td colspan="3">
   ```

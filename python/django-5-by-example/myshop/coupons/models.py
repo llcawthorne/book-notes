@@ -1,5 +1,12 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
+
+
+class CouponQuerySet(models.QuerySet):
+    def valid(self):
+        now = timezone.now()
+        return self.filter(active=True, valid_from__lte=now, valid_to__gte=now)
 
 
 class Coupon(models.Model):
@@ -11,6 +18,8 @@ class Coupon(models.Model):
         help_text="Percentage value (0 to 100)",
     )
     active = models.BooleanField()
+
+    objects = CouponQuerySet.as_manager()
 
     def __str__(self):
         return self.code

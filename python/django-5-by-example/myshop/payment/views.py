@@ -4,6 +4,7 @@ import stripe
 from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 
 from orders.models import Order
 
@@ -21,6 +22,7 @@ def payment_process(request):
         session_data = {
             "mode": "payment",
             "client_reference_id": order.id,
+            "customer_email": order.email,
             "success_url": success_url,
             "cancel_url": cancel_url,
             "line_items": [],
@@ -39,6 +41,26 @@ def payment_process(request):
                     "quantity": item.quantity,
                 }
             )
+
+        if order.coupon:
+            stripe_coupon = stripe.Coupon.create(
+                name=order.coupon.code, percent_off=order.discount, duration="once"
+            )
+            session_data["discounts"] = [{"coupon": stripe_coupon.id}]
+
+        if order.shipping_cost:
+            session_data["shipping_options"] = [
+                {
+                    "shipping_rate_data": {
+                        "type": "fixed_amount",
+                        "fixed_amount": {
+                            "amount": int(order.shipping_cost * Decimal("100")),
+                            "currency": "usd",
+                        },
+                        "display_name": _("Shipping"),
+                    }
+                }
+            ]
 
         session = stripe.checkout.Session.create(**session_data)
         return redirect(session.url, code=303)

@@ -33,6 +33,11 @@ a.button.light {
     background:#ededed;
 }
 
+input[type="submit"].light {
+    color:#666;
+    background:#ededed;
+}
+
 .text-left {
     text-align:left;
 }
@@ -104,6 +109,10 @@ form p input {
     background:#efefef;
     color:#666;
     border-radius:4px;
+}
+
+form p input[type="submit"] {
+    width:auto;
 }
 
 ul.errorlist {
@@ -223,8 +232,28 @@ ul.errorlist {
     margin-top:10px;
 }
 
+.product-detail form div {
+    display:inline;
+}
+
 .order-form {
     float:left;
+}
+
+/* Contain the floated label/input/button so the elements after the form
+   start below it instead of moving up beside the floats. */
+.coupon-form {
+    display:flow-root;
+}
+
+.coupon-form p input[type="submit"] {
+    clear:none;
+    margin-left:8px;
+}
+
+.cart-clear {
+    float:left;
+    margin-top:8px;
 }
 
 .order-info {
@@ -265,23 +294,13 @@ ul.errorlist {
    font-size:14px;
 }
 
-.languages ul {
-    list-style:none;
-    margin:0;
-    padding:0;
-    float:left;
-}
-
-.languages ul li {
-    float:left;
-    margin:0 0 0 10px;
+.languages select {
+    margin-left:6px;
     font-size:14px;
 }
 
-.languages p {
-    float:left;
-    margin:0;
-}
+
+
 
 .recommendations {
     clear:both;
@@ -292,7 +311,9 @@ ul.errorlist {
 }
 
 .recommendations img {
-    width:200px
+    width:200px;
+    aspect-ratio:1 / 1;
+    object-fit:cover;
 }
 
 .recommendations p {
@@ -300,9 +321,8 @@ ul.errorlist {
 }
 
 .recommendations.cart {
-    width:60%;
-    float:left;
     overflow:auto;
+    padding-top:20px;
 }
 
 .recommendations.cart h3 {

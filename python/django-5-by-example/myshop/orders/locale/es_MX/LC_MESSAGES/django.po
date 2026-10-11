@@ -1,0 +1,127 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-11 19:26+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es_MX\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: orders/forms.py:12 orders/models.py:16
+msgid "postal code"
+msgstr ""
+
+#: orders/models.py:12
+msgid "first name"
+msgstr ""
+
+#: orders/models.py:13
+msgid "last name"
+msgstr ""
+
+#: orders/models.py:14
+msgid "e-mail"
+msgstr "correo electrónico"
+
+#: orders/models.py:15
+msgid "address"
+msgstr ""
+
+#: orders/models.py:17
+msgid "city"
+msgstr ""
+
+#: orders/models.py:29
+msgid "shipping cost"
+msgstr "costo de envío"
+
+#: orders/templates/orders/order/create.html:4
+#: orders/templates/orders/order/create.html:7
+msgid "Checkout"
+msgstr ""
+
+#: orders/templates/orders/order/create.html:9
+msgid "Your order"
+msgstr "Tu orden"
+
+#: orders/templates/orders/order/create.html:19
+#, python-format
+msgid "\"%(code)s\" (%(discount)s%% off)"
+msgstr ""
+
+#: orders/templates/orders/order/create.html:26
+#: orders/templates/orders/order/pdf.html:56
+msgid "Shipping"
+msgstr ""
+
+#: orders/templates/orders/order/create.html:31
+#: orders/templates/orders/order/pdf.html:60
+msgid "Total"
+msgstr ""
+
+#: orders/templates/orders/order/create.html:37
+msgid "Place order"
+msgstr "Realizar orden"
+
+#: orders/templates/orders/order/pdf.html:4
+msgid "My shop"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:6
+msgid "Invoice no."
+msgstr "Factura No."
+
+#: orders/templates/orders/order/pdf.html:11
+msgid "Bill to"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:18
+msgid "Items bought"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:22
+msgid "Product"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:23
+msgid "Price"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:24
+msgid "Quantity"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:25
+msgid "Cost"
+msgstr "Costo"
+
+#: orders/templates/orders/order/pdf.html:39
+msgid "Subtotal"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:46
+#, python-format
+msgid "\"%(code)s\" coupon (%(discount)s%% off)"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:67
+msgid "Paid"
+msgstr ""
+
+#: orders/templates/orders/order/pdf.html:69
+msgid "Pending payment"
+msgstr ""
+
+#: orders/urls.py:8
+msgid "create/"
+msgstr ""

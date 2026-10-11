@@ -10,9 +10,9 @@ parent:
 ---
 # Book Notes by Lewis
 
-Note: *Django 5 by Example*, *Haskell Programming from First Principles*, and
-*Learn Haskell by Example* are works in progress. *Kotlin in Action* and
-*Python for DevOps* are paused about halfway.
+Note: *Command-Line Rust*, *Django 5 by Example*, *Haskell Programming from
+First Principles*, and *Learn Haskell by Example* are works in progress.
+*Kotlin in Action* and *Python for DevOps* are paused about halfway.
 
 ## Architecture
 
@@ -62,6 +62,10 @@ Note: *Django 5 by Example*, *Haskell Programming from First Principles*, and
 ## Ruby
 
 - [Agile Web Development with Rails 8](./ruby/agile-web-development/book-notes.md)
+
+## Rust
+
+- [Command-Line Rust](./rust/command-line-rust/book-notes.md)
 
 ## Tools
 
