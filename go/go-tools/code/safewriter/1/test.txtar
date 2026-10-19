@@ -1,0 +1,8 @@
+exec go run main.go
+cmp output.dat golden.txt
+
+-- golden.txt --
+hello
+hello
+hello
+hello

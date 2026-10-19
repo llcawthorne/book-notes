@@ -10,9 +10,10 @@ parent:
 ---
 # Book Notes by Lewis
 
-Note: *Command-Line Rust*, *Django 5 by Example*, *Haskell Programming from
-First Principles*, and *Learn Haskell by Example* are works in progress.
-*Kotlin in Action* and *Python for DevOps* are paused about halfway.
+Note: *Django 5 by Example*, *Learn Go with Tests*, *Learn Haskell by Example*,
+*Rustlings*, and *The Rust Programming Language* are works in progress. *Kotlin
+in Action* and *Python for DevOps* are paused about halfway, and *Command-Line
+Rust* is paused early on.
 
 ## Architecture
 
@@ -33,6 +34,7 @@ First Principles*, and *Learn Haskell by Example* are works in progress.
 ## Go
 
 - [Head First Go](./go/headfirstgo/book-notes.md)
+- [Learn Go with Tests](./go/learn-go-with-tests/book-notes.md)
 - [Powerful Command-Line Applications in Go](./go/pragprog.com/rggo/book-notes.md)
 
 ## Haskell
@@ -66,6 +68,8 @@ First Principles*, and *Learn Haskell by Example* are works in progress.
 ## Rust
 
 - [Command-Line Rust](./rust/command-line-rust/book-notes.md)
+- [Rustlings](./rust/rustlings/book-notes.md)
+- [The Rust Programming Language](./rust/the-rust-programming-language/book-notes.md)
 
 ## Tools
 

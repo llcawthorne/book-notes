@@ -1,0 +1,9 @@
+[package]
+name = "dungeonecs"
+version = "0.1.0"
+authors = ["Herbert Wolverson <herberticus@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+bracket-lib.workspace = true
+legion = "=0.3.1"

@@ -1,0 +1,20 @@
+;---
+; Excerpted from "Clojure Brain Teasers",
+; published by The Pragmatic Bookshelf.
+; Copyrights apply to this code. It may not be used to create training material,
+; courses, books, articles, and the like. Contact us if you are in doubt.
+; We make no guarantees that this code is fit for any purpose.
+; Visit https://pragprog.com/titles/mmclobrain for more book information.
+;---
+(def photo1 :hero)
+(def photo2 :villain)
+
+(defn identify 
+  [photo]
+  (case photo
+    photo1 "Our hero!"
+    photo2 "The dastardly villain"
+    "Unknown"))
+
+(= (identify photo1) "Our hero!")
+(= (identify photo2) "The dastardly villain")

@@ -1,0 +1,12 @@
+/* The final version of this file at the end of this chapter can be found at */
+/* https://github.com/sevenseacat/tunez/blob/end-of-chapter-5/assets/css/app.css */
+
+/* ------------------------------------------------------------------------------ */
+/* Context: Adding AshAuthenticationPhoenix to Tailwind's source checker */
+/* ... */
+@source "../../lib/tunez_web";
+@source "../../deps/ash_authentication_phoenix";
+
+@plugin "@tailwindcss/forms";
+/* ... */
+/* ------------------------------------------------------------------------------ */
