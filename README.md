@@ -18,6 +18,7 @@ Rust* is paused early on.
 ## Architecture
 
 - [Fundamentals of Software Architecture](./architecture/fundamentals-of-software-architecture/book-notes.md)
+- [Software Engineering at Google](./architecture/software-engineering-at-google/book-notes.md)
 - [The Pragmatic Programmer](./architecture/the-pragmatic-programmer/book-notes.md)
 - [The Programmer's Brain](./architecture/the-programmers-brain/book-notes.md)
 
