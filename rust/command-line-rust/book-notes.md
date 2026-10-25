@@ -28,8 +28,8 @@
   in *target/debug*. By default Cargo builds a *debug* target. The Cargo.toml
   specifies the executable is `hello`:
 
-  ```rs
-  // 01_hello/Cargo.toml
+  ```toml
+  # 01_hello/Cargo.toml
   [package]
   name = "hello"
   version = "0.1.0"
@@ -118,8 +118,8 @@
   program can't be found. `std::process::Command` only runs commands on the PATH.
   We need a way to execute binaries that exist only in  the current crate. We aregoing to add the `assert_cmd` development dependency to Cargo.toml and use it.
 
-  ```rs
-  // 01_hello/Cargo.toml
+  ```toml
+  # 01_hello/Cargo.toml
   [package]
   name = "hello"
   version = "0.1.0"
@@ -128,8 +128,11 @@
   [dependencies]
 
   [dev-dependencies]
-  assert_cmd = "1"
-
+  assert_cmd = "2.0.13"
+  pretty_assertions = "1.4.0"
+  ```
+  
+  ```rs
   // 01/hello/test/cli.rs
   use assert_cmd::Command;
 

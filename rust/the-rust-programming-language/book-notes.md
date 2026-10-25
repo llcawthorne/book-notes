@@ -1,7 +1,8 @@
 # The Rust Programming Language
 
 - Note: I did the Brown University version of *The Rust Programming Language* at
-  <https://rust-book.cs.brown.edu>.
+  <https://rust-book.cs.brown.edu>. Passages are quoted or adapted from the
+  book, which is licensed under MIT/Apache-2.0.
 
 ## Chapter 1 - Getting Started
 
@@ -24,7 +25,7 @@
   done within an existing Git repository. It creates *Cargo.toml* and a *src*
   directory with a *main.rs* file inside. The default *Cargo.toml*:
 
-  ```sh
+  ```toml
   [package]
   name = "hello_cargo"
   version = "0.1.0"
@@ -151,7 +152,7 @@
   crate, which contains code that is intended to be used in other programs and
   cannot be executed on its own. Add `rand` to your Cargo.toml dependencies:
 
-  ```sh
+  ```toml
   [dependencies]
   rand = "0.8.5"
   ```
@@ -513,8 +514,8 @@
 - We can define functions to have *parameters*. The values you provide it are
   called *arguments*. In function signatures you must declare the type of each
   parameter. This is a deliberate decision for the language, and in practice
-  the compiler almost never needs them elsewhere because they are in the
-  function definitions. It can also give more helpful error messages. You
+  the compiler almost never needs type annotations elsewhere because they are
+  in the function definitions. It can also give more helpful error messages. You
   separate multiple parameters by commas:
 
   ```rs
@@ -1190,6 +1191,21 @@
   data it points to can be changed (W on `*num`). They're independent:
   - `let mut num: &i32` can point elsewhere, but can't change the data.
   - `let num: &mut i32` can change the data, but can't point elsewhere.
+- The rule behind that: `let mut` lets you change what the variable *directly
+  holds*. The two-`mut` split only exists for references, because a reference
+  variable has two places (`r` and `*r`). A variable that owns its value (a
+  `Vec`, `String`, `i32`) has just one place, so a single `let mut` covers both
+  modifying the value and reassigning the variable:
+
+  ```rs
+  let mut v = vec![1, 2, 3];  // v owns the Vec: one place, one `mut`
+  v.push(4);                  // modify the Vec
+  v = vec![9];                // or replace it; same `mut`
+
+  let r = &mut v;             // r holds a reference: two places
+  r.push(5);                  // fine without `let mut r`; changes *r, not r
+  ```
+
 - A reference changes permissions while it is "in use". "in use" here refers to
   a reference's **lifetime**, or the range of code spanning from its birth
   (where the reference is created) to its death (the last time the reference
@@ -2045,12 +2061,12 @@
   }
   ```
 
-- We used the owned `String` type rather than `&str` slice type in `User` struct
-  define above. This is a deliberate choice because we want each instance of
-  this struct to own all of its data and for that data to be valid for as long
-  as the entire struct is valid. Structs can also store references to data
-  owned by something else, but to do this requires *lifetimes*, a Rust feature
-  we will discuss in Chapter 10.
+- We used the owned `String` type rather than `&str` slice type in the `User`
+  struct defined above. This is a deliberate choice because we want each
+  instance of this struct to own all of its data and for that data to be valid
+  for as long as the entire struct is valid. Structs can also store references
+  to data owned by something else, but to do this requires *lifetimes*, a Rust
+  feature we will discuss in Chapter 10.
 
   ```rs
   // DOES NOT COMPILE! error[E0106]: missing lifetime specifier
@@ -2228,7 +2244,9 @@
 
       dbg!(&rect1);
   }
+  ```
 
+  ```text
   $ cargo run
      Compiling rectangles v0.1.0 (file:///projects/rectangles)
       Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.61s
@@ -2682,12 +2700,12 @@
   }
   ```
 
-- `let...else` lets us perform some computation when a value is present and
-  return a default value otherwise. `let...else` takes a pattern on the left
-  side and an expression on the right, but it does not have an `if` branch, only
-  an `else`. If the pattern matches, it will bind the value from the pattern,
-  but if it does not match it will follow the `else` arm, which must diverge
-  (usually by returning from the function):
+- `let...else` lets us bind values from a pattern if it matches, and execute
+  an early-exit `else` block if it does not. `let...else` takes a pattern on the
+  left side and an expression on the right, but it does not have an `if` branch,
+  only an `else`. If the pattern matches, it will bind the value from the
+  pattern, but if it does not match it will follow the `else` arm, which must
+  diverge (usually by returning from the function):
 
   ```rs
   fn describe_state_quarter(coin: Coin) -> Option<String> {
@@ -2762,8 +2780,8 @@
 - **Declaring modules**: In the crate root file, you can declare new modules,
   say for example "garden", with `mod garden;`. The compiler will look for the
   module's code in:
-  - Inline, within curly brackets that replace the semicolon following `mod
-    garden`.
+  - Inline, within curly brackets that replace the semicolon following
+    `mod garden`.
   - In the file *src/garden.rs*
   - In the file *src/garden/mod.rs*
 - **Declaring submodules**: In any file other than the crate root, you can
@@ -2792,7 +2810,7 @@
   Modules also allow us to control the *privacy* of items because code within
   a module is private by default.
 - The source code provides an extended example of a `restaurant` library in
-  `ch07-restaurant`.
+  `ch07_restaurant`.
 - The contents of either *src/main.rs* or *src/lib.rs* are *crate roots* and the
   contents of either of these two files form a module named `crate` at the root
   of the crate's module structure, known as the *module tree*.
@@ -2961,6 +2979,17 @@
   having many open files named `mod.rs`.
 - You only need to load a file using a `mod` declaration *once* in your module
   tree. Other files refer to it using a path to where it was declared.
+- Not covered in the book: there are more visibility levels than private and
+  `pub`. `pub(crate)` is the common one, for sharing an item between modules
+  without making it part of the crate's public API:
+
+  | Visibility                  | Visible to                            |
+  | --------------------------- | ------------------------------------- |
+  | (none)                      | This module and its child modules     |
+  | `pub(super)`                | Also the parent module                |
+  | `pub(crate)`                | The whole crate, but not other crates |
+  | `pub(in crate::some::path)` | Everything under that module          |
+  | `pub`                       | Everyone, including other crates      |
 
 ## Chapter 8 - Common Collections
 
@@ -3075,6 +3104,26 @@
   } // <- v goes out of scope and is freed here
   ```
 
+- `&[T]` works like `&str` for any list of elements: functions take a slice
+  and can then accept a `Vec`, an array, or part of either. A `&Vec<T>` is
+  converted to `&[T]` automatically, and slice syntax works on vectors too.
+
+  ```rs
+  fn sum(list: &[i32]) -> i32 {
+      let mut total = 0;
+      for n in list {
+          total += n;
+      }
+      total
+  }
+
+  let v = vec![1, 2, 3, 4, 5];
+  let a = [10, 20, 30];
+  sum(&v);       // 15, &Vec<i32> becomes &[i32]
+  sum(&a);       // 60, arrays work too
+  sum(&v[1..3]); // 5, a slice of the Vec: [2, 3]
+  ```
+
 ### 8.2 - Storing UTF-8 Encoded Text with Strings
 
 - Strings are implemented as a collection of bytes, plus some methods to provide
@@ -3098,7 +3147,7 @@
   let s = String::from("initial contents");
   ```
 
-- You can append to a string with `push_str`. You can use the the `+` operator
+- You can append to a string with `push_str`. You can use the `+` operator
   and `format!` macro to also concatenate string values. `push` adds a single
   character to a string.
 
@@ -3269,8 +3318,8 @@
   let text = "hello world wonderful world";
   let mut map = HashMap::new();
   for word in text.split_whitespace() {
-      // while we hold a reference to `count`, the map is mutably borrowed so
-      // we can't use `map`, but `count` only exists until the for block ends
+      // `count` is a &mut i32 into the map; while it's in use the map is
+      // mutably borrowed, but the borrow ends after its last use (*count += 1)
       let count = map.entry(word).or_insert(0);
       *count += 1;
   }
@@ -3287,7 +3336,8 @@
       .or_insert(1);                        // runs only if it doesn't
 
   // You can also iterate over a HashMap, `key` and `value` are references.
-  // You could also do `for (&key, &value) in &counts` to not dereference them.
+  // Using `for (&key, &value) in &counts` matches and copies the values so you
+  // don't have to dereference them inside the loop body.
   for (key, value) in &counts {
       println!("{key}: {value}");
   }
@@ -3568,3 +3618,2434 @@
       }
       ```
 
+## Chapter 9 - Error Handling
+
+- Rust groups errors into two major categories: recoverable and unrecoverable
+  errors. For a *recoverable error*, such as "file not found", we just want
+  to report the error and allow the user to retry the operation. *Unrecoverable
+  errors* are always symptoms of bugs, like trying to access a location beyond
+  the end of an array, so we want to immediately stop the program. Rust doesn't
+  have exceptions, which are the single way many other languages try to deal
+  with both types of error. It has `Result<T, E>` for recoverable errors and
+  `panic!` for unrecoverable errors.
+
+### 9.1 - Unrecoverable Errors with `panic!`
+
+- You can cause a panic by taking an action that causes a panic or by calling
+  the `panic!` macro. By default, a panic prints a failure message, unwinds,
+  cleans up the stack, and quits. Via an environment variable, you can have Rust
+  display the call stack when a panic occurs.
+- Unwinding (walking back up the stack and cleaning up each function's data) is
+  a lot of work and makes the binary larger. You can instead abort immediately
+  and let the operating system reclaim the memory by adding `panic = 'abort'`
+  to the appropriate `[profile]` sections in your *Cargo.toml*.
+- You can get a backtrace in the event of a panic by setting `RUST_BACKTRACE=1`.
+  The key to reading the backtrace is to start from the top and read until you
+  see files you wrote. That's the spot where the problem originated. To get a
+  backtrace, debug symbols must be enabled. They are enabled by default when
+  building without the `--release` flag.
+
+### 9.2 - Recoverable Errors with `Result`
+
+- The `Result` enum has two variants: `Ok` and `Err`:
+
+  ```rs
+  enum Result<T, E> {
+      Ok(T),
+      Err(E),
+  }
+  ```
+
+- Consider the function `File::open` from `std::fs::File`. It returns a
+  `Result<T, E>` where the `T` is `std::fs::File` which is a file handle on
+  success and the `E` is a `std::io::Error`. We can `match` on these variants.
+- The `Result` enum and its variants are brought into scope by the prelude.
+
+  ```rs
+  use std::fs::File;
+  use std::io::ErrorKind;
+
+  fn main() {
+      let greeting_file_result = File::open("hello.txt");
+
+      let greeting_file = match greeting_file_result {
+          Ok(file) => file,
+          Err(error) => match error.kind() {
+              ErrorKind::NotFound => match File::create("hello.txt") {
+                  Ok(fc) => fc,
+                  Err(e) => panic!("Problem creating the file: {e:?}"),
+              },
+              _ => {
+                  panic!("Problem opening the file: {error:?}");
+              }
+          },
+      };
+  }
+  ```
+
+- `io::Error` is a struct provided by the standard library. It has a method
+  `kind` that we can call to get an `io::ErrorKind` value. The enum
+  `io::ErrorKind` is also provided by the standard library and has variants
+  for the different kinds of errors that might result from an `io` operation.
+  Here we are prepared to deal with `NotFound` by creating the file and willing
+  to crash for other errors.
+- `match` is very useful but also very primitive. `Result` has methods that
+  can be more convenient, often using closures which we'll introduce in Chapter
+  13. Here is the above rewritten:
+
+  ```rs
+  use std::fs::File;
+  use std::io::ErrorKind;
+
+  fn main() {
+      let greeting_file = File::open("hello.txt").unwrap_or_else(|error| {
+          if error.kind() == ErrorKind::NotFound {
+              File::create("hello.txt").unwrap_or_else(|error| {
+                  panic!("Problem creating the file: {error:?}");
+              })
+          } else {
+              panic!("Problem opening the file: {error:?}");
+          }
+      });
+  }
+  ```
+
+- If you don't have any error handling code and just want to panic, the `unwrap`
+  and `expect` methods are an easy way to get the value out of the `Result` and
+  panic if it's an error. Both return the value inside for an `Ok`, but panic
+  for an `Err`, but `expect` allows you to specify a panic message. Most
+  Rustaceans prefer `expect` to `unwrap` to give more context about why the
+  operation is expected to always succeed.
+
+  ```rs
+  use std::fs::File;
+
+  fn main() {
+      let greeting_file = File::open("hello.txt")
+          .expect("hello.txt should be included in this project");
+  }
+  ```
+
+- Instead of dealing with the `Err` immediately, we may choose to propagate the
+  error to calling code where there might be more context on how to deal with
+  the issue. This is a long way to propagate the error; we will see a short way
+  later:
+
+  ```rs
+  use std::fs::File;
+  use std::io::{self, Read};
+
+  fn read_username_from_file() -> Result<String, io::Error> {
+      let username_file_result = File::open("hello.txt");
+
+      let mut username_file = match username_file_result {
+          Ok(file) => file,
+          Err(e) => return Err(e),
+      };
+
+      let mut username = String::new();
+
+      match username_file.read_to_string(&mut username) {
+          Ok(_) => Ok(username),
+          Err(e) => Err(e),
+      }
+  }
+  ```
+
+- This code propagates the error. It returns an `io::Error`, because that is the
+  error type of both calls that could fail. On success it returns `Ok` wrapping
+  the username. Recall that `return` is unnecessary when you are returning the
+  final expression of a function. The calling code may decide to panic, use a
+  default username, or look up the username elsewhere, for example. We don't
+  know what the calling code is trying to do, so we propagate all the success
+  and error information upward for it to handle appropriately.
+- The pattern of propagating errors is so common in Rust that Rust provides the
+  question mark operator `?` to make this easier. Here is the last example
+  rewritten using it:
+
+  ```rs
+  use std::fs::File;
+  use std::io::{self, Read};
+
+  fn read_username_from_file() -> Result<String, io::Error> {
+      let mut username_file = File::open("hello.txt")?;
+      let mut username = String::new();
+      username_file.read_to_string(&mut username)?;
+      Ok(username)
+  }
+  ```
+
+- In the above code, if the value of the `Result` is `Ok`, the value inside the
+  `Ok` will be returned by the `?` expression, but if the value is an `Err`, the
+  `Err` will be returned from the whole function as if we had used the `return`
+  keyword. There is one difference between this and the longer example. Error
+  values that have `?` called on them go through the `from` function defined in
+  the `From` trait of the standard library, which converts values from one type
+  into another. The error type received is thus converted into the error type
+  defined in the return type of the current function. This is useful when a
+  function returns one error type to represent all the ways a function might
+  fail, even if parts might fail for many different reasons. For example we
+  could define `OurError` as the return type and also define
+  `impl From<io::Error> for OurError` to construct `OurError` from an
+  `io::Error`, and the `?` operator would convert error types.
+- We could make this example even shorter by chaining method calls:
+
+  ```rs
+  use std::fs::File;
+  use std::io::{self, Read};
+
+  fn read_username_from_file() -> Result<String, io::Error> {
+      let mut username = String::new();
+
+      File::open("hello.txt")?.read_to_string(&mut username)?;
+
+      Ok(username)
+  }
+  ```
+
+- And we could make that even shorter by using `fs::read_to_string`, but that
+  wouldn't have given a chance to explain `?`:
+
+  ```rs
+  use std::fs;
+  use std::io;
+
+  fn read_username_from_file() -> Result<String, io::Error> {
+      fs::read_to_string("hello.txt")
+  }
+  ```
+
+- The `?` operator can only be used in functions whose return type is compatible
+  with the value the `?` is used on, because it is defined to perform an early
+  return of a value out of the function.
+
+  ```rs
+  // DOES NOT COMPILE! error[E0277]: the `?` operator can only be used in a
+  //                                 function that returns `Result` or `Option`
+  use std::fs::File;
+
+  fn main() {
+      let greeting_file = File::open("hello.txt")?;
+  }
+  ```
+
+- You can make `main` return a `Result<(), E>`. If it returns an `Err`, the
+  program prints the error and exits with a failure code. Just remember to
+  return `Ok(())` at the end. A `Box<dyn Error>` allows `main` to return any
+  type of error. `main` may return any types that implement the
+  `std::process::Termination` trait which contains a function `report` that
+  returns an `ExitCode`. The standard library documentation has more on
+  implementing the `Termination` trait for your own types.
+- As you can see from the error, `?` can also be used with `Option<T>` values if
+  that is what your function returns.
+
+  ```rs
+  fn last_char_of_first_line(text: &str) -> Option<char> {
+      text.lines().next()?.chars().last()
+  }
+  ```
+
+- Note you can't mix and match between `Result` and `Option`. You can either use
+  `?` on `Result` values in a function that returns `Result`, or you can use `?`
+  on `Option` values in a function that returns `Option`. You can use `ok` to
+  convert a `Result` to an `Option` or `ok_or` to convert an `Option` to a
+  `Result` and then use `?` though.
+
+### 9.3 - To `panic!` or Not to `panic!`
+
+- When you choose to return a `Result`, you are giving the calling code options,
+  so `Result` is a good default choice for a function that might fail. In
+  examples, prototype code, and tests, it's more appropriate to panic. Often
+  examples are obfuscated by too much error handling, prototypes can have
+  `expect` and `unwrap` replaced by real error handling later, and panic is
+  an expedient way to mark a test as failed. `expect` is also appropriate in
+  code you know cannot fail and documenting the reason you think you will never
+  get an `Err` variant:
+
+  ```rs
+  use std::net::IpAddr;
+
+  let home: IpAddr = "127.0.0.1"
+      .parse()
+      .expect("Hardcoded IP address should be valid");
+  ```
+
+- If the above IP came from user input and did have the possibility of failure,
+  we would want to handle it robustly. But we can see that the hardcoded value
+  will parse, so we can unwrap the value.
+- Panic anytime your code could end up in a bad state. In this context, a *bad
+  state* is when some assumption, guarantee, contract, or invariant has been
+  broken, such as when invalid values, contradictory values, or missing values
+  are passed in to your code - plus one of the following:
+  - The bad state is something that is unexpected as opposed to something that
+    will likely happen occasionally, such as a user entering data in the wrong
+    format.
+  - Your code after this point needs to rely on not being in this bad state,
+    rather than checking for the problem at every step.
+  - There's not a good way to encode this information in the types you use.
+- If someone calls your code with values that don't make sense, it is best to
+  return an error and let the user decide what they want to do, but if
+  continuing could be insecure or harmful, the best choice might be to call
+  `panic!` and alert the user to the bug in their code so it can be fixed
+  immediately. Similarly, `panic!` can be appropriate if you're calling external
+  code that is out of your control and returns an invalid state that you have
+  no way of fixing. However, when failure is expected, return `Result` instead
+  of calling `panic!`.
+- Let's imagine for our chapter 2 guessing game, we wanted to implement a
+  `Guess` type that restricts guesses to values between 1 and 100 and otherwise
+  panics (which would be documented in our API docs). Imagine we have a
+  *src/lib.rs* that declares a `mod guessing_game` where we implement this
+  struct in *src/guessing_game.rs*. By being in a module, its `value` field
+  would be private and only set through the public `Guess::new` method and only
+  accessible through the public `value` method. You could pass this around
+  safely knowing you had a value between 1 and 100. Any of our functions relying
+  on this value can take or return a `Guess` without having to validate the
+  value is within range.
+
+  ```rs
+  // imaginary /src/guessing_game.rs
+  pub struct Guess {
+      value: i32,
+  }
+
+  impl Guess {
+      pub fn new(value: i32) -> Guess {
+          if value < 1 || value > 100 {
+              panic!("Guess value must be between 1 and 100, got {value}.");
+          }
+
+          Guess { value }
+      }
+
+      pub fn value(&self) -> i32 {
+          self.value
+      }
+  }
+  ```
+
+## Chapter 10 - Generic Types, Traits, and Lifetimes
+
+- *Generics* are abstract stand-ins for concrete types or other properties. We
+  can express the behavior of generics or how they relate to other generics
+  without knowing what will be in their place when compiling and running code.
+  Generics allow us to replace specific types with a placeholder that represents
+  multiple types to remove code duplication.
+- First let's talk about extracting a function to remove duplication. Here are
+  the steps:
+  1. Identify duplicate code.
+  2. Extract the duplicate code into the body of the function, and specify the
+     inputs and return values of that code in the function signature.
+  3. Update the instances of duplicated code to call the function instead.
+
+  ```rs
+  fn largest(list: &[i32]) -> &i32 {
+      let mut largest = &list[0];
+
+      for item in list {
+          if item > largest {
+              largest = item;
+          }
+      }
+
+      largest
+  }
+
+  fn main() {
+      let number_list = vec![34, 50, 25, 100, 65];
+
+      let result = largest(&number_list);
+      println!("The largest number is {result}");
+
+      let number_list = vec![102, 34, 6000, 89, 54, 2, 43, 8];
+
+      let result = largest(&number_list);
+      println!("The largest number is {result}");
+  }
+  ```
+
+- Just like a function body can operate on an abstract `list` instead of
+  specific values, generics allow code to operate on abstract types.
+
+### 10.1 - Generic Data Types
+
+- When defining a function that uses generics, we place the generics in the
+  signature of the function where we would usually specify the data types of the
+  parameters and return value.
+- Continuing our `largest` example, imagine you had a function to determine
+  the largest `i32` in a list and another to determine the largest `char`.
+
+  ```rs
+  fn largest_i32(list: &[i32]) -> &i32 {
+      let mut largest = &list[0];
+
+      for item in list {
+          if item > largest {
+              largest = item;
+          }
+      }
+
+      largest
+  }
+
+  fn largest_char(list: &[char]) -> &char {
+      let mut largest = &list[0];
+
+      for item in list {
+          if item > largest {
+              largest = item;
+          }
+      }
+
+      largest
+  }
+
+  fn main() {
+      let number_list = vec![34, 50, 25, 100, 65];
+
+      let result = largest_i32(&number_list);
+      println!("The largest number is {result}");
+
+      let char_list = vec!['y', 'm', 'a', 'q'];
+
+      let result = largest_char(&char_list);
+      println!("The largest char is {result}");
+  }
+  ```
+
+- The functions do the same thing but do it to different types. Introducing a
+  generic type parameter will allow us to eliminate the duplicate and use a
+  single function for both. To parameterize the types we need to name the type
+  parameter. You can use any identifier as a type parameter name but by
+  convention type parameter names are short, often just one letter, and
+  UpperCamelCase. We will simply use `T`, short for type. We have to declare
+  the type parameter in the signature before we use it and we do so within
+  angle brackets, `<>`, between the name of the function and the parameter list:
+  `fn largest<T>(list: &[T]) -> &T {`. We read this definition as "The function
+  `largest` is generic over some type `T`". This function has one parameter
+  named `list`, which is a slice of values of type `T`. The `largest` function
+  will return a reference to a value of the same type `T`. Using it would look
+  something like this:
+
+  ```rs
+  // DOES NOT COMPILE! error[E0369]: binary operation `>` cannot be applied to
+  //                                 the type `&T`
+  fn largest<T>(list: &[T]) -> &T {
+      let mut largest = &list[0];
+
+      for item in list {
+          if item > largest {
+              largest = item;
+          }
+      }
+
+      largest
+  }
+
+  fn main() {
+      let number_list = vec![34, 50, 25, 100, 65];
+
+      let result = largest(&number_list);
+      println!("The largest number is {result}");
+
+      let char_list = vec!['y', 'm', 'a', 'q'];
+
+      let result = largest(&char_list);
+      println!("The largest char is {result}");
+  }
+  ```
+
+- The issue is that when `largest` takes a slice `&[T]` as input, the function
+  cannot assume *anything* about the type `T`. It could be `i32` or `String`,
+  but it could also be `File`. Can you say one file is greater than another?
+  `largest` requires that `T` is something you can compare with `>` (i.e. that
+  `T` implements `PartialOrd`, a trait we are about to explain). Some types are
+  comparable and others are not. Rust requires you to state the expected
+  capabilities of generic types up front. If `T` needs to be comparable, then
+  `largest` must say so. Also, unlike Java where every object has a set of core
+  methods like `Object.toString()`, there are no core methods in Rust. Without
+  restrictions, a generic type `T` has no capabilities: it cannot be printed,
+  cloned, or mutated (although it can be dropped). We will come back to how to
+  fix this in the next section, but let's see other uses of generics.
+- We can define structs to use a generic type parameter in one or more fields
+  by using the `<>` syntax. A `Point<T>` can hold `x` and `y` coordinate values
+  of any type:
+
+  ```rs
+  struct Point<T> {
+      x: T,
+      y: T,
+  }
+
+  fn main() {
+      let integer = Point { x: 5, y: 10 };
+      let float = Point { x: 1.0, y: 4.0 };
+  }
+  ```
+
+- Like a function definition, the `<T>` comes just after the name of the struct,
+  then you use the generic type in the struct definition where we would
+  otherwise specify concrete data type. Because we used only one generic type
+  `T` to define `Point<T>`, this definition says that the struct is generic
+  over some type `T` and that the fields `x` and `y` are both the same type.
+  If you tried to make one `i32` and the other `f64`, you would get a compile
+  error: `error[E0308]: mismatched types`:
+
+  ```rs
+  // DOES NOT COMPILE! error[E0308]: mismatched types
+  struct Point<T> {
+      x: T,
+      y: T,
+  }
+
+  fn main() {
+      let wont_work = Point { x: 5, y: 4.0 };
+  }
+  ```
+
+- However, we could allow `x` and `y` to be different types by using multiple
+  generic type parameters:
+
+  ```rs
+  struct Point<T, U> {
+      x: T,
+      y: U,
+  }
+
+  fn main() {
+      let both_integer = Point { x: 5, y: 10 };
+      let both_float = Point { x: 1.0, y: 4.0 };
+      let integer_and_float = Point { x: 5, y: 4.0 };
+  }
+  ```
+
+- You can use as many generic type parameters in a definition as you want, but
+  more than a few makes your code hard to read. If you find you need many
+  generic types, your code may need restructuring into smaller pieces.
+- We have already seen several enums that use generics, so let's review the
+  definitions of `Option<T>` and `Result<T, E>`. Because `Option<T>` is generic,
+  we can use this abstraction no matter what the type of the optional value is:
+
+  ```rs
+  enum Option<T> {
+      Some(T),
+      None,
+  }
+
+
+  enum Result<T, E> {
+      Ok(T),
+      Err(E),
+  }
+  ```
+
+- When you recognize situations in your code with multiple struct or enum
+  definitions that differ only in the types of values they hold, you can
+  avoid duplication by using generic types instead.
+- You can also use generics in method definitions on structs and enums:
+
+  ```rs
+  struct Point<T> {
+      x: T,
+      y: T,
+  }
+
+  impl<T> Point<T> {
+      fn x(&self) -> &T {
+          &self.x
+      }
+  }
+
+  fn main() {
+      let p = Point { x: 5, y: 10 };
+
+      println!("p.x = {}", p.x());
+  }
+  ```
+
+- Note we specify `<T>` right after the `impl`. You could use a different letter
+  than the struct declaration, but it is conventional to use the same name. We
+  can also specify constraints on generic types when defining methods on the
+  type. For example, we could implement a method only on `Point<f32>`
+  instances:
+
+  ```rs
+  impl Point<f32> {
+      fn distance_from_origin(&self) -> f32 {
+          (self.x.powi(2) + self.y.powi(2)).sqrt()
+      }
+  }
+  ```
+
+- You cannot simultaneously implement specific and generic methods of the same
+  name this way. For example, if you had a generic `distance_from_origin` for
+  all types `T` and a specific `distance_from_origin` for `f32` the compiler
+  would reject your program. More generally, Rust does not have inheritance-like
+  mechanisms for specializing methods as you might find in an object-oriented
+  language, with the one exception of default trait methods discussed in the
+  next section.
+- Generic type parameters in a struct definition aren't always the same as those
+  you use in that same struct's method signatures. Consider the following with
+  `X1` and `Y1` in the struct definition and `X2` and `Y2` for the `mixup`
+  method signature. The method creates a new `Point` instance with the `x`
+  value from the `self` `Point` (of type `X1`) and the `y` value from the
+  passed-in `Point` (of type `Y2`).
+
+  ```rs
+  struct Point<X1, Y1> {
+      x: X1,
+      y: Y1,
+  }
+
+  impl<X1, Y1> Point<X1, Y1> {
+      fn mixup<X2, Y2>(self, other: Point<X2, Y2>) -> Point<X1, Y2> {
+          Point {
+              x: self.x,
+              y: other.y,
+          }
+      }
+  }
+
+  fn main() {
+      let p1 = Point { x: 5, y: 10.4 };
+      let p2 = Point { x: "Hello", y: 'c' };
+
+      let p3 = p1.mixup(p2);
+
+      println!("p3.x = {}, p3.y = {}", p3.x, p3.y);
+  }
+  ```
+
+- In the above code, `p3` will have an `x` value of type `i32` and a `y` value
+  of type `char`, so the output will be `p3.x = 5, p3.y = c`. In this example,
+  `X1` and `Y1` are declared after `impl` because they go with the struct
+  definition. `X2` and `Y2` are declared after `fn mixup` because they're only
+  relevant to the method.
+- Generic types will not make your code run slower than concrete types. Rust
+  accomplishes this through monomorphization of the code using generics at
+  compile time. *Monomorphization* is the process of turning generic code into
+  specific code by filling in the concrete types that are used when compiled.
+  An `Option<T>` in the source code becomes a concrete `Option<i32>` or
+  `Option<f64>` (or whatever) at compilation based on its types used, so there
+  is no performance penalty at runtime as if we had duplicated each definition
+  by hand.
+
+### 10.2 - Defining Shared Behavior with Traits
+
+- A *trait* defines the functionality a particular type has and can share with
+  other types. We can use traits to define shared behavior in an abstract way.
+  We can use *trait bounds* to specify that a generic type can be any type that
+  has certain behavior. Traits are similar to a feature often called interfaces
+  in other languages, although with some differences.
+
+#### Defining a Trait
+
+- A type's behavior consists of the methods we can call on that type. Different
+  types share the same behavior if we can call the same methods on all those
+  types. Trait definitions are a way to group method signatures together to
+  define a set of behaviors necessary to accomplish some purpose.
+- For example, let's say you have a `NewsArticle` struct that holds a news
+  story filed in a particular location and a `SocialPost` that can have at most
+  280 characters along with metadata. We want to make a media aggregator
+  library crate named `aggregator` that can display summaries of both. To do
+  this, we need a summary from each type, and we'll request the summary by
+  calling a `summarize` method on an instance. The `Summary` definition below
+  expresses this behavior:
+
+  ```rs
+  pub trait Summary {
+      fn summarize(&self) -> String;
+  }
+  ```
+
+- We declare a trait with the `trait` keyword and then the trait's name which is
+  `Summary` in this case. We also declared it `pub` so that crates depending on
+  this crate can make use of it. Inside the curly brackets, we declare the
+  method signatures that describe the behaviors of the types that implement this
+  trait, which in this case is `fn summarize(&self) -> String`. After the method
+  signature we use a semicolon instead of providing an implementation. Each type
+  implementing this trait must provide its own custom behavior for the body of
+  the method. The compiler will enforce that any type that has the `Summary`
+  trait will have the method `summarize` defined with this signature exactly.
+  A trait can have multiple methods in its body: The method signatures are
+  listed one per line, and each line ends in a semicolon.
+
+#### Implementing a Trait on a Type
+
+- Below are the implementations of `summarize` for our `NewsArticle` and
+  `SocialPost` structs:
+
+  ```rs
+  // imaginary aggregator/src/lib.rs
+  pub struct NewsArticle {
+      pub headline: String,
+      pub location: String,
+      pub author: String,
+      pub content: String,
+  }
+
+  impl Summary for NewsArticle {
+      fn summarize(&self) -> String {
+          format!("{}, by {} ({})", self.headline, self.author, self.location)
+      }
+  }
+
+  pub struct SocialPost {
+      pub username: String,
+      pub content: String,
+      pub reply: bool,
+      pub repost: bool,
+  }
+
+  impl Summary for SocialPost {
+      fn summarize(&self) -> String {
+          format!("{}: {}", self.username, self.content)
+      }
+  }
+  ```
+
+- Implementing a trait is similar to implementing regular methods. The
+  difference is that after `impl` we put the trait name we want to implement
+  then use the `for` keyword and specify the name of the type we want to
+  implement the trait for. Within the `impl` block, we put the method signatures
+  that the trait definition has defined. Instead of the semicolon after each
+  signature, we fill in the method body with the specific behavior that we want
+  the methods of the trait to have for the particular type.
+- Now that the traits are implemented, users of the crate can call the trait
+  methods on instances of `NewsArticle` and `SocialPost` like normal methods,
+  but first they must bring the trait into scope as well as the types.
+
+  ```rs
+  use aggregator::{SocialPost, Summary};
+
+  fn main() {
+      let post = SocialPost {
+          username: String::from("horse_ebooks"),
+          content: String::from(
+              "of course, as you probably already know, people",
+          ),
+          reply: false,
+          repost: false,
+      };
+
+      println!("1 new post: {}", post.summarize());
+  }
+  ```
+
+- Other crates that depend on `aggregator` can also bring the `Summary` trait
+  into scope to implement `Summary` on their own types. We can implement a
+  trait on a type only if either the trait or the type, or both, are local to
+  our crate. For example, we can implement standard library traits like
+  `Display` on a custom type like `SocialPost` in our `aggregator` crate because
+  `SocialPost` is local to our `aggregator` crate. We can also implement
+  `Summary` on `Vec<T>` in our `aggregator` crate because the trait `Summary`
+  is local to our `aggregator` crate. But we can't implement external traits on
+  external types. For example, we can't implement `Display` on `Vec<T>` because
+  both are defined in the standard library and not local to our `aggregator`
+  crate. This restriction is part of a property called *coherence* and more
+  specifically the *orphan rule*, so named because the parent type is not
+  present. This rule ensures that other people's code can't break your code and
+  vice versa. Without the rule, two crates could implement the same trait for
+  the same type and Rust wouldn't know which implementation to use.
+
+#### Using Default Implementations
+
+- Sometimes it is useful to have default behavior for some or all the methods
+  in a trait instead of requiring implementations for all methods on every
+  type. We can implement a default method body when declaring the trait, and
+  those implementing the trait can choose to keep or override the default
+  behavior:
+
+  ```rs
+  pub trait Summary {
+      fn summarize(&self) -> String {
+          String::from("(Read more...)")
+      }
+  }
+  ```
+
+- To use a default implementation for `NewsArticle`, we specify an empty `impl`
+  block with `impl Summary for NewsArticle {}`. The syntax for overriding the
+  default implementation is the same as the syntax for implementing a trait
+  without a default implementation, so we don't have to change `SocialPost`.
+  Default implementations can call other methods in the same trait, even if
+  those other methods don't have a default implementation.
+
+  ```rs
+  pub trait Summary {
+      fn summarize_author(&self) -> String;
+
+      fn summarize(&self) -> String {
+          format!("(Read more from {}...)", self.summarize_author())
+      }
+  }
+
+  impl Summary for SocialPost {
+      fn summarize_author(&self) -> String {
+          format!("@{}", self.username)
+      }
+  }
+  ```
+
+- We only have to implement `summarize_author` and we get the default
+  implementation of `summarize` for free. Note however you cannot call the
+  default implementation from an overriding implementation in the same method.
+
+#### Using Traits as Parameters
+
+- Now that we know how to define and implement traits, we can explore how to use
+  traits to define functions that accept many different types. We will continue
+  using the `Summary` trait as an example. Imagine we wanted a `notify` function
+  that takes a type that implements `Summary` and calls its `summarize`
+  function. We would specify this with the `impl Trait` syntax:
+
+  ```rs
+  pub fn notify(item: &impl Summary) {
+      println!("Breaking news! {}", item.summarize());
+  }
+  ```
+
+- This parameter will accept any type that implements the specified trait. In
+  the function body, we can use any methods on `item` that come from the
+  `Summary` trait such as `summarize`. We could call it with a `NewsArticle` or
+  `SocialPost`, but it would fail to compile if called with a `String` or `i32`
+  because those types don't implement `Summary`.
+- The `impl Trait` syntax is actually syntactic sugar for a longer form known
+  as a *trait bound*:
+
+  ```rs
+  pub fn notify<T: Summary>(item: &T) {
+      println!("Breaking news! {}", item.summarize());
+  }
+  ```
+
+- The longer form gives us more control. If we declared two parameters using
+  `impl Summary`, those two parameters could be different types. Where if we
+  declared them `<T: Summary>` then used `T` for both, they would be required to
+  be the same type.
+- In either syntax we can specify more than one trait bound using the `+`
+  syntax:
+
+  ```rs
+  pub fn notify(item: &(impl Summary + Display)) { /* ... */ }
+
+  pub fn notify<T: Summary + Display>(item: &T) { /* ... */ }
+  ```
+
+- With both traits specified, the caller can call `summarize` and use `{}` to
+  format `item`.
+- Functions with multiple generic type parameters can contain lots of trait
+  bound information, so Rust has alternate syntax for specifying trait bounds
+  inside a `where` clause after the function signature:
+
+  ```rs
+  // Instead of
+  fn some_function<T: Display + Clone, U: Clone + Debug>(t: &T, u: &U) -> i32 {
+      /* ... */
+  }
+  // We can say
+  fn some_function<T, U>(t: &T, u: &U) -> i32
+  where
+      T: Display + Clone,
+      U: Clone + Debug,
+  {
+      /* ... */
+  }
+  ```
+
+#### Returning Types That Implement Traits
+
+- We can use the `impl Trait` syntax in the return position to return a
+  value of some type that implements a trait without specifying the concrete
+  type:
+
+  ```rs
+  fn returns_summarizable() -> impl Summary {
+      SocialPost {
+          username: String::from("horse_ebooks"),
+          content: String::from(
+              "of course, as you probably already know, people",
+          ),
+          reply: false,
+          repost: false,
+      }
+  }
+  ```
+
+- The ability to specify a return type only by the trait it implements is
+  especially useful in the context of closures and iterators, which we cover in
+  Chapter 13. Closures and iterators create types that only the compiler knows
+  or types that are very long to specify, but the `impl Trait` syntax allows you
+  to specify that a function returns some type that implements the `Iterator`
+  trait without needing to write out a very long type. However, you can only
+  use `impl Trait` if you're returning a single type. Returning either a
+  `NewsArticle` or a `SocialPost` isn't allowed due to restrictions on how
+  `impl Trait` is implemented in the compiler.
+
+#### Using Trait Bounds to Conditionally Implement Methods
+
+- By using a trait bound with an `impl` block that uses generic type parameters,
+  we can implement methods conditionally for types that implement the specified
+  traits. In the following example, `Pair<T>` always implements the `new`
+  function to return a new instance of `Pair<T>`, but it only implements
+  `cmp_display` when its inner type `T` implements the `PartialOrd` trait that
+  enables comparison and the `Display` trait that enables printing:
+
+  ```rs
+  use std::fmt::Display;
+
+  struct Pair<T> {
+      x: T,
+      y: T,
+  }
+
+  impl<T> Pair<T> {
+      fn new(x: T, y: T) -> Self {
+          // Recall `Self` in an `impl` is a type alias for `Pair<T>` here:
+          Self { x, y }
+      }
+  }
+
+  impl<T: Display + PartialOrd> Pair<T> {
+      fn cmp_display(&self) {
+          if self.x >= self.y {
+              println!("The largest member is x = {}", self.x);
+          } else {
+              println!("The largest member is y = {}", self.y);
+          }
+      }
+  }
+  ```
+
+- We can also conditionally implement a trait for any type that implements
+  another trait. Implementations of a trait on any type that satisfies the
+  trait bounds are called *blanket implementations* and are used extensively
+  by the Rust standard library. For example, the standard library implements
+  the `ToString` trait on any type that implements the `Display` trait. The
+  `impl` block looks similar to:
+
+  ```rs
+  impl<T: Display> ToString for T {
+      // --snip--
+  }
+  ```
+
+- Because of this, we can call the `to_string` method defined in `ToString` on
+  any type that implements the `Display` trait. Because integers implement
+  `Display` we can convert them to `String` values as follows:
+
+  ```rs
+  let s = 3.to_string();
+  ```
+
+- Blanket implementations appear in the documentation for the trait in the
+  "Implementors" section.
+- Not covered in the book: implementing `Display` for your own type. It can't
+  be derived (the user-facing format is up to you), but it's short. `fmt`
+  writes into a `Formatter` with `write!` (like `format!`, but into `f`) and
+  returns `fmt::Result`. Thanks to the blanket implementation above,
+  `to_string()` comes for free:
+
+  ```rs
+  use std::fmt;
+
+  struct Rectangle {
+      width: u32,
+      height: u32,
+  }
+
+  impl fmt::Display for Rectangle {
+      fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+          write!(f, "{}x{} rectangle", self.width, self.height)
+      }
+  }
+
+  fn main() {
+      let rect = Rectangle { width: 30, height: 50 };
+      println!("{rect}");        // 30x50 rectangle
+      let s = rect.to_string();  // "30x50 rectangle", via ToString
+  }
+  ```
+
+- Traits and trait bounds let us write code that uses generic type parameters
+  to reduce duplication but also specify to the compiler that we want the
+  generic type to have particular behavior. The compiler can then use the
+  trait bound information to check that all the concrete types used with our
+  code provide the correct behavior. In dynamically typed languages, we would
+  get an error at runtime if we called a method on a type that didn't define
+  the method. But Rust moves these errors to compile time so that we're forced
+  to fix the problems before our code is even able to run. Additionally, we
+  don't have to write code that checks for behavior at runtime, because we've
+  already checked at compile time. Doing so improves performance without
+  having to give up the flexibility of generics.
+
+### 10.3 - Validating References with Lifetimes
+
+- Lifetimes are another kind of generic that we've already been using. They
+  ensure that references are valid as long as we need them to be. Every
+  reference in Rust has a lifetime, which is the scope for which that reference
+  is valid. Most of the time they are implicit and inferred, just like most of
+  the time types are inferred. Just like we are only required to annotate types
+  when multiple types are possible, we must annotate lifetimes when the
+  lifetimes of references could be related in a few different ways. Rust
+  requires us to annotate the relationships using generic lifetime parameters
+  to ensure that the actual references used at runtime will definitely be valid.
+
+#### Dangling References
+
+- The main aim of lifetimes is to prevent dangling references which, if they
+  were allowed to exist, would cause a program to reference data other than the
+  data it's intended to reference.
+
+  ```rs
+  // DOES NOT COMPILE! error[E0597]: `x` does not live long enough
+  fn main() {
+      let r;
+
+      {
+          let x = 5;
+          r = &x;
+      }
+
+      println!("r: {}", r);
+  }
+  ```
+
+- Because `r` has a larger scope than `x`, we say that it "lives longer". If
+  Rust allowed this code to work, `r` would be referencing memory that was
+  deallocated when `x` went out of scope.
+
+#### The Borrow Checker Ensures Data Outlives Its References
+
+- The Rust compiler has a *borrow checker* that compares scopes to determine
+  whether all borrows are valid. This is the same code with annotations showing
+  the lifetimes of the variables:
+
+  ```rs
+  // DOES NOT COMPILE! error[E0597]: `x` does not live long enough
+  fn main() {
+      let r;                // ---------+-- 'a
+                            //          |
+      {                     //          |
+          let x = 5;        // -+-- 'b  |
+          r = &x;           //  |       |
+      }                     // -+       |
+                            //          |
+      println!("r: {r}");   //          |
+  }                         // ---------+
+  ```
+
+- `'b` is shorter than `'a`: The subject of the reference doesn't live as long
+  as the reference. So the program is rejected. Here is a fixed version:
+
+  ```rs
+  fn main() {
+      let x = 5;            // ----------+-- 'b
+                            //           |
+      let r = &x;           // --+-- 'a  |
+                            //   |       |
+      println!("r: {r}");   //   |       |
+                            // --+       |
+  }                         // ----------+
+  ```
+
+- Here `x` still has lifetime `'b`, but `'b` is larger than `'a`.
+
+#### Generic Lifetimes in Functions
+
+- We'll write a function that returns the longer of two string slices. After it
+  is written, the output of the following program will be
+  `The longest string is abcd`.
+
+  ```rs
+  fn main() {
+      let string1 = String::from("abcd");
+      let string2 = "xyz";
+
+      let result = longest(string1.as_str(), string2);
+      println!("The longest string is {result}");
+  }
+  ```
+
+- We want `longest` to take string slices, which are references, rather than
+  strings, because we don't want the `longest` function to take ownership of its
+  parameters. The following will not compile:
+
+  ```rs
+  // DOES NOT COMPILE! error[E0106]: missing lifetime specifier
+  fn longest(x: &str, y: &str) -> &str {
+      if x.len() > y.len() { x } else { y }
+  }
+  ```
+
+- The error message tells us we need a generic lifetime parameter on the return
+  type because Rust can't tell whether the reference being returned refers to
+  `x` or `y`. But we actually don't know that either and also don't know the
+  lifetimes of concrete references that will be passed in. To fix this error,
+  we'll add generic lifetime parameters that define the relationship between
+  the references so that the borrow checker can perform analysis.
+
+#### Lifetime Annotation Syntax
+
+- Lifetime annotations don't change how long references live. They instead
+  describe the relationships of the lifetimes of multiple references to each
+  other without affecting lifetimes. Just like a function can accept any type
+  when the type signature specified a generic type parameter, functions can
+  accept references with any lifetime by specifying a generic lifetime
+  parameter.
+- Lifetime annotations start with an apostrophe `'` and are usually all
+  lowercase and very short, like generic types. Most people use `'a` for the
+  first lifetime annotation. We place lifetime annotations after the `&` of a
+  reference, using a space to separate the annotation from the reference's
+  type. Here are some examples:
+
+  ```rs
+  &i32        // a reference
+  &'a i32     // a reference with an explicit lifetime
+  &'a mut i32 // a mutable reference with an explicit lifetime
+  ```
+
+- One lifetime annotation by itself doesn't have much meaning, because the
+  annotations are meant to tell Rust how generic lifetime parameters of
+  multiple references relate to each other.
+
+#### In Function Signatures
+
+- To use lifetime annotations in function signatures, we need to declare the
+  generic lifetime parameters inside angle brackets between the function name
+  and the parameter list, just as we did with generic type parameters. We want
+  the signature to express the following constraint: The returned reference will
+  be valid as long as both parameters are valid:
+
+  ```rs
+  fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+      if x.len() > y.len() { x } else { y }
+  }
+  ```
+
+- Now the function signature tells Rust that for some lifetime `'a`, the
+  function takes two parameters, both of which are string slices that live at
+  least as long as lifetime `'a`. It also tells Rust that the string slice
+  returned from the function will live at least as long as lifetime `'a`. In
+  practice, this means the lifetime of the reference returned by the `longest`
+  function is the same as the smaller of the lifetimes of the values passed in
+  as arguments. Lifetime annotations go in the function signature, not in the
+  function body, and they become part of the contract of the function. The
+  generic lifetime `'a` will get the concrete lifetime that is equal to the
+  smaller of the lifetimes of `x` and `y`, and the returned reference will be
+  valid for the length of the smaller of the lifetimes of `x` and `y`.
+
+  ```rs
+  // This example works fine, since `result` doesn't outlive either parameter
+  fn main() {
+      let string1 = String::from("long string is long");
+
+      {
+          let string2 = String::from("xyz");
+          let result = longest(string1.as_str(), string2.as_str());
+          println!("The longest string is {result}");
+      }
+  }
+
+  // DOES NOT COMPILE! error[E0597]: `string2` does not live long enough
+  fn main() {
+      let string1 = String::from("long string is long");
+      let result;
+      {
+          let string2 = String::from("xyz");
+          result = longest(string1.as_str(), string2.as_str());
+      }
+      println!("The longest string is {result}");
+  }
+  ```
+
+#### Relationships
+
+- If `longest` always returned the first parameter, we would only need to
+  specify the lifetime of the first parameter and return type. When returning
+  a reference from a function, the lifetime parameter for the return type must
+  match the lifetime parameter for one of the parameters. If the reference does
+  not refer to one of the parameters, it must refer to a value created within
+  the function, but this would be a dangling reference because the value would
+  go out of scope at the end of the function. It doesn't work to specify a
+  lifetime parameter only for the return value when it relates to neither
+  parameter:
+
+  ```rs
+  // DOES NOT COMPILE! error[E0515]: cannot return value referencing local
+  //                                 variable `result`
+  fn longest<'a>(x: &str, y: &str) -> &'a str {
+      let result = String::from("really long string");
+      result.as_str()
+  }
+  ```
+
+- We're trying to return a reference to a local variable that is cleaned up at
+  the end of the function, and there is no way to specify lifetime parameters
+  to make this legal, so Rust won't allow it. In this case, the best fix would
+  be to return an owned data type rather than a reference.
+- Ultimately, lifetime syntax is about connecting the lifetimes of various
+  parameters and return values of functions. Once they're connected, Rust has
+  enough information to allow memory-safe operations and disallow operations
+  that would create dangling pointers or otherwise violate memory safety.
+
+#### In Struct Definitions
+
+- So far, the structs we've defined all hold owned types. We can define structs
+  to hold references, but in that case we would need to add a lifetime
+  annotation on every reference in the struct's definition:
+
+  ```rs
+  struct ImportantExcerpt<'a> {
+      part: &'a str,
+  }
+
+  fn main() {
+      let novel = String::from("Call me Ishmael. Some years ago...");
+      let first_sentence = novel.split('.').next().unwrap();
+      let i = ImportantExcerpt {
+          part: first_sentence,
+      };
+  }
+  ```
+
+- This struct has a single field `part` that holds a string slice which is a
+  reference. An instance of `ImportantExcerpt` cannot outlive the reference it
+  holds in its `part` field. Here `novel` exists before `i` and doesn't go out
+  of scope until after `i` does, so this is valid.
+
+#### Lifetime Elision
+
+- The *lifetime elision rules* are particular patterns that the compiler is
+  programmed to recognize, so you can leave out lifetime annotations. Lifetimes
+  on function or method parameters are called *input lifetimes*, and lifetimes
+  on return values are called *output lifetimes*. The compiler follows three
+  rules to figure out lifetimes of references when there aren't explicit
+  annotations. The first rule applies to input lifetimes, and the second and
+  third rules apply to output lifetimes. If the compiler gets to the end of the
+  three rules and there are still references for which it can't figure out
+  lifetimes, the compiler will stop with an error. These rules apply to `fn`
+  definitions as well as `impl` blocks.
+- The first rule is that the compiler assigns a different lifetime parameter to
+  each lifetime in each input type. For example:
+  - The function `fn foo(x: &i32)` would get one lifetime parameter and become
+    `fn foo<'a>(x: &'a i32)`.
+  - The function `fn foo(x: &i32, y: &i32)` would get two lifetime parameters
+    and become `fn foo<'a, 'b>(x: &'a i32, y: &'b i32)`.
+  - The function `fn foo(x: &ImportantExcerpt)` would get two lifetime
+    parameters and become `fn foo<'a, 'b>(x: &'a ImportantExcerpt<'b>)`.
+- The second rule is that if there is exactly one input lifetime parameter,
+  that lifetime is assigned to all output lifetime parameters:
+  `fn foo<'a>(x: &'a i32) -> &'a i32`.
+- The third rule is that if there are multiple input lifetime parameters but
+  one of them is `&self` or `&mut self` because this is a method, the lifetime
+  of `self` is assigned to all output lifetime parameters. The third rule makes
+  methods much nicer to read and write because fewer symbols are necessary.
+- Consider the `first_word` function from Chapter 4. It did not need annotations
+  because of these rules. The signature starts without any lifetimes:
+  `fn first_word(s: &str) -> &str {`. Then the compiler applies the first rule
+  which specifies that each parameter gets its own lifetime:
+  `fn first_word<'a>(s: &'a str) -> &str {`. The second rule applies because
+  there is exactly one input lifetime, so the lifetime of the input parameter is
+  assigned to the output parameter:
+  `fn first_word<'a>(s: &'a str) -> &'a str {`. Now all the references in the
+  signature have lifetimes so the compiler can continue analysis without needing
+  programmer annotations.
+- Now consider the `longest` function before we added lifetime parameters.
+  `fn longest(x: &str, y: &str) -> &str {`. The first rule is every input
+  parameter gets its own lifetime:
+  `fn longest<'a, 'b>(x: &'a str, y: &'b str) -> &str {`. The second rule does
+  not apply since there is more than one input lifetime. The third rule doesn't
+  apply because this is a function rather than a method so there is no `self`.
+  We have worked through all three rules without figuring out the return type's
+  lifetime, so we get a compiler error.
+
+#### In Method Definitions
+
+- The third rule means we don't need to annotate method signatures often. When
+  we implement methods on a struct with lifetimes, we use the same syntax as
+  that of generic type parameters. Where we declare and use the lifetime
+  parameters depends on whether they are related to the struct fields or the
+  method parameters and return values. Lifetime names for struct fields always
+  need to be declared after the `impl` keyword and then used after the struct's
+  name because those lifetimes are part of the struct's type. In method
+  signatures inside the `impl` block, references might be tied to the lifetime
+  of references in the struct's fields or they might be independent.
+- Consider this method `level` whose only parameter is a reference to `self`
+  and whose return value is an `i32` defined on `ImportantExcerpt` from the
+  earlier example:
+
+  ```rs
+  impl<'a> ImportantExcerpt<'a> {
+      fn level(&self) -> i32 {
+          3
+      }
+  }
+  ```
+
+- The lifetime parameter after `impl` and after the struct name are required,
+  but because of the first elision rule, we're not required to annotate the
+  lifetime of the reference to `self`.
+- Here is an example where the third lifetime elision rule applies:
+
+  ```rs
+  impl<'a> ImportantExcerpt<'a> {
+      fn announce_and_return_part(&self, announcement: &str) -> &str {
+          println!("Attention please: {announcement}");
+          self.part
+      }
+  }
+  ```
+
+- The first rule applies and gives both `&self` and `announcement` their own
+  lifetimes. Then because one of the parameters is `&self`, the return type
+  gets the lifetime of `&self` and all lifetimes have been accounted for.
+
+#### The Static Lifetime
+
+- `'static` is a special lifetime that denotes the affected reference *can*
+  live for the entire duration of the program. All string literals have the
+  `'static` lifetime. Here is an annotated string:
+
+  ```rs
+  let s: &'static str = "I have a static lifetime.";
+  ```
+
+- The text of this string is stored directly in the program's binary, which is
+  always available. Therefore, the lifetime of all string literals is `'static`.
+  An error message might suggest using `'static` but it is seldom the answer.
+
+#### Generic Type Parameters, Trait Bounds, and Lifetimes
+
+- Here is an example that combines specifying generic type parameters, trait
+  bounds, and lifetimes all in one function:
+
+  ```rs
+  use std::fmt::Display;
+
+  fn longest_with_an_announcement<'a, T>(
+      x: &'a str,
+      y: &'a str,
+      ann: T,
+  ) -> &'a str
+  where
+      T: Display,
+  {
+      println!("Announcement! {ann}");
+      if x.len() > y.len() { x } else { y }
+  }
+  ```
+
+- This is the `longest` function from earlier, but it also takes an `ann`
+  parameter of any type that implements the `Display` trait. Because lifetimes
+  are a type of generic, both `'a` and `T` go in the angle brackets after the
+  function name.
+
+## Chapter 11 - Writing Automated Tests
+
+- Tests are Rust functions that verify that the non-test code is functioning in
+  the expected manner. The bodies of test functions typically perform these
+  three actions:
+  - Set up any needed data or state.
+  - Run the code you want to test.
+  - Assert that the results are what you expect.
+
+### 11.1 - How to Write Tests
+
+- At its simplest, a test in Rust is a function that's annotated with the `test`
+  attribute. Attributes are metadata about pieces of Rust code; one example is
+  the `derive` attribute we used with structs in Chapter 5. To change a function
+  into a test function, add `#[test]` on the line before `fn`. When you run your
+  tests with `cargo test`, Rust builds a test runner binary that runs the
+  annotated function and reports on whether each test function passes or fails.
+- When you make a new library project with Cargo
+  (`cargo new library-name --lib`), a test module with a test function in it is
+  automatically generated.
+- `cargo test` outputs a line per test, but `cargo test -q` outputs a `.` per
+  test unless there's a failure.
+- One way to fail a test is to call `panic!`. Another is to give the `assert!`
+  macro an argument that evaluates `false`. You could also compare two unequal
+  values with `assert_eq!` or two equal values with `assert_ne!`.
+- Here's a basic library with a couple of tests for some code we've seen:
+
+  ```rs
+  // ch11_adder/src/lib.rs
+  #[derive(Debug)]
+  struct Rectangle {
+      width: u32,
+      height: u32,
+  }
+
+  impl Rectangle {
+      fn can_hold(&self, other: &Rectangle) -> bool {
+          self.width > other.width && self.height > other.height
+      }
+  }
+
+  pub fn add_two(a: u64) -> u64 {
+      a + 2
+  }
+
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn larger_can_hold_smaller() {
+          let larger = Rectangle {
+              width: 8,
+              height: 7,
+          };
+          let smaller = Rectangle {
+              width: 5,
+              height: 1,
+          };
+
+          assert!(larger.can_hold(&smaller));
+      }
+
+      #[test]
+      fn smaller_cannot_hold_larger() {
+          let larger = Rectangle {
+              width: 8,
+              height: 7,
+          };
+          let smaller = Rectangle {
+              width: 5,
+              height: 1,
+          };
+
+          assert!(!smaller.can_hold(&larger));
+      }
+
+      #[test]
+      fn it_adds_two() {
+          let result = add_two(2);
+          assert_eq!(result, 4);
+      }
+  }
+  ```
+
+- The tests are in their own `tests` module but they can see everything in their
+  parent module. They `use super::*` so they can directly call anything in their
+  parent. These tests pass.
+- The `assert_eq!` macro calls its arguments `left` and `right` and doesn't care
+  which is the expected vs actual value. When `assert_eq!` or `assert_ne!` fail,
+  they print their arguments using debug formatting. Also, they do their
+  comparison with `==` and `!=` so the values being compared need to implement
+  the `Debug` and `PartialEq` traits. Both traits are derivable, so usually you
+  only need to add `#[derive(PartialEq, Debug)]` annotation to your struct or
+  enum definition. Any arguments after the value (for `assert!`) or two values
+  (for `_eq!` and `_ne!`) being tested are passed to the `format!` macro for
+  display. You can pass a format string that contains `{}` placeholders and
+  values to go in those placeholders. Custom messages are useful for documenting
+  what an assertion means; when a test fails, you'll have a better idea of what
+  the problem is with the code.
+
+  ```rs
+  pub fn greeting(name: &str) -> String {
+      format!("Hello {name}!")
+  }
+
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn greeting_contains_name() {
+          let result = greeting("Carol");
+          assert!(
+              result.contains("Carol"),
+              "Greeting did not contain name, value was `{result}`"
+          );
+      }
+  }
+  ```
+
+- Now when `greeting_contains_name` fails, we get an informational message that
+  includes the result without using `assert_eq!` to test exact equality.
+  You can refer to any variables in scope, and you can also provide format
+  strings for `assert_eq!` and `assert_ne!`.
+- The `#[track_caller]` attribute works like Go's `t.Helper()` for test
+  helper functions: a failing assertion inside the helper is reported at the
+  line in the test that called it, not inside the helper.
+
+  ```rs
+  #[track_caller]
+  fn assert_even(n: i32) {
+      assert!(n % 2 == 0, "{n} is not even");
+  }
+
+  #[test]
+  fn three_is_even() {
+      assert_even(3); // the failure points at this line
+  }
+  ```
+
+- Recall our `Guess` struct that takes a guess between 1 and 100 and panics
+  otherwise. This is our contract, and it would be good to test. We can test it
+  with `should_panic`. We place `#[should_panic]` after the `#[test]` attribute
+  and before the test function it applies to.
+
+  ```rs
+  pub struct Guess {
+      value: i32,
+  }
+
+  impl Guess {
+      pub fn new(value: i32) -> Guess {
+          if value < 1 || value > 100 {
+              panic!("Guess value must be between 1 and 100, got {value}.");
+          }
+
+          Guess { value }
+      }
+  }
+
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      #[should_panic]
+      fn greater_than_100() {
+          Guess::new(200);
+      }
+  }
+  ```
+
+- Tests relying on `#[should_panic]` can be imprecise and pass even when they
+  panic for an unexpected reason. `should_panic` takes an `expected` argument
+  that will check the panic message for an expected substring. It can further
+  check your expectations, but couples you to a specific `panic` message.
+
+  ```rs
+  #[test]
+  #[should_panic(expected = "between 1 and 100")]
+  fn greater_than_100() {
+      Guess::new(200);
+  }
+  ```
+
+- Instead of panicking, tests can optionally return a `Result<(), String>`. This
+  enables you to use the question mark operator in the body of tests, which can
+  be a convenient way to write tests that should fail if any operation within
+  them returns an `Err` variant. You cannot use `#[should_panic]` with a test
+  that returns a `Result`. To check that an operation returns an `Err` variant,
+  you should use `assert!(value.is_err())`.
+
+  ```rs
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn it_works() -> Result<(), String> {
+          let result = add_two(2);
+
+          if result == 4 {
+              Ok(())
+          } else {
+              Err(String::from("two plus two does not equal four"))
+          }
+      }
+  }
+  ```
+
+- Here is an example of a test calling `Result` returning functions and passing
+  the `Err` upwards:
+
+  ```rs
+  // without Result: unwrap on every fallible step
+  #[test]
+  fn loads_config() {
+      let text = fs::read_to_string("tests/data/config.toml").unwrap();
+      let config = Config::parse(&text).unwrap();
+      assert_eq!(config.port, 8080);
+  }
+
+  // with Result: ? passes any failure up, which fails the test
+  #[test]
+  fn loads_config() -> Result<(), Box<dyn Error>> {
+      let text = fs::read_to_string("tests/data/config.toml")?;
+      let config = Config::parse(&text)?;
+      assert_eq!(config.port, 8080);
+      Ok(())
+  }
+  ```
+
+- This has two benefits:
+  - Setup reads like normal code. Integration tests often read files, parse
+    input or connect to things, and `?` keeps that setup short.
+  - Failures show the error itself. A failing test prints the returned error
+    (for example, the parse error), while an `unwrap()` panic shows mostly the
+    panic location.
+
+### 11.2 - Controlling How Tests Are Run
+
+- The default behavior of `cargo test` is to run all your tests in parallel and
+  capture output generated during test runs to make it easier to read test
+  output. All tests in a test binary are run by default and all test failures
+  are reported at the end. `cargo test -- --fail-fast` stops starting new tests
+  after the first failure. Some arguments go to `cargo test` and some go to the
+  resultant test binary. You separate options to each by `--`.
+  `cargo test --help` displays the options you can use with `cargo test`, and
+  `cargo test -- --help` displays the options you can use after the separator.
+  Options are documented in the Tests section of the rustc book:
+  <https://doc.rust-lang.org/rustc/tests/index.html>.
+- If you don't want to run the tests in parallel, you run:
+  `cargo test -- --test-threads=1`. It is slower, but the tests won't interfere
+  with one another if they share state.
+- Rust captures output of tests and only shows it on test failure. So if the
+  test passes, you only see the success message and no `println!` output, but if
+  it fails you see both the failure message and captured output. If you want
+  to see printed output for passing tests run: `cargo test -- --show-output`.
+- Running `cargo test` will run all tests. Passing a string after `cargo test`,
+  like `cargo test greeting` will run all tests that contain the substring
+  "greeting" in their function name or module name. Specifying
+  `cargo test module_name` is a good way to run all the tests in a module.
+- Not in the book: Cargo can also select tests by *target*, which is better for
+  running fast unit tests on every change and slower integration tests before
+  committing:
+
+  | Command                 | Runs                                          |
+  | ----------------------- | --------------------------------------------- |
+  | `cargo test --lib`      | Unit tests in the library (*src/lib.rs* tree) |
+  | `cargo test --bins`     | Unit tests in *src/main.rs* and *src/bin*     |
+  | `cargo test --test api` | Only the integration test file *tests/api.rs* |
+  | `cargo test --test '*'` | All integration tests                         |
+  | `cargo test --doc`      | Only doc tests                                |
+  | `cargo test`            | Everything                                    |
+
+  Targets and name filters combine: `cargo test --lib parser::` runs just the
+  parser module's unit tests. For a TDD loop, `bacon test -- --lib`. Avoid
+  `--tests` (plural) for this: it runs unit and integration tests together.
+- The `#[ignore]` attribute marks a test to not be run unless you call either
+  `cargo test -- --ignored` to run only the ignored tests or
+  `cargo test -- --include-ignored` to run the normal test suite along with the
+  ignored tests.
+
+### 11.3 - Test Organization
+
+- *Unit tests* are small, focused tests that test one module in isolation at a
+  time and can test private interfaces. *Integration tests* are entirely
+  external to your library and use your code in the same way any other external
+  code would, using only the public interface and potentially exercising
+  multiple modules per test. Both types of test are important to ensure the
+  pieces of your library do what you expect them to, separately and together.
+- You put unit tests in the *src* directory in each file with the code that
+  they're testing. The convention is to create a module named `tests` in each
+  file to contain the test functions and to annotate the module with
+  `#[cfg(test)]`. Because of the annotation, unit tests are not compiled unless
+  you run `cargo test`. Integration tests don't need this annotation because
+  they are in a different directory. The annotation applies to all code in the
+  `tests` module, including test helpers. If you make a separate test helper
+  module, annotate it `#[cfg(test)]` as well (see Testing Larger Projects
+  below).
+- Rust's test conventions allow you to test private functions. It is up to you
+  if that is a good idea.
+- In Rust, integration tests are entirely external to your library, and they use
+  your library through the public API, like any other code would. You put
+  integration tests in the *tests* directory. Each file in the *tests* directory
+  is a separate crate, so we need to bring our library into each test crate's
+  scope with `use`. Cargo automatically only compiles code in the *tests*
+  directory when you run `cargo test`, so `#[cfg(test)]` is unnecessary.
+- In the test output, unit tests then integration tests and finally doc tests
+  are reported on separately. If any test in a section fails, the following
+  sections will not be run (`cargo test --no-fail-fast` runs them anyway). Each
+  integration test has its own section, so if you add more files to the *tests*
+  directory, there will be more integration test sections. To only run the tests
+  in one particular integration test, you can run
+  `cargo test --test integration_test` for a test named `integration_test`.
+
+  ```rs
+  // ch11_adder/tests/integration_test.rs
+  use adder::add_two;
+
+  #[test]
+  fn it_adds_two() {
+      let result = add_two(2);
+      assert_eq!(result, 4);
+  }
+  ```
+
+- It is likely you will need a place for shared integration test code such as
+  a shared `setup` function. If you place test helpers in *tests/common/mod.rs*,
+  it will not show up as a separate integration test. The name tells Rust to not
+  treat it as an integration test file. Here is our same integration test using
+  a shared helper:
+
+  ```rs
+  // ch11_adder/tests/common/mod.rs
+  pub fn setup() {
+      // setup code specific to your library's tests would go here
+  }
+
+  // ch11_adder/tests/integration_test.rs
+  use adder::add_two;
+
+  mod common;
+
+  #[test]
+  fn it_adds_two() {
+      common::setup();
+
+      let result = add_two(2);
+      assert_eq!(result, 4);
+  }
+  ```
+
+- Only library crates expose functions that other crates can `use`; binary
+  crates are meant to be run on their own. So integration tests have no way to
+  bring functions defined in `src/main.rs` into scope. This is why we keep the
+  code in our `src/main.rs` straightforward and call logic that lives in
+  *src/lib.rs*. Using that structure, integration tests can test the library
+  crate with `use`. If the important functionality works, the small amount of
+  code in the *src/main.rs* file will work as well.
+- Testing larger projects (not in the book): each module gets its own
+  `#[cfg(test)] mod tests` child, because a test module only sees the private
+  items of its own parent; `crate::tests` can't see inside sibling modules like
+  `crate::parser`. To keep tests out of the source file (like Go's
+  *parser_test.go* beside *parser.go*), end the module with
+  `#[cfg(test)] mod tests;` and put the tests in *src/parser/tests.rs*; it is
+  still a child module with private access.
+- `pub(crate)` makes an item visible anywhere in the crate but not to other
+  crates. Use it for code shared between modules, and for shared unit-test
+  helpers: `#[cfg(test)] pub(crate) mod test_utils;` (no standard name;
+  `test_utils` is the most common). Integration tests can't see `test_utils`,
+  since they are separate crates; they share helpers through
+  *tests/common/mod.rs* instead.
+- Besides one integration test binary per `tests/*.rs` file, Cargo also builds
+  `tests/<name>/main.rs` as a single binary that can pull in sibling files as
+  modules. Linking fewer binaries is faster, so big projects often group their
+  integration tests this way, named after what they test (or *tests/it/* for
+  one all-in-one binary). Other subdirectories are only modules. Each
+  workspace member has its own *tests/*.
+
+  ```text
+  src/
+  |-- lib.rs            // #[cfg(test)] pub(crate) mod test_utils;
+  |-- test_utils.rs     // shared unit-test helpers
+  |-- parser.rs         // ends with: #[cfg(test)] mod tests;
+  |-- parser/
+  |   `-- tests.rs      // crate::parser::tests (sees parser's private items)
+  |-- lexer.rs          // ends with: #[cfg(test)] mod tests;
+  `-- lexer/
+      `-- tests.rs      // crate::lexer::tests
+  tests/
+  |-- api.rs            // one integration test binary
+  |-- common/
+  |   `-- mod.rs        // shared integration helpers, not a test binary
+  `-- parser/
+      |-- main.rs       // one binary for all parser integration tests
+      `-- errors.rs     // pulled in with `mod errors;`
+  ```
+
+- Even though Rust's type system and ownership rules help prevent some kinds of
+  bugs, tests are still important to reduce logic bugs having to do with how
+  your code is expected to behave.
+
+#### Beyond the Book
+
+- Naming tests: test names are function names, so no spaces, but nested
+  modules give RSpec-style `describe`/`context`/`it` names joined by `::`. Each
+  module needs its own `use super::*;`.
+
+  ```rs
+  #[cfg(test)]
+  mod mode {                          // describe "mode"
+      use super::*;
+
+      mod when_the_list_is_empty {    // context "when the list is empty"
+          use super::*;
+
+          #[test]
+          fn returns_none() {         // it "returns none"
+              assert_eq!(mode(&[]), None);
+          }
+      }
+  }
+  // cargo test prints: mode::when_the_list_is_empty::returns_none
+  ```
+
+- [rstest](https://docs.rs/rstest/latest/rstest/) - pytest-style fixtures and
+  parametrized tests. `#[case(...)]` runs one test per row (like Go's
+  table-driven tests or Spock's `where:` blocks), `#[values(...)]` runs every
+  combination, and `#[fixture]` functions inject shared setup. The docs have
+  good examples of all three.
+
+  ```rs
+  use rstest::rstest;
+
+  #[rstest]
+  #[case::rectangle(Shape::Rectangle { width: 12.0, height: 6.0 }, 72.0)]
+  #[case::triangle(Shape::Triangle { base: 12.0, height: 6.0 }, 36.0)]
+  fn area(#[case] shape: Shape, #[case] want: f64) {
+      // floats: compare within a tolerance, not with assert_eq!
+      let got = shape.area();
+      assert!((got - want).abs() < 1e-9, "got {got}, want {want}");
+  }
+  // names: area::case_1_rectangle, area::case_2_triangle
+
+  #[rstest]
+  fn scaling_keeps_area_positive(
+      #[values(1.0, 2.5, 10.0)] width: f64,
+      #[values(1.0, 0.5)] scale: f64,   // 3 x 2 = 6 tests
+  ) {
+      let rect = Shape::Rectangle { width: width * scale, height: 4.0 };
+      assert!(rect.area() > 0.0);
+  }
+  ```
+
+- [test-case](https://docs.rs/test-case/) - like `#[case]`, but each case gets
+  a plain-English description that becomes the test name. `=>` gives the
+  expected return value (an implicit `assert_eq!`).
+
+  ```rs
+  use test_case::test_case;
+
+  #[test_case(&[] => None ; "returns none for an empty list")]
+  #[test_case(&[3, 1, 2] => Some(2.0) ; "returns the middle of an odd list")]
+  fn median_works(v: &[i32]) -> Option<f64> {
+      median(v)
+  }
+  ```
+
+- [pretty_assertions](https://docs.rs/pretty_assertions/) - drop-in
+  `assert_eq!` with colored diffs; add `use pretty_assertions::assert_eq;` to
+  the test module.
+- [approx](https://docs.rs/approx/) - `assert_relative_eq!` and
+  `assert_abs_diff_eq!` for float comparisons.
+- [proptest](https://docs.rs/proptest/) - property-based testing, the Rust
+  take on QuickCheck/Hypothesis.
+- Benchmarks: Rust's built-in `#[bench]` has been unstable for years and only
+  works on the nightly compiler. On stable Rust, use the `criterion` crate
+  (the long-standing standard, modeled on Haskell's criterion) or `divan`
+  (newer and simpler). Go's built-in `testing.B` is more convenient here.
+
+## Chapter 12 - An I/O Project: Building a Command Line Program
+
+- Project time! We are going to build `grep` (globally search a regular
+  expression and print). In the simplest case `grep` searches a specified file
+  for a specified string. To do so, `grep` takes as its arguments a file path
+  and a string. Then, it reads the file, finds lines in that file that contain
+  the string argument, and prints those lines.
+
+### 12.1 - Accepting Command Line Arguments
+
+- Our first task after creating the new project is to make `minigrep` accept
+  its two command line arguments: the file path and a string to search for.
+  We will pass these arguments by calling `cargo run` with `--`:
+  `cargo run -- searchstring example-filename.txt`. There are many good
+  command-line argument parsing libraries, but we are going to do it ourselves.
+- To enable `minigrep` to read the values of command line arguments we pass it,
+  we will use the `std::env::args` function provided by Rust's standard library.
+  It returns an iterator of the command line arguments passed to `minigrep`.
+  Iterators will be covered in Chapter 13, but it is enough to know that
+  iterators produce a series of values, and we can call the `collect` method on
+  an iterator to turn it into a collection, such as a vector, which contains all
+  the elements the iterator produces.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  use std::env;
+
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+      dbg!(args);
+  }
+  ```
+
+- `collect` can return many varieties of collection. Although you don't have to
+  annotate types in Rust often, `collect` is one function you do often need to
+  annotate because Rust isn't able to infer the kind of collection you want.
+
+  ```text
+  $ cargo run
+      Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.00s
+       Running `/Users/llcawthorne/git/book-notes/rust/the-rust-programming-language/target/debug/minigrep`
+  [ch12_minigrep/src/main.rs:5:5] args = [
+      "/Users/llcawthorne/git/book-notes/rust/the-rust-programming-language/target/debug/minigrep",
+  ]
+
+  $ cargo run needle haystack
+      Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.00s
+       Running `/Users/llcawthorne/git/book-notes/rust/the-rust-programming-language/target/debug/minigrep needle haystack`
+  [ch12_minigrep/src/main.rs:5:5] args = [
+      "/Users/llcawthorne/git/book-notes/rust/the-rust-programming-language/target/debug/minigrep",
+      "needle",
+      "haystack",
+  ]
+  ```
+
+- So let's pull out the first two args where we can use them:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  use std::env;
+
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let query = &args[1];
+      let file_path = &args[2];
+
+      println!("Searching for {query}");
+      println!("In file {file_path}");
+  }
+  ```
+
+- We know array indexing starts at 0, but `args[0]` is the filename of the
+  program we're running.
+
+### 12.2 - Reading a File
+
+- Next we actually need to read a file, so we'll create a `poem.txt` in the
+  root of our project.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  use std::env;
+  use std::fs;
+
+  fn main() {
+      // --snip--
+      println!("In file {file_path}");
+
+      let contents = fs::read_to_string(file_path)
+          .expect("Should have been able to read the file");
+
+      println!("With text:\n{contents}");
+  }
+  ```
+
+- Now if we `cargo run -- the poem.txt`, we get the contents of our text file.
+
+### 12.3 - Refactoring to Improve Modularity and Error Handling
+
+- To improve our program, we'll fix four problems that have to do with the
+  program's structure and how it's handling potential errors. First, our `main`
+  function now performs two tasks: it parses arguments and reads files. As our
+  program grows, the number of separate tasks the `main` function handles will
+  increase. As the function gains responsibilities, it becomes more difficult to
+  reason about, harder to test, and harder to change without breaking one of its
+  parts. It's best to separate functionality so that each function is
+  responsible for one task.
+- This issue also ties into the second problem: Although `query` and `file_path`
+  are configuration variables to our program, variables like `contents` are
+  used to perform the program's logic. The longer `main` becomes, the more
+  variables we'll need to bring into scope; the more variables we have in scope,
+  the harder it will be to keep track of the purpose of each. It's best to group
+  the configuration variables into one structure to make their purpose clear.
+- The third problem is that we've used `expect` to print an error message when
+  reading the file fails, but the error message just prints
+  `Should have been able to read the file.` Reading a file can fail in a
+  number of ways: For example, the file could be missing, or we might not have
+  permission to open it. Right now, regardless of the situation, we'd print the
+  same error message for everything, which wouldn't give the user any
+  information.
+- Fourth, we use `expect` to handle an error, and if the user runs our program
+  without specifying enough arguments, they'll get an `index out of bounds`
+  error from Rust that doesn't clearly explain the problem. It would be best if
+  all the error-handling code were in one place so that future maintainers had
+  only one place to consult the code if the error-handling logic needed to
+  change. Having all the error-handling code in one place will also ensure that
+  we're printing messages that will be meaningful to our end users.
+- The organization problem of allocating responsibility for multiple tasks to
+  the `main` function is common to many binary projects. As a result, many Rust
+  programmers find it useful to split up the separate concerns of a binary
+  program when the `main` function starts getting large. This process has
+  the following steps:
+  - Split your program into a *main.rs* file and a *lib.rs* file and move your
+    program's logic to *lib.rs*.
+  - As long as your command line parsing logic is small, it can remain in the
+    `main` function.
+  - When the command line parsing logic starts getting complicated, extract it
+    from the `main` function into other functions or types.
+- The responsibilities that remain in the `main` function after refactoring
+  should be limited to the following:
+  - Calling the command line parsing logic with the argument values
+  - Setting up any other configuration
+  - Calling a `run` function (the book says in *lib.rs*, but in the current
+    version `run` stays in *main.rs* and only `search` moves to *lib.rs*)
+  - Handling the error if `run` returns an error
+- This pattern is about separating concerns: *main.rs* handles running the
+  program and *lib.rs* handles all the logic of the task at hand. Because you
+  cannot test `main` function directly, this structure lets you test all of
+  your program's logic by moving it out of the `main` function. The code that
+  remains in the `main` function will be small enough to verify by inspection.
+- First we need a `parse_config` function to handle arguments:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let (query, file_path) = parse_config(&args);
+
+      // --snip--
+  }
+
+  fn parse_config(args: &[String]) -> (&str, &str) {
+      let query = &args[1];
+      let file_path = &args[2];
+
+      (query, file_path)
+  }
+  ```
+
+- At the moment, we're returning a tuple, but then we immediately break that
+  tuple down into individual parts again. This is a sign that perhaps we don't
+  have the right abstraction yet. We'll instead put the two values in one struct
+  and give each of the struct fields a meaningful name.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  use std::env;
+  use std::fs;
+
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let config = parse_config(&args);
+
+      println!("Searching for {}", config.query);
+      println!("In file {}", config.file_path);
+
+      let contents = fs::read_to_string(config.file_path)
+          .expect("Should have been able to read the file");
+
+      println!("With text:\n{contents}");
+  }
+
+  struct Config {
+      query: String,
+      file_path: String,
+  }
+
+  fn parse_config(args: &[String]) -> Config {
+      let query = args[1].clone();
+      let file_path = args[2].clone();
+
+      Config { query, file_path }
+  }
+  ```
+
+- Now we bundle our configuration parameters in a `Config` struct. We transfer
+  ownership of our new struct when we return. We also clone our two `arg` values
+  so our struct can contain owned `String` values. It would've been a violation
+  of the borrowing rules if `Config` tried to take ownership of the values in
+  `args` directly. Cloning isn't the most efficient solution, but it makes our
+  code very straightforward because we don't have to manage the lifetimes of
+  references.
+- The primary point of `parse_config` is to create a struct now, so it's a
+  constructor. We can make our code more idiomatic by naming it `new` and
+  associating it with the `Config` struct.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let config = Config::new(&args);
+
+      // --snip--
+  }
+
+  // --snip--
+
+  impl Config {
+      fn new(args: &[String]) -> Config {
+          let query = args[1].clone();
+          let file_path = args[2].clone();
+
+          Config { query, file_path }
+      }
+  }
+  ```
+
+- We don't have tests yet, but we're refactoring in small steps while keeping
+  working code and running it between changes. Next up is fixing the panic when
+  not enough arguments are provided. How about we `panic!` with a better
+  message:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  // --snip--
+      fn new(args: &[String]) -> Config {
+          if args.len() < 3 {
+              panic!("not enough arguments");
+          }
+          // --snip--
+  ```
+
+- Now the error message is better, but it's still a panic with line numbers of
+  our code included. Let's try using `Result`. We're also going to change the
+  name of our constructor from `new` to `build`, because many programmers
+  expect `new` functions to never fail.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  use std::env;
+  use std::fs;
+  use std::process;
+
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let config = Config::build(&args).unwrap_or_else(|err| {
+          println!("Problem parsing arguments: {err}");
+          process::exit(1);
+      });
+      // --snip--
+  }
+
+  impl Config {
+      fn build(args: &[String]) -> Result<Config, &'static str> {
+          if args.len() < 3 {
+              return Err("not enough arguments");
+          }
+          let query = args[1].clone();
+          let file_path = args[2].clone();
+
+          Ok(Config { query, file_path })
+      }
+  }
+  ```
+
+- We are exiting with a nonzero status since it is the convention to signal to
+  the process that called our program that the program exited with an error
+  state.
+- Now we want to extract a function named `run` that will hold all the logic
+  currently in `main` that isn't involved with setting up configuration or
+  handling errors. It stays in *main.rs*; despite the book's earlier
+  description, only the search logic ends up in *lib.rs*.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  fn main() {
+      // --snip--
+
+      println!("Searching for {}", config.query);
+      println!("In file {}", config.file_path);
+
+      run(config);
+  }
+
+  fn run(config: Config) {
+      let contents = fs::read_to_string(config.file_path)
+          .expect("Should have been able to read the file");
+
+      println!("With text:\n{contents}");
+  }
+  // --snip--
+  ```
+
+- Ok, so the only logic left to move was reading the file. But we want to again
+  improve error handling. Our `run` could return a `Result` too and let `main`
+  sort out errors.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  use std::error::Error;
+
+  // --snip--
+
+  fn run(config: Config) -> Result<(), Box<dyn Error>> {
+      let contents = fs::read_to_string(config.file_path)?;
+
+      println!("With text:\n{contents}");
+
+      Ok(())
+  }
+  ```
+
+- For the return type, we left the success type of `run` as `()` but wrapped it
+  in an `Ok`. Returning `()` or when using `Result` returning `Ok(())` is the
+  idiomatic way to indicate we are calling `run` for its side effects only.
+  For the error type, we used the trait object `Box<dyn Error>` and
+  brought `std::error::Error` into scope. Trait objects will be covered in
+  Chapter 18, but for now just know that `Box<dyn Error>` means the function
+  will return a type that implements the `Error` trait, but we don't have to
+  specify the particular type. This gives us flexibility to return error values
+  of different types for different error cases. This is a lot cleaner than the
+  panic caused by `expect`.
+- If we run this now, we get a warning that we are ignoring the resulting value
+  and that it might indicate an error occurred. It's so helpful:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  fn main() {
+      // --snip--
+
+      println!("Searching for {}", config.query);
+      println!("In file {}", config.file_path);
+
+      if let Err(e) = run(config) {
+          println!("Application error: {e}");
+          process::exit(1);
+      }
+  }
+  ```
+
+- In this case, `run` doesn't return a value we want to unwrap, so we'll just
+  check for the `Err`. Now it's time to start our library code:
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      unimplemented!();
+  }
+
+  // ch12_minigrep/src/main.rs
+  use minigrep::search;
+  // --snip--
+  fn run(config: Config) -> Result<(), Box<dyn Error>> {
+      let contents = fs::read_to_string(config.file_path)?;
+
+      for line in search(&config.query, &contents) {
+          println!("{line}");
+      }
+
+      Ok(())
+  }
+  ```
+
+- The `unimplemented!` macro is just a placeholder that panics. It's also a good
+  time to remove the two `println!` calls in `main` that print our arguments.
+  Now we're moving on with more module code that handles errors well, and the
+  work that is left is mostly in *src/lib.rs*.
+
+### 12.4 - Adding Functionality with Test-Driven Development
+
+- We're working in the *src/lib.rs* and we're working test first.
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      unimplemented!();
+  }
+
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn one_result() {
+          let query = "duct";
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.";
+
+          assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+      }
+  }
+  ```
+
+- First, we make our `search` function return an empty `vec!` so everything will
+  compile and we can see our assertion fail:
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      vec![]
+  }
+  ```
+
+- It's worth mentioning our lifetime annotations. We're simply making it clear
+  to the compiler that the string slices we return in the `Vec` refer to
+  `contents` not `query` and will be valid as long as `contents` is valid.
+  If we failed to include the annotation, the compiler would helpfully suggest
+  we annotate all the arguments and return value with the same lifetime, but
+  we know that our references will be to `contents`, not `query`, so `query`
+  doesn't need a lifetime.
+- So now we need `search` to do something for real to make the test pass:
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      let mut results = Vec::new();
+
+      for line in contents.lines() {
+          if line.contains(query) {
+              results.push(line);
+          }
+      }
+
+      results
+  }
+  ```
+
+- And our tests are green. We could use this opportunity to refactor, but
+  `search` doesn't look half bad. There are some useful iterator features we
+  aren't using, so we will revisit this project in Chapter 13. So basically by
+  passing one test, we've implemented the whole program! Try it at the command
+  line, it greps text just fine.
+
+### 12.5 - Working with Environment Variables
+
+- We will add a feature to turn on case insensitive searching by setting an
+  environment variable. We could make it a command line option, but with an
+  environment variable it can be set once for that terminal session.
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn case_sensitive() {
+          let query = "duct";
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.
+  Duct tape.";
+
+          assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+      }
+
+      #[test]
+      fn case_insensitive() {
+          let query = "rUsT";
+
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.
+  Trust me.";
+
+          assert_eq!(
+              vec!["Rust:", "Trust me."],
+              search_case_insensitive(query, contents)
+          );
+      }
+  }
+  ```
+
+- Note that we modified our first test case by renaming it and adding a line to
+  `contents` that says "Duct tape." and shouldn't match "duct" in all
+  lowercase. So we need a new function. First we make it a carbon copy of
+  `search` to make sure our new test fails with a good error. Then we modify it
+  to lowercase both its `query` and `contents`:
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  pub fn search_case_insensitive<'a>(
+      query: &str,
+      contents: &'a str,
+  ) -> Vec<&'a str> {
+      let query = query.to_lowercase();
+      let mut results = Vec::new();
+
+      for line in contents.lines() {
+          if line.to_lowercase().contains(&query) {
+              results.push(line);
+          }
+      }
+
+      results
+  }
+  ```
+
+- Since `to_lowercase` creates new data rather than referencing existing data,
+  `query` is now a `String` instead of a string slice and we need to pass a
+  reference to `contains` which takes a string slice.
+- So our new function works. We are going to need to call it from `run` but
+  first we need to add a field to our struct for the new option. Note that this
+  will break the build, because we aren't initializing the field anywhere yet:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  pub struct Config {
+      pub query: String,
+      pub file_path: String,
+      pub ignore_case: bool,
+  }
+
+  // same file
+  use minigrep::{search, search_case_insensitive};
+
+  // --snip--
+  fn run(config: Config) -> Result<(), Box<dyn Error>> {
+      let contents = fs::read_to_string(config.file_path)?;
+
+      let results = if config.ignore_case {
+          search_case_insensitive(&config.query, &contents)
+      } else {
+          search(&config.query, &contents)
+      };
+
+      for line in results {
+          println!("{line}");
+      }
+
+      Ok(())
+  }
+  ```
+
+- We've already done `use std::env` so we have access to the functions to work
+  with environment variables.
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  impl Config {
+      fn build(args: &[String]) -> Result<Config, &'static str> {
+          if args.len() < 3 {
+              return Err("not enough arguments");
+          }
+
+          let query = args[1].clone();
+          let file_path = args[2].clone();
+
+          let ignore_case = env::var("IGNORE_CASE").is_ok();
+
+          Ok(Config {
+              query,
+              file_path,
+              ignore_case,
+          })
+      }
+  }
+  ```
+
+- We don't actually care about the value of `IGNORE_CASE`, just that it is set.
+  So we can just call `is_ok` to make sure `var` returns an `Ok` and not an
+  `Err`. Testing the changes (beyond the tests of the library that pass) is as
+  simple as running `cargo run -- to poem.txt` and
+  `IGNORE_CASE=1 cargo run -- to poem.txt`.
+
+### 12.6 - Redirecting Errors to Standard Error
+
+- The `println!` macro only prints to `stdout`, so we need something else to
+  print to `stderr`. If we run `cargo run > output.txt` we see our error goes to
+  the file instead of the screen. All our error handling code is in `main`, so
+  it's a pretty simple update. We use `eprintln!` to print to `stderr`:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let config = Config::build(&args).unwrap_or_else(|err| {
+          eprintln!("Problem parsing arguments: {err}");
+          process::exit(1);
+      });
+
+      if let Err(e) = run(config) {
+          eprintln!("Application error: {e}");
+          process::exit(1);
+      }
+  }
+  ```
+
+## Chapter 13 - Functional Language Features: Iterators and Closures
+
+### 13.1 - Closures
+
+### 13.2 - Processing a Series of Items with Iterators
+
+### 13.3 - Improving our I/O Project
+
+### 13.4 - Performance in Loops vs Iterators
