@@ -1,6 +1,8 @@
 # Learn Go with Tests
 
-## Chapter 1 - Why unit tests?
+## Go Fundamentals
+
+### Chapter 1 - Why unit tests?
 
 - The strength of software is that we can change it. Most software will need to
   change over time in unpredictable ways, but don't try to over-engineer for
@@ -27,7 +29,7 @@
   - TDD can help and force you to design well-factored software iteratively,
     backed by tests to help future work as it arrives.
 
-## Chapter 2 - Hello, World
+### Chapter 2 - Hello, World
 
 - Run `go mod init MODULENAME` once, in the top-level folder, before running
   commands like `go test` or `go build`. Each chapter folder below it is its own
@@ -159,7 +161,7 @@
     - Then refactor, backed with the safety of our tests to ensure we have
       well-crafted code that is easy to work with.
 
-## Chapter 3 - Integers
+### Chapter 3 - Integers
 
 - A doc comment is an ordinary `//` comment directly above a top-level package,
   func, type, const or var declaration, with no blank line in between.
@@ -217,7 +219,7 @@
       quickly
     - Examples of how to use our code, which are checked as part of our tests
 
-## Chapter 4 - Iteration
+### Chapter 4 - Iteration
 
 - To repeat things in Go, you need `for`. There are no `while`, `do`, or
   `until` keywords.
@@ -298,7 +300,7 @@
   - Learned `for`
   - Learned how to write benchmarks
 
-## Chapter 5 - Arrays and slices
+### Chapter 5 - Arrays and slices
 
 - Arrays allow you to store multiple elements of the same type in a variable,
   in a particular order. Arrays have a fixed capacity, which you define when
@@ -775,7 +777,7 @@
     - Test coverage tool (`go test -cover`)
     - `slices.Equal` and why it is needed instead of regular equality operators
 
-## Chapter 6 - Structs, methods & interfaces
+### Chapter 6 - Structs, methods & interfaces
 
 - Alright, let's say we want to calculate the perimeter of a rectangle with
   decimal measurements of height and width. We know we'll need a
@@ -1304,7 +1306,7 @@
   - Table driven tests to make your assertions clearer and your test suites
     easier to extend & maintain
 
-## Chapter 7 - Pointers & errors
+### Chapter 7 - Pointers & errors
 
 - We're going to make a `Wallet` struct that lets us deposit `Bitcoin`. The idea
   with this struct is controlling access to the data via methods.
@@ -1816,7 +1818,7 @@
     - Useful for adding more domain specific meaning to values
     - Can let you implement interfaces
 
-## Chapter 8 - Maps
+### Chapter 8 - Maps
 
 - Declaring a map is somewhat similar to an array, except it starts with the
   `map` keyword and requires two types. The key type is written in `[]` and the
@@ -2435,7 +2437,7 @@
       - How to create errors that are constants
       - Writing error wrappers
 
-## Chapter 9 - Dependency Injection
+### Chapter 9 - Dependency Injection
 
 - The benefits of dependency injection include:
   - You don't need a framework
@@ -2646,7 +2648,7 @@
   more you'll see these general purpose interfaces, which you can then re-use in
   your own code to make your software reusable in a number of contexts.
 
-## Chapter 10 - Mocking
+### Chapter 10 - Mocking
 
 - We want a program that counts down from 3, printing each number on a new line
   with a 1-second pause, and when it reaches zero it will print "Go!" and exit.
@@ -3168,7 +3170,7 @@
     for testing purposes. Under test doubles, there are various types like
     stubs, spies, and indeed mocks!
 
-## Chapter 11 - Concurrency
+### Chapter 11 - Concurrency
 
 - To tell Go to start a new goroutine we turn a function call into a `go`
   statement by putting the keyword `go` in front of it: `go doSomething()`.
@@ -3345,7 +3347,7 @@
       fast' once we've made it work and made it right. We should never try to
       'make it fast' before the other two steps have been performed.
 
-## Chapter 12 - Select
+### Chapter 12 - Select
 
 - We have been asked to make a function called `WebsiteRacer` which takes two
   URLs and "races" them by hitting them with an HTTP GET request and returning
@@ -3759,7 +3761,7 @@
     - Uses the same interfaces as the "real" `net/http` servers which is consistent
       and less for you to learn.
 
-## Chapter 13 - Reflection
+### Chapter 13 - Reflection
 
 - Golang challenge: write a function `walk(x interface{}, fn func(string))`
   which takes a struct `x` and calls `fn` for all string fields found inside.
@@ -4537,7 +4539,7 @@
     <https://go.dev/blog/laws-of-reflection>.
   - Now that you know about reflection, do your best to avoid using it.
 
-## Chapter 14 - Sync
+### Chapter 14 - Sync
 
 - We want to make a counter that is safe to use concurrently. We'll start with
   an unsafe counter and verify its behaviour works in a single-threaded
@@ -4823,7 +4825,7 @@
       when it shouldn't be; this would cause some very strange bugs that will be
       hard to track down.
 
-## Chapter 15 - Context
+### Chapter 15 - Context
 
 - Alright, basic server, first test for "returns data from store" passes, second
   test fails with "store was not told to cancel":
@@ -5198,7 +5200,7 @@
     `context.Value` is for maintainers not users. It should never be required
     input for documented or expected results.
 
-## Chapter 16 - Roman Numerals
+### Chapter 16 - Roman Numerals
 
 - We're going to do the Roman Numeral Kata, but we're doing it TDD-style. We're
   starting with 1.
@@ -5559,7 +5561,7 @@
     - Force you to think about your domain deeply
     - Potentially a nice complement for your test suite
 
-## Chapter 17 - Maths
+### Chapter 17 - Maths
 
 - For this chapter, we want to make an SVG of an analog clock. Our goal is to
   design a nice function that takes a `Time` from the `time` package and spits
@@ -6680,7 +6682,7 @@
   }
   ```
 
-## Chapter 18 - Reading files
+### Chapter 18 - Reading files
 
 - We are going to write a program to read a folder of markdown documents and
   create a `Post` data structure for each, to be used as a data source by a web
@@ -7222,7 +7224,7 @@
   }
   ```
 
-## Chapter 19 - HTML Templates
+### Chapter 19 - HTML Templates
 
 - Go's standard library includes HTML templates for simple and maintainable
   HTML generation. Many websites don't need to be a SPA, and HTML and CSS are
@@ -8090,7 +8092,7 @@
       functions, so template mistakes become compile errors. Search "GOTH stack"
       or "templ htmx" for tutorials.
 
-## Chapter 20 - Generics
+### Chapter 20 - Generics
 
 - Generics offer us a way to make abstractions by letting us **describe our
   constraints**. They allow us to write functions that have a similar level of
@@ -8264,7 +8266,7 @@
     generalization. People often advise to only generalize when you see the same
     code three times.
 
-## Chapter 21 - Revisiting arrays and slices with generics
+### Chapter 21 - Revisiting arrays and slices with generics
 
 - Consider these two functions:
 
@@ -8631,4 +8633,6 @@
     Using the "proper" name for these items will reduce cognitive burden for
     others.
 
-## Chapter 22 - Introduction to acceptance testing
+## Testing Fundamentals
+
+### Chapter 22 - Introduction to acceptance testing

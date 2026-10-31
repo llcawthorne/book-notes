@@ -8,6 +8,26 @@
   exercises, but I like having a place to keep reference to stuff I find
   personally useful rather than having to start over with a resource.
 
+## Running Rustlings
+
+From this folder (`rust/rustlings`), start the interactive watcher:
+
+```bash
+rustlings
+```
+
+- Watch mode monitors files in `exercises/`, re-compiles on save, runs tests,
+  and advances when green (state stored in `.rustlings-state.txt`).
+- Interactive hotkeys:
+  - `h`: Show hint for the current exercise.
+  - `l`: List all exercises and their status.
+  - `c`: Re-run/check the current exercise.
+  - `q`: Quit watch mode.
+- One-off CLI commands:
+  - `rustlings run <name>`: Run a single exercise (e.g. `rustlings run vecs1`).
+  - `rustlings hint <name>`: Print hint for a specific exercise.
+  - `rustlings reset <name>`: Reset an exercise back to initial state.
+
 ## Plan
 
 Work through it alongside the Brown version of The Rust Programming Language
@@ -61,6 +81,6 @@ haven't read yet:
   array to 100 elements of the same value and looked up a complicated solution
   to converting a range to an array, but then was reminded after the fact that I
   can just do `let a = [0; 100]`. The solutions had the "correct" way to do it.
-- It's a nice touch that the solutions are all empty until after you solve the
-  problem. I have only had to use the hints once or twice, but they seem thorough
-  enough to get you going when your stuck.
+- It's a nice touch that the solutions are all empty until after you solve
+  the problem. I have only had to use the hints once or twice, but they seem
+  thorough enough to get you going when your stuck.

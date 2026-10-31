@@ -1,0 +1,1 @@
+["^ ","~:members",["^ ","allowHeapAccess",["~#set",[["^ ","~:flags",["^2",["~:method","~:public"]]]]],"validateForDowncall",["^2",[["^ ","^3",["^2",["^4","^5"]]]]],"ALLOW_HEAP",["^2",[["^ ","^3",["^2",["~:field"]]]]],"DONT_ALLOW_HEAP",["^2",[["^ ","^3",["^2",["^8"]]]]]]]

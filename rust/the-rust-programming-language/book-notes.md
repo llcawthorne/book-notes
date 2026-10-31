@@ -5570,7 +5570,7 @@
   - Handling the error if `run` returns an error
 - This pattern is about separating concerns: *main.rs* handles running the
   program and *lib.rs* handles all the logic of the task at hand. Because you
-  cannot test `main` function directly, this structure lets you test all of
+  cannot test the `main` function directly, this structure lets you test all of
   your program's logic by moving it out of the `main` function. The code that
   remains in the `main` function will be small enough to verify by inspection.
 - First we need a `parse_config` function to handle arguments:
@@ -5958,10 +5958,10 @@
 
   ```rs
   // ch12_minigrep/src/main.rs
-  pub struct Config {
-      pub query: String,
-      pub file_path: String,
-      pub ignore_case: bool,
+  struct Config {
+      query: String,
+      file_path: String,
+      ignore_case: bool,
   }
 
   // same file
@@ -6044,8 +6044,697 @@
 
 ### 13.1 - Closures
 
+- Rust's closures are anonymous functions you can save in a variable or pass as
+  arguments to other functions. Unlike functions, closures can capture values
+  from the scope in which they're defined.
+
+  ```rs
+  #[derive(Debug, PartialEq, Copy, Clone)]
+  enum ShirtColor {
+      Red,
+      Blue,
+  }
+
+  struct Inventory {
+      shirts: Vec<ShirtColor>,
+  }
+
+  impl Inventory {
+      fn giveaway(&self, user_preference: Option<ShirtColor>) -> ShirtColor {
+          user_preference.unwrap_or_else(|| self.most_stocked())
+      }
+
+      fn most_stocked(&self) -> ShirtColor {
+          let mut num_red = 0;
+          let mut num_blue = 0;
+
+          for color in &self.shirts {
+              match color {
+                  ShirtColor::Red => num_red += 1,
+                  ShirtColor::Blue => num_blue += 1,
+              }
+          }
+          if num_red > num_blue {
+              ShirtColor::Red
+          } else {
+              ShirtColor::Blue
+          }
+      }
+  }
+
+  fn main() {
+      let store = Inventory {
+          shirts: vec![ShirtColor::Blue, ShirtColor::Red, ShirtColor::Blue],
+      };
+
+      let user_pref1 = Some(ShirtColor::Red);
+      let giveaway1 = store.giveaway(user_pref1);
+      println!(
+          "The user with preference {:?} gets {:?}",
+          user_pref1, giveaway1
+      );
+
+      let user_pref2 = None;
+      let giveaway2 = store.giveaway(user_pref2);
+      println!(
+          "The user with preference {:?} gets {:?}",
+          user_pref2, giveaway2
+      );
+  }
+  ```
+
+- Here `unwrap_or_else` is being passed a closure. It takes one argument: a
+  closure without any arguments that returns a value `T` (the same `T` in the
+  `Some` variant of `Option<T>`). If the option is a `Some` variant, it returns
+  the value from within the `Some`. If it is `None`, then it calls the closure
+  and returns the value returned by the closure. The closure calls
+  `self.most_stocked()` on the current `Inventory` instance. The closure
+  captures an immutable reference to the `self Inventory` instance and passes
+  it with the code we specify to the `unwrap_or_else` method.
+- Closures don't usually require you to annotate the types of the parameters or
+  the return value like normal functions do. As we see above, brackets are also
+  optional, but only when the closure body has only one expression.
+- The following causes `s` to immediately be dropped:
+
+  ```rs
+  let f = |_| (); // sometimes called the "toilet closure"
+  let s = String::from("Hello");
+  f(s);
+  ```
+
+- Closures can capture values in three ways: borrowing immutably, borrowing
+  mutably, and taking ownership. The closure will decide which of the three to
+  do based upon the body of the function. Remember, a mutable borrow disables
+  read access on the original.
+- If your closure only needs a borrow, but you want to transfer ownership (often
+  useful when doing concurrency), you can specify the `move` keyword:
+  `thread::spawn(move || println!("From thread: {list:?}")).join().unwrap()`
+  transfers ownership of `list` so if `main` finishes first it isn't
+  deallocated.
+- Traits are how functions and structs can specify what kinds of closures they
+  can use. Closures will automatically implement one, two, or all three of these
+  `Fn` traits depending on how the closure's body handles values from the
+  environment:
+  - `FnOnce` - All closures implement at least this trait. It applies to
+    closures that can be called once. A closure that moves captured values out
+    of its body will implement this and no other `Fn` traits, because it can
+    only be called once.
+  - `FnMut` - applies to closures that don't move captured values out of their
+    body but might mutate the captured values. These closures can be called more
+    than once.
+  - `Fn` - applies to closures that don't move captured values out of their body
+    and don't mutate captured values, as well as closures that capture nothing
+    from their environment. These closures can be called more than once without
+    mutating their environment, which is important in cases such as calling a
+    closure multiple times concurrently.
+- As an example, we will look at the standard library definition on
+  `unwrap_or_else` defined on `Option<T>`:
+
+  ```rs
+  impl<T> Option<T> {
+      pub fn unwrap_or_else<F>(self, f: F) -> T
+      where
+          F: FnOnce() -> T
+      {
+          match self {
+              Some(x) => x,
+              None => f(),
+          }
+      }
+  }
+  ```
+
+- Because `unwrap_or_else` specifies `FnOnce`, and all closures implement
+  `FnOnce`, it works with any closure. Indeed, you can even specify the name of
+  a function to pass to this method, such as `Vec::new`, and the compiler would
+  automatically implement the correct trait(s) for the function definition. By
+  specifying `FnOnce`, `unwrap_or_else` will not call `f` more than once.
+- Now we will look at `sort_by_key`. It specifies `FnMut` instead of `FnOnce`:
+
+  ```rs
+  #[derive(Debug)]
+  struct Rectangle {
+      width: u32,
+      height: u32,
+  }
+
+  fn main() {
+      let mut list = [
+          Rectangle { width: 10, height: 1 },
+          Rectangle { width: 3, height: 5 },
+          Rectangle { width: 7, height: 12 },
+      ];
+
+      list.sort_by_key(|r| r.width);
+      println!("{list:#?}");
+  }
+  ```
+
+- The reason it specifies `FnMut` is because it calls its closure more than
+  once, even if it doesn't capture, mutate, or move anything out of its
+  environment, so it meets the trait bound requirements. Here we try to pass
+  it a function that implements `FnOnce` since it moves a value out of its
+  environment:
+
+  ```rs
+  // DOES NOT COMPILE! error[E0507]: cannot move out of `value`, a captured
+  //                   variable in an `FnMut` closure
+  #[derive(Debug)]
+  struct Rectangle {
+      width: u32,
+      height: u32,
+  }
+
+  fn main() {
+      let mut list = [
+          Rectangle { width: 10, height: 1 },
+          Rectangle { width: 3, height: 5 },
+          Rectangle { width: 7, height: 12 },
+      ];
+
+      let mut sort_operations = vec![];
+      let value = String::from("closure called");
+
+      list.sort_by_key(|r| {
+          sort_operations.push(value);
+          r.width
+      });
+      println!("{list:#?}");
+  }
+  ```
+
+- The closure captures `value` and then moves `value` out of the closure by
+  transferring ownership of `value` to the `sort_operations` vector. This
+  closure can only be called once; trying to call it a second time wouldn't
+  work, because `value` would no longer be in the environment to be pushed
+  into `sort_operations` again! Therefore the closure implements `FnOnce`.
+- Instead we could close over a mutable variable and mutate that:
+
+  ```rs
+  #[derive(Debug)]
+  struct Rectangle {
+      width: u32,
+      height: u32,
+  }
+
+  fn main() {
+      let mut list = [
+          Rectangle { width: 10, height: 1 },
+          Rectangle { width: 3, height: 5 },
+          Rectangle { width: 7, height: 12 },
+      ];
+
+      let mut num_sort_operations = 0;
+      list.sort_by_key(|r| {
+          num_sort_operations += 1;
+          r.width
+      });
+      println!("{list:#?}, sorted in {num_sort_operations} operations");
+  }
+  ```
+
 ### 13.2 - Processing a Series of Items with Iterators
+
+- The iterator pattern allows you to perform some task on a sequence of items
+  in turn without manually reimplementing the logic. In Rust, iterators are
+  lazy, meaning they have no effect until you call methods that consume the
+  iterator to use it up. On a `Vector`, the `iter` method returns an iterator.
+- All iterators implement the `Iterator` trait that is defined in the standard
+  library:
+
+  ```rs
+  pub trait Iterator {
+      type Item;
+
+      fn next(&mut self) -> Option<Self::Item>;
+
+      // methods with default implementations elided
+  }
+  ```
+
+- The `Item` type is an associated type that is returned from the iterator. We
+  will go into the details of associated types in Chapter 20. The `Iterator`
+  trait only requires implementation of a `next` method which returns one item
+  wrapped in `Some` and when iteration is over returns `None`. An iterator
+  variable needs to be mutable since `next` changes internal state. We don't
+  need to do this in a `for` loop despite it using an iterator behind the
+  scenes, since `for` takes ownership of the iterator and makes it mutable
+  behind the scenes.
+- `Iterator` provides a number of different methods with default
+  implementations. Some of these call `next` and are called *consuming adapters*
+  because calling them uses up the iterator. `sum` is one example. It takes
+  ownership of the iterator and uses it up. *Iterator adapters* don't consume
+  the iterator but instead produce different iterators by changing some aspect
+  of the original iterator. Iterator adapters like `map` are lazy and don't do
+  anything on their own. To apply their changes, you must consume the iterator.
+  Because iterator adapters are lazy, you can chain multiple before consuming
+  them to produce results. `collect` is a handy way to consume an iterator and
+  collect the resultant values into a collection type.
+
+  ```rs
+  let v1: Vec<i32> = vec![1, 2, 3];
+  let v2: Vec<_> = v1.iter().map(|x| x + 1).collect();
+  assert_eq!(v2, vec![2, 3, 4]);
+  ```
+
+- Many iterator adapters take closures as arguments, and commonly those closures
+  capture their environment. Here is an example of `filter` with a closure that
+  captures the `shoe_size` variable:
+
+  ```rs
+  #[derive(PartialEq, Debug)]
+  struct Shoe {
+      size: u32,
+      style: String,
+  }
+
+  fn shoes_in_size(shoes: Vec<Shoe>, shoe_size: u32) -> Vec<Shoe> {
+      shoes.into_iter().filter(|s| s.size == shoe_size).collect()
+  }
+
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn filters_by_size() {
+          let shoes = vec![
+              Shoe {
+                  size: 10,
+                  style: String::from("sneaker"),
+              },
+              Shoe {
+                  size: 13,
+                  style: String::from("sandal"),
+              },
+              Shoe {
+                  size: 10,
+                  style: String::from("boot"),
+              },
+          ];
+
+          let in_my_size = shoes_in_size(shoes, 10);
+
+          assert_eq!(
+              in_my_size,
+              vec![
+                  Shoe {
+                      size: 10,
+                      style: String::from("sneaker")
+                  },
+                  Shoe {
+                      size: 10,
+                      style: String::from("boot")
+                  },
+              ]
+          );
+      }
+  }
+  ```
+
+- `shoes_in_size` takes ownership of a vector of shoes and a shoe size as
+  parameters. It returns a vector containing only shoes of the specified size.
+  The call to `into_iter` creates an iterator that takes ownership of the
+  vector. The `filter` adapts that into a new iterator. The closure captures the
+  `shoe_size` parameter, and the call to `collect` gathers the values returned
+  into a vector.
 
 ### 13.3 - Improving our I/O Project
 
+- Recall last chapter where we had a `Config::build` function that had to
+  clone its arguments. We needed `clone` here because we have a slice with
+  `String` elements in the parameter `args`, but the `build` function doesn't
+  own `args`:
+
+  ```rs
+  // ch12_minigrep/src/main.rs
+  impl Config {
+      fn build(args: &[String]) -> Result<Config, &'static str> {
+          if args.len() < 3 {
+              return Err("not enough arguments");
+          }
+
+          let query = args[1].clone();
+          let file_path = args[2].clone();
+
+          let ignore_case = env::var("IGNORE_CASE").is_ok();
+
+          Ok(Config {
+              query,
+              file_path,
+              ignore_case,
+          })
+      }
+  }
+
+  // This is called from main here:
+  fn main() {
+      let args: Vec<String> = env::args().collect();
+
+      let config = Config::build(&args).unwrap_or_else(|err| {
+          eprintln!("Problem parsing arguments: {err}");
+          process::exit(1);
+      });
+
+      // --snip--
+  }
+  ```
+
+- Once `Config::build` takes ownership of the iterator and stops
+  using indexing operations that borrow, we can move the `String` values from
+  the iterator into `Config`. `env::args` returns an iterator we were
+  `collect`ing into a vector before. Now we pass ownership of the iterator
+  to `Config::build` directly:
+
+  ```rs
+  // ch13_minigrep_iter/src/main.rs
+  // First we will change where we call it to pass an iterator
+  fn main() {
+      let config = Config::build(env::args()).unwrap_or_else(|err| {
+          eprintln!("Problem parsing arguments: {err}");
+          process::exit(1);
+      });
+
+      // --snip--
+  }
+
+
+  // We need to make `args` `mut`, and it can be any type that implements the
+  // `Iterator<Item = String>` trait, so any Iterator returning String values.
+  impl Config {
+      fn build(
+          mut args: impl Iterator<Item = String>,
+      ) -> Result<Config, &'static str> {
+          args.next();  // first value is program name
+
+          let query = match args.next() {
+              Some(arg) => arg,
+              None => return Err("Didn't get a query string"),
+          };
+
+          let file_path = match args.next() {
+              Some(arg) => arg,
+              None => return Err("Didn't get a file path"),
+          };
+
+          let ignore_case = env::var("IGNORE_CASE").is_ok();
+
+          Ok(Config {
+              query,
+              file_path,
+              ignore_case,
+          })
+      }
+  }
+  ```
+
+- We can also take advantage of iterators in our `search` function. Here's the
+  code from last chapter:
+
+  ```rs
+  // ch12_minigrep/src/lib.rs
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      let mut results = Vec::new();
+
+      for line in contents.lines() {
+          if line.contains(query) {
+              results.push(line);
+          }
+      }
+
+      results
+  }
+  ```
+
+- Change it to:
+
+  ```rs
+  // ch13_minigrep_iter/src/lib.rs
+  pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+      contents
+          .lines()
+          .filter(|line| line.contains(query))
+          .collect()
+  }
+  ```
+
+- We can also update the `search_case_insensitive` function:
+
+  ```rs
+  pub fn search_case_insensitive<'a>(
+      query: &str,
+      contents: &'a str,
+  ) -> Vec<&'a str> {
+      let query = query.to_lowercase();
+
+      contents
+          .lines()
+          .filter(|line| line.to_lowercase().contains(&query))
+          .collect()
+  }
+  ```
+
+### Additional Project: Returning Iterators Directly
+
+- (Not in the book) The book notes that `search` and `search_case_insensitive`
+  could return an iterator directly instead of collecting into a `Vec<&'a str>`.
+  Doing so eliminates the heap allocation of the `Vec` inside the search
+  functions, letting the caller lazily stream lines as needed.
+- This change requires addressing a few subtleties:
+  - **Return type**: Because closure types in iterator adapters like `filter`
+    are anonymous and unnameable, the return type must be written as
+    `impl Iterator<Item = &'a str>`.
+  - **Lifetimes**: `query` in `search` must live as long as the returned
+    iterator (`&'a str`) because the lazy closure retains a reference to it
+    until iteration is finished.
+  - **Ownership in `search_case_insensitive`**: `query.to_lowercase()` creates a
+    local `String`. To return an iterator without returning a dangling reference
+    to that local string, the closure must own it via `move`.
+  - **Branching in `run`**: Because each closure produces a distinct concrete
+    iterator type, `let results = if ... else ...` fails with mismatched types
+    (`error[E0308]`). Instead, we can run a separate `for` loop inside each
+    branch (or use dynamic dispatch with `Box<dyn Iterator<Item = &str>>`).
+  - **Unit tests**: `assert_eq!` cannot compare a `Vec<&str>` directly against
+    an iterator type. In tests, we either call `.collect::<Vec<_>>()` on the
+    returned iterator or use `Iterator::eq`.
+
+  ```rs
+  // ch13_minigrep_iter/src/lib.rs
+  pub fn search<'a>(
+      query: &'a str,
+      contents: &'a str,
+  ) -> impl Iterator<Item = &'a str> {
+      contents.lines().filter(move |line| line.contains(query))
+  }
+
+  pub fn search_case_insensitive<'a>(
+      query: &str,
+      contents: &'a str,
+  ) -> impl Iterator<Item = &'a str> {
+      let query = query.to_lowercase();
+
+      contents
+          .lines()
+          .filter(move |line| line.to_lowercase().contains(&query))
+  }
+
+  #[cfg(test)]
+  mod tests {
+      use super::*;
+
+      #[test]
+      fn case_sensitive() {
+          let query = "duct";
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.
+  Duct tape.";
+
+          assert_eq!(
+              vec!["safe, fast, productive."],
+              search(query, contents).collect::<Vec<_>>()
+          );
+      }
+
+      #[test]
+      fn case_insensitive() {
+          let query = "rUsT";
+
+          let contents = "\
+  Rust:
+  safe, fast, productive.
+  Pick three.
+  Trust me.";
+
+          assert_eq!(
+              vec!["Rust:", "Trust me."],
+              search_case_insensitive(query, contents).collect::<Vec<_>>()
+          );
+      }
+  }
+  ```
+
+- And in *main.rs*, `run` branches into two `for` loops rather than assigning
+  to a single `results` variable:
+
+  ```rs
+  // ch13_minigrep_iter/src/main.rs
+  fn run(config: Config) -> Result<(), Box<dyn Error>> {
+      let contents = fs::read_to_string(config.file_path)?;
+
+      if config.ignore_case {
+          for line in search_case_insensitive(&config.query, &contents) {
+              println!("{line}");
+          }
+      } else {
+          for line in search(&config.query, &contents) {
+              println!("{line}");
+          }
+      }
+
+      Ok(())
+  }
+  ```
+
 ### 13.4 - Performance in Loops vs Iterators
+
+- Iterators are one of Rust's *zero-cost abstractions*. Using the abstraction
+  imposes no additional runtime overhead. In many cases, Rust's code using
+  iterators compiles down to the same assembly you'd write by hand.
+- In an audio decoder benchmark from the book, the iterator implementation was
+  actually slightly faster than a manual loop because the compiler was able to
+  eliminate array bounds checks and unroll the loop.
+
+## Chapter 14 - More About Cargo and Crates.io
+
+### 14.1 - Customizing Builds with Release Profiles
+
+- Cargo has two main profiles: the `dev` profile Cargo uses when you run
+  `cargo build`, and the `release` profile Cargo uses when you run
+  `cargo build --release`. Cargo has default settings for each profile
+  that apply when you haven't explicitly added any `[profile.*]` sections to
+  your project's *Cargo.toml* file. Default settings are covered in the
+  [Cargo reference](https://doc.rust-lang.org/cargo/reference/profiles.html).
+- The primary profile configuration shown is `opt-level`, which controls how
+  many compiler optimizations are applied (defaults to `0` for `dev` to keep
+  compiles fast, and `3` for `release` for maximum execution speed).
+
+### 14.2 - Publishing a Crate to Crates.io
+
+- Documentation comments use three slashes, `///`, and support Markdown
+  notation for formatting the text. Place them just before the item they are
+  documenting.
+
+  ```rs
+  /// Adds one to the number given.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// let arg = 5;
+  /// let answer = my_crate::add_one(arg);
+  ///
+  /// assert_eq!(6, answer);
+  /// ```
+  pub fn add_one(x: i32) -> i32 {
+      x + 1
+  }
+  ```
+
+- Running `cargo doc --open` compiles the HTML documentation for your current
+  crate and all dependencies, and opens it directly in your browser.
+- Examples in your comments are run as tests when you run `cargo test`.
+- Commonly used sections include Examples, Panics, Errors, and Safety.
+- `//!` comments are for documenting the item that *contains* the comments
+  rather than the item *following* the comments. They are normally used inside
+  the crate root (*src/lib.rs*) or inside a module to document the crate or
+  module as a whole. This is to document `My Crate`:
+
+  ```rs
+  //! # My Crate
+  //!
+  //! `my_crate` is a collection of utilities to make performing certain
+  //! calculations more convenient.
+
+  /// Adds one to the number given.
+  // --snip--
+  ```
+
+- Make your API convenient for users by re-exporting internal items with
+  `pub use`.
+- After registering, you can get your crates.io API key at
+  <https://crates.io/me/> then use it with `cargo login`.
+- Publishing a version to crates.io is permanent: code cannot be modified or
+  deleted once published, guaranteeing projects depending on that version never
+  break.
+- `cargo yank` prevents new projects from adding a specific version as a new
+  dependency, while allowing existing projects with a `Cargo.lock` to continue
+  downloading it. Use `cargo yank --undo` to un-yank a version.
+
+### 14.3 - Cargo Workspaces
+
+- A *workspace* is a set of packages that share the same *Cargo.lock* and output
+  directory.
+- I already have a workspace for this book, so I'll use its file as an example:
+
+  ```toml
+  [workspace]
+  members = ["ch*_*"]
+  exclude = ["code"]
+  resolver = "3"
+  ```
+
+- The book source code is in `code/`, so I don't want it included. All my
+  projects live in folders like `ch05_rectangles`, so I match them with a glob,
+  and the resolver level is 3; the latest and greatest. You don't have to make
+  your projects match a glob though. Making a new project in the workspace
+  folder with `cargo new` will add the new project to *Cargo.toml*.
+- Let's say we had a workspace with a binary `adder` that depends on two
+  libraries: `add_one` and `add_two`. We could make our top level folder
+  anything, so let's make it `add`. Then we would do `cargo new adder`,
+  `cargo new add_one --lib`, and `cargo new add_two --lib`. Now if `adder` uses
+  the function `add_one` in the same project, in its `adder/Cargo.toml` file
+  you would add a line as follows:
+
+  ```toml
+  [dependencies]
+  add_one = { path = "../add_one" }
+  ```
+
+- Cargo builds projects in a workspace together but doesn't assume they depend
+  on each other unless you list it explicitly. Also, now cargo needs help
+  knowing what to run, so to run `adder`, we `cargo run -p adder`.
+- If we need an external dependency in more than one project, it needs to be
+  listed in each project's *Cargo.toml*. The *Cargo.lock* at the workspace level
+  will keep the version the same between projects if possible.
+- When you run `cargo build` or `cargo test` at the workspace level, it builds
+  or tests all projects and puts executables in a top-level *target* directory,
+  in our running example `add/target`. You can run tests just for the `add_one`
+  project from the top-level with `cargo test -p add_one`. Crates have to be
+  published to crates.io separately, but you can run `cargo publish -p add_one`
+  at the top level to publish `add_one`.
+
+### 14.4 - Installing Binaries with cargo install
+
+- `cargo install` lets you install and use binary crates locally. The binary by
+  default goes to `$HOME/.cargo/bin`.
+
+### 14.5 - Extending Cargo with Custom Commands
+
+- Any executable in your path named `cargo-something` can be run using the
+  command `cargo something`. They also show up in `cargo --list`.
+
+## Chapter 15 - Smart Pointers
+
+### 15.1 - Using Box<T> to Point to Data on the Heap
+
+### 15.2 - Treating Smart Pointers Like Regular References with the Deref Trait
+
+### 15.3 - Running Code on Cleanup with the Drop Trait
+
+### 15.4 - Rc<T>, the Reference Counted Smart Pointer
+
+### 15.5 - RefCell<T> and the Interior Mutability Pattern
+
+### 15.6 - Reference Cycles Can Leak Memory

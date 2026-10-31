@@ -1103,6 +1103,8 @@
   import Csv.Types
   ```
 
+## Chapter 8 - A tool for CSV
+
 - So first to parse, we need a way to convert `Text` to `DataField` and vice
   versa.
 

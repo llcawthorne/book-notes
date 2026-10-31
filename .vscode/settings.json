@@ -1,0 +1,7 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./rust/rustlings/Cargo.toml",
+    "./rust/the-rust-programming-language/Cargo.toml"
+  ]
+}
+
