@@ -4412,3 +4412,48 @@ impl Order {
   }
 
 ### Mutex, Send, and Arc
+
+- Our last version of this code had a problem with race conditions on updates.
+  If A and B both send an update, they will be applied in the order received
+  and the last updates will "win". One way to fix this is **optimistic
+  concurrency control** where you assign the `Ticket` a version number which is
+  updated on applying an update, and you only apply updates that have a
+  matching version number. Another solution is a lock. Rust's standard library
+  provides two different locking primitives: `Mutex<T>` and `RwLock<T>`.
+- `Mutex<T>` allows one thread to access the data, whether its for reading or
+  writing. The `Mutex` wraps the data it locks and you get a reference with
+  `lock` or `try_lock`. `lock` will wait until the data is available where
+  `try_lock` returns with an error if the lock cannot be acquired.
+
+  ```rs
+  use std::sync::Mutex;
+
+  // An integer protected by a mutex lock
+  let lock = Mutex::new(0);
+
+  // Acquire a lock on the mutex
+  let mut guard = lock.lock().unwrap();
+
+  // Modify the data through the guard,
+  // leveraging its `Deref` implementation
+  *guard += 1;
+
+  // The lock is released when `data` goes out of scope
+  // This can be done explicitly by dropping the guard
+  // or happen implicitly when the guard goes out of scope
+  drop(guard)
+  ```
+
+- We could wrap our entire `TicketStore` in a `Mutex`. This is known as
+  **coarse-grained locking**, and the problem is it severely limits performance
+  of the system. It would be better to use **fine-grained locking**, where each
+  ticket is protected by its own lock. This way, clients can keep working with
+  tickets in parallel, as long as they aren't trying to access the same ticket.
+
+  ```rs
+  // The new structure, with a lock for each ticket
+
+  struct TicketStore {
+      tickets: BTreeMap<TicketId, Mutex<Ticket>>,
+  }
+  ```
