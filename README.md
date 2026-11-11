@@ -10,10 +10,10 @@ parent:
 ---
 # Book Notes by Lewis
 
-Note: *Command-Line Rust*, *Learn Haskell by Example*, *Rustlings*, and *The
-Rust Programming Language* are works in progress. *Django 5 by Example* is
-paused after Chapter 11, *Kotlin in Action* and *Python for DevOps* are paused
-about halfway, and *Learn Go with Tests* is paused a little past halfway.
+Note: *Command-Line Rust* and *Learn Haskell by Example* are works in progress.
+*Django 5 by Example* is paused after Chapter 11, *Kotlin in Action* and *Python
+for DevOps* are paused about halfway, and *Learn Go with Tests* is paused a
+little past halfway.
 
 ## Architecture
 
@@ -70,7 +70,7 @@ about halfway, and *Learn Go with Tests* is paused a little past halfway.
 
 - [Command-Line Rust](./rust/command-line-rust/book-notes.md)
 - [Rustlings](./rust/rustlings/book-notes.md)
-- [The Rust Programming Language](./rust/the-rust-programming-language/book-notes.md)
+- [The Rust Programming Language](./rust/trpl/book-notes.md)
 
 ## Tools
 

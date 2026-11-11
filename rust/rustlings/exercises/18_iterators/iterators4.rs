@@ -42,6 +42,9 @@ fn factorial(num: u64) -> u64 {
     // - additional variables
     // For an extra challenge, don't use:
     // - recursion
+
+    // without recursion: (2..=num).product()
+
     if num == 0 {
         return 1;
     }

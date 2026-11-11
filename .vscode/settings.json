@@ -1,7 +1,31 @@
 {
   "rust-analyzer.linkedProjects": [
     "./rust/rustlings/Cargo.toml",
-    "./rust/the-rust-programming-language/Cargo.toml"
+    "./rust/trpl/Cargo.toml"
+  ],
+  "cSpell.words": [
+    "ababab",
+    "calr",
+    "catr",
+    "commr",
+    "cutr",
+    "depts",
+    "echor",
+    "findr",
+    "fortuner",
+    "grepr",
+    "headr",
+    "irst",
+    "lsr",
+    "minigrep",
+    "miniserde",
+    "Petgraph",
+    "reqwest",
+    "someusername",
+    "tailr",
+    "trpl",
+    "uniqr",
+    "wcr"
   ]
 }
 

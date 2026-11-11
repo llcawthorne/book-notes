@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow, bail};
 use clap::Parser;
-use csv::{ReaderBuilder, StringRecord};
+use csv::{ReaderBuilder, StringRecord, WriterBuilder};
 use regex::Regex;
 use std::{
     fs::File,
@@ -54,7 +54,6 @@ fn parse_pos(range: String) -> Result<PositionList> {
     let range_re = Regex::new(r"^(\d+)-(\d+)$").unwrap();
     range
         .split(',')
-        .into_iter()
         .map(|val| {
             parse_index(val).map(|n| n..n + 1).or_else(|e| {
                 range_re.captures(val).ok_or(e).and_then(|captures| {
@@ -72,21 +71,19 @@ fn parse_pos(range: String) -> Result<PositionList> {
                 })
             })
         })
-        .collect::<Result<_, _>>()
-        .map_err(From::from)
+        .collect()
 }
 
 fn parse_index(input: &str) -> Result<usize> {
     let value_error = || anyhow!(r#"illegal list value: "{input}""#);
-    input
-        .starts_with('+')
-        .then(|| Err(value_error()))
-        .unwrap_or_else(|| {
-            input
-                .parse::<NonZeroUsize>()
-                .map(|n| usize::from(n) - 1)
-                .map_err(|_| value_error())
-        })
+    if input.starts_with('+') {
+        Err(value_error())
+    } else {
+        input
+            .parse::<NonZeroUsize>()
+            .map(|n| usize::from(n) - 1)
+            .map_err(|_| value_error())
+    }
 }
 
 fn main() {
@@ -102,7 +99,6 @@ fn run(args: Args) -> Result<()> {
         bail!(r#"--delim "{}" must be a single byte"#, args.delimiter);
     }
     let delimiter: u8 = *delim_bytes.first().unwrap();
-    println!("{delimiter}");
 
     let extract = if let Some(fields) = args.extract.fields.map(parse_pos).transpose()? {
         Extract::Fields(fields)
@@ -114,12 +110,35 @@ fn run(args: Args) -> Result<()> {
         unreachable!("Must have --fields, --bytes, or --chars");
     };
 
-    println!("{extract:?}");
-
     for filename in &args.files {
         match open(filename) {
             Err(err) => eprintln!("{filename}: {err}"),
-            Ok(_) => println!("Opened {filename}"),
+            Ok(file) => match &extract {
+                Extract::Fields(field_pos) => {
+                    let mut reader = ReaderBuilder::new()
+                        .delimiter(delimiter)
+                        .has_headers(false)
+                        .from_reader(file);
+
+                    let mut writer = WriterBuilder::new()
+                        .delimiter(delimiter)
+                        .from_writer(io::stdout());
+
+                    for record in reader.records() {
+                        writer.write_record(extract_fields(&record?, field_pos))?;
+                    }
+                }
+                Extract::Bytes(byte_pos) => {
+                    for line in file.lines() {
+                        println!("{}", extract_bytes(&line?, byte_pos));
+                    }
+                }
+                Extract::Chars(char_pos) => {
+                    for line in file.lines() {
+                        println!("{}", extract_chars(&line?, char_pos));
+                    }
+                }
+            },
         }
     }
 
@@ -135,24 +154,29 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
 
 fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
     let chars: Vec<_> = line.chars().collect();
-    let mut selected: Vec<char> = vec![];
-
-    for range in char_pos.iter().cloned() {
-        for i in range {
-            if let Some(val) = chars.get(i) {
-                selected.push(*val)
-            }
-        }
-    }
-    selected.iter().collect()
+    char_pos
+        .iter()
+        .cloned()
+        .flat_map(|range| range.filter_map(|i| chars.get(i)))
+        .collect()
 }
 
 fn extract_bytes(line: &str, byte_pos: &[Range<usize>]) -> String {
-    unimplemented!();
+    let bytes = line.as_bytes();
+    let selected: Vec<_> = byte_pos
+        .iter()
+        .cloned()
+        .flat_map(|range| range.filter_map(|i| bytes.get(i)).copied())
+        .collect();
+    String::from_utf8_lossy(&selected).into_owned()
 }
 
-fn extract_fields(record: &StringRecord, field_pos: &[Range<usize>]) -> Vec<String> {
-    unimplemented!();
+fn extract_fields<'a>(record: &'a StringRecord, field_pos: &[Range<usize>]) -> Vec<&'a str> {
+    field_pos
+        .iter()
+        .cloned()
+        .flat_map(|range| range.filter_map(|i| record.get(i)))
+        .collect()
 }
 
 #[cfg(test)]

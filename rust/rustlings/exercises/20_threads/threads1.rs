@@ -22,9 +22,29 @@ fn main() {
 
     let mut results = Vec::new();
     for handle in handles {
-        // TODO: Collect the results of all threads into the `results` vector.
-        // Use the `JoinHandle` struct which is returned by `thread::spawn`.
+        results.push(handle.join().unwrap());
     }
+    /* Could've done this two ways without the loop:
+
+    let results: Vec<_> = handles
+        .into_iter()
+        .map(|h| h.join().unwrap())
+        .collect();
+
+    // Inverts Vec<Result<T, E>> into Result<Vec<T>, E>:
+    let results: Vec<_> = handles
+        .into_iter()
+        .map(|h| h.join())
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    Rule of thumb:
+    - `.map(|x| f(x).unwrap()).collect()`: Good for quick scripts, tests, or
+       prototypes where failure means "just blow up the world".
+    - `.map(f).collect::<Result<Vec<_>, _>>()?`: Production-grade Rust where
+       errors should be handled, logged, or returned via Result.
+
+     */
 
     if results.len() != 10 {
         panic!("Oh no! Some thread isn't done yet!");

@@ -23,27 +23,57 @@ enum IntoColorError {
     IntConversion,
 }
 
-// TODO: Tuple implementation.
+/* We couldn't shortened these three lines:
+let red: u8 = red.try_into().map_err(|_| IntoColorError::IntConversion)?;
+let green: u8 = green.try_into().map_err(|_| IntoColorError::IntConversion)?;
+let blue: u8 = blue.try_into().map_err(|_| IntoColorError::IntConversion)?;
+
+// To just:
+let red: u8 = red.try_into();
+let green: u8 = green.try_into();
+let blue: u8 = blue.try_into();
+
+// By implementing From for std::num::TryFromIntError
+impl From<std::num::TryFromIntError> for IntoColorError {
+    fn from(_: std::num::TryFromIntError) -> Self {
+        Self::IntConversion
+    }
+}
+*/
 // Correct RGB color values must be integers in the 0..=255 range.
 impl TryFrom<(i16, i16, i16)> for Color {
     type Error = IntoColorError;
 
-    fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {}
+    fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {
+        let (red, green, blue) = tuple;
+
+        let red: u8 = red.try_into().map_err(|_| IntoColorError::IntConversion)?;
+        let green: u8 = green
+            .try_into()
+            .map_err(|_| IntoColorError::IntConversion)?;
+        let blue: u8 = blue.try_into().map_err(|_| IntoColorError::IntConversion)?;
+
+        Ok(Self { red, green, blue })
+    }
 }
 
-// TODO: Array implementation.
 impl TryFrom<[i16; 3]> for Color {
     type Error = IntoColorError;
 
-    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {}
+    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {
+        (arr[0], arr[1], arr[2]).try_into()
+    }
 }
 
-// TODO: Slice implementation.
-// This implementation needs to check the slice length.
 impl TryFrom<&[i16]> for Color {
     type Error = IntoColorError;
 
-    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {}
+    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {
+        let &[red, green, blue] = slice else {
+            return Err(IntoColorError::BadLen);
+        };
+        (red, green, blue).try_into()
+    }
 }
 
 fn main() {

@@ -43,20 +43,20 @@
   <https://doc.rust-lang.org/cargo/reference/manifest.html>.
 - Rust libraries are called *crates* and they are expected to use *semantic
   version numbers* in the form *major.minor.patch*, so that 1.2.4 is major
-  verison 1, minor version 2, patch version 4. A change in a major version
+  version 1, minor version 2, patch version 4. A change in a major version
   indicates a breaking change in the crate's public API.
 - Rust is expression-based. A `;` turns an expression into a statement,
   discarding its value. The last expression in a block, written without a
   `;`, becomes the block's value (e.g. a function's return value). With a
   trailing `;`, the block evaluates to `()` instead.
-- *Inside-out* or *unit testing* is when you write tests for the functions inside
-  your program. We will start using it in Chapter 4. *Outside-in* or *integration
-  testing* is when you write tests that run your programs as the user might.
-  We will begin writing integration tests now, even for `hello`.
-  The convention in Rust projects is to create a *tests* drectory parallel to the
-  *src* directory. Unit tests go in the same file as the code. Integration tests
-  go in `tests/` and are compiled as a separate program that only have access to
-  your crate's public API.
+- *Inside-out* or *unit testing* is when you write tests for functions
+  inside your program. We will start using it in Chapter 4. *Outside-in* or
+  *integration testing* is when you write tests that run your programs as
+  the user might. We will begin writing integration tests now, even for `hello`.
+  The convention in Rust projects is to create a *tests* directory parallel to
+  the *src* directory. Unit tests go in the same file as the code.
+  Integration tests go in `tests/` and are compiled as a separate program
+  that only has access to your crate's public API.
 
   ```rs
   // 01_hello/tests/cli.rs
@@ -116,7 +116,9 @@
   `Result` and verify that it is an `Ok` variant.
 - We can change the command to `hello`, but it will fail because the `hello`
   program can't be found. `std::process::Command` only runs commands on the PATH.
-  We need a way to execute binaries that exist only in  the current crate. We aregoing to add the `assert_cmd` development dependency to Cargo.toml and use it.
+  We need a way to execute binaries that exist only in  the current crate. We
+  are going to add the `assert_cmd` development dependency to Cargo.toml and
+  use it.
 
   ```toml
   # 01_hello/Cargo.toml
@@ -751,9 +753,9 @@
   }
   ```
 
-- If `File::open` is successful, the result will be a *filehandle* of the type
-  `std::fs::File`, which allows us to read the contents of a file. Both a
-  filehandle and `std::io::stdin` implement the `Read` trait that a `BufReader`
+- If `File::open` is successful, the result will be a *file handle* of the
+  type `std::fs::File`, which allows us to read the contents of a file. Both a
+  file handle and `std::io::stdin` implement the `Read` trait that a `BufReader`
   struct will use to implement the `BufRead` trait. This means the return value
   from `open` will respond to the `BufRead::lines` function to produce lines of
   text. This function will also remove any line endings.
@@ -986,7 +988,7 @@
 - `line` has an `is_empty` method we can use instead of using `line != ""`.
 - I did the line counter by incrementing a mutable variable, but the book had an
   example of using an iterator. Using `Iterator::enumerate` is more idiomatic.
-  It still uses a manual counter for numbering nonblank lines though.
+  It still uses a manual counter for numbering non-blank lines though.
 
 ## Chapter 4 - Head Aches
 
@@ -1075,8 +1077,8 @@
   ```
 
 - **Why use `read(&mut buffer)` and `read_line` over the iterator shortcuts?**
-  1. **Bulk I/O vs. Byte-by-byte overhead**: `file.read(&mut buffer)` tells the OS
-     to copy the bytes in a single bulk `read` system call directly into
+  1. **Bulk I/O vs. Byte-by-byte overhead**: `file.read(&mut buffer)` tells the
+     OS to copy the bytes in a single bulk `read` system call directly into
      pre-allocated memory. In contrast, `file.bytes().take().collect()` calls an
      iterator for *every single byte*, wrapping each in a `Result<u8, io::Error>`
      and dynamically reallocating the `Vec` as it grows.
@@ -1180,7 +1182,7 @@
 - For this chapter we will be writing `wc` (word count). It will display the
   number of lines, words, and bytes found in text from STDIN or one or more
   files. It takes the options `-c` for bytes, `-l` for number of lines, `-m` for
-  number of characters (which is the same as `-c` unless there are multibyte
+  number of characters (which is the same as `-c` unless there are multi-byte
   characters), and `-w` for number of words. When options are provided, it only
   displays the results for the options, but with no options it defaults to `-c`,
   `-l`, and `-w`. The order of output is always line, word, bytes/chars, and
@@ -1216,7 +1218,7 @@
   }
   ```
 
-- In our tests, we use `std::io::Cursor` to fake a filehandle for the `count`
+- In our tests, we use `std::io::Cursor` to fake a file handle for the `count`
   function. A `Cursor` is "used with in-memory buffers, anything implementing
   `AsRef<[u8]>`, to allow them to implement `Read` and/or `Write`, allowing
   these buffers to be used anywhere you might use a reader or writer that does
@@ -2150,3 +2152,212 @@
   - **Collecting characters into a `String`:** `selected.iter().collect()`
     produces a `String` because the standard library implements
     `FromIterator<char>` for `String`.
+  - **Avoiding a panic:** If `range` extends beyond the bounds of `chars`,
+    `chars[i]` would panic. By using `chars.get(i)`, which returns an
+    `Option`, we safely handle out-of-bounds access by simply not pushing
+    anything, preventing the program from crashing and allowing us to
+    produce a partial output instead.
+- Alright, so that's already a bit dense and had several points worth
+  clarifying, but the tests are green, so it's time to refactor! First, we're
+  going to change that inner `for`, `let Some(val) = chars.get(i)`, and `push`
+  call into `filter_map`, which on an iterator returns only the values for
+  which the closure returns `Some(value)`.
+
+  ```rs
+  fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
+      let chars: Vec<_> = line.chars().collect();
+      let mut selected: Vec<char> = vec![];
+
+      for range in char_pos.iter().cloned() {
+          selected.extend(range.filter_map(|i| chars.get(i)));
+      }
+      selected.iter().collect()
+  }
+  ```
+
+- Both versions so far initialize a mutable `selected` variable to collect
+  results. We can eliminate mutability entirely using `map` and `flatten`.
+  The documentation's wording can sound needlessly abstract, but the data
+  flow is very simple:
+  - We start with a list of ranges: `[Range, Range]`.
+  - Mapping each range to `range.filter_map(...)` produces an iterable
+    stream of characters for each range.
+  - Without flattening, we would have a nested list of lists:
+    `[[c, c], [c, c, c]]`.
+  - We don't want nested lists—we want a single flat list of characters:
+    `[c, c, c, c, c]`.
+  - Calling `.flatten()` strips away the outer nesting level, and `.collect()`
+    assembles the characters into our final `String`:
+
+  ```rs
+  fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
+      let chars: Vec<_> = line.chars().collect();
+      char_pos
+          .iter()
+          .cloned()
+          .map(|range| range.filter_map(|i| chars.get(i)))
+          .flatten()
+          .collect()
+  }
+  ```
+
+- Finally, `Iterator::flat_map` combines `.map()` followed immediately by
+  `.flatten()` into a single idiomatic step (just like `concatMap` in Haskell
+  or `flatMap` in Scala):
+
+  ```rs
+  fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
+      let chars: Vec<_> = line.chars().collect();
+      char_pos
+          .iter()
+          .cloned()
+          .flat_map(|range| range.filter_map(|i| chars.get(i)))
+          .collect()
+  }
+  ```
+
+- With `extract_bytes` we just skip to the final form. But there's a few new
+  subtleties here.
+
+  ```rs
+  fn extract_bytes(line: &str, byte_pos: &[Range<usize>]) -> String {
+      let bytes = line.as_bytes();
+      let selected: Vec<_> = byte_pos
+          .iter()
+          .cloned()
+          .flat_map(|range| range.filter_map(|i| bytes.get(i)).copied())
+          .collect();
+      String::from_utf8_lossy(&selected).into_owned()
+  }
+  ```
+
+  - `line.as_bytes()` returns a borrowed slice `&[u8]` directly over the
+    string's existing memory with zero allocations. Unlike `line.chars()`,
+    we don't need to collect into a `Vec` first for random index access
+    because byte offsets are directly addressable.
+  - `bytes.get(i)` returns `Option<&u8>`. In `extract_chars`, collecting
+    directly into `String` worked because `String` implements
+    `FromIterator<&char>` and automatically dereferences characters. Here,
+    however, we must collect into an intermediate `Vec<_>` to pass to
+    `from_utf8_lossy`. Without `.copied()`, we would collect a `Vec<&u8>`
+    (a list of 64-bit memory addresses) rather than `Vec<u8>` (contiguous
+    1-byte raw values). `.copied()` dereferences each `&u8` into `u8`.
+  - `String::from_utf8_lossy(&selected)` safely decodes bytes into UTF-8. If a
+    byte range severs a multi-byte character boundary, invalid sequences are
+    replaced with the Unicode replacement character (`\u{FFFD}` or `�`).
+  - `from_utf8_lossy` returns a `std::borrow::Cow<'_, str>` (Copy-on-Write
+    enum):
+    - `Cow::Borrowed(&str)`: Returned if the input is 100% valid UTF-8, avoiding
+      heap allocations entirely.
+    - `Cow::Owned(String)`: Returned if invalid bytes had to be replaced,
+      allocating a new string.
+    - Calling `.into_owned()` unifies both cases by returning the existing
+      `String` or cloning the borrowed `&str` into a new `String`.
+
+- `extract_fields` extracts field slices from a `csv::StringRecord`. For
+  performance reasons, `csv::StringRecord` is not a `&[&str]`, but it responds
+  to the same methods as an array or vector, so we can use the familiar pattern:
+
+  ```rs
+  fn extract_fields<'a>(
+      record: &'a StringRecord,
+      field_pos: &[Range<usize>],
+  ) -> Vec<&'a str> {
+      field_pos
+          .iter()
+          .cloned()
+          .flat_map(|range| range.filter_map(|i| record.get(i)))
+          .collect()
+  }
+  ```
+
+  - **Explicit Lifetimes (`'a`)**: The function takes two borrowed inputs
+    (`record` and `field_pos`) and returns a collection of borrowed string
+    slices (`Vec<&'a str>`). Rust's lifetime elision rules cannot automatically
+    infer which input reference the return slices borrow from when multiple
+    reference arguments are present. Explicitly annotating `'a` informs the
+    compiler that the returned `&str` slices borrow from the `StringRecord`.
+  - **Zero-Allocation Slices**: Because `record.get(i)` returns `Option<&str>`,
+    we can return borrowed slices directly without converting them to owned
+    `String`s. No string heap allocations are required—only the `Vec` vector
+    buffer holding the pointer/length pairs.
+- This `run` function is actually bigger than some of our early programs, but it
+  is actually quite straightforward. In `run()`, we wire the pieces together:
+  - For `Extract::Fields`, we use `csv::ReaderBuilder` and `csv::WriterBuilder`.
+    Setting `.has_headers(false)` ensures the first line is processed as data
+    rather than swallowed as a header row.
+  - `writer.write_record(...)` takes any iterable where the items implement
+    `AsRef<[u8]>`, so our `Vec<&str>` drops in directly.
+  - For `Extract::Bytes` and `Extract::Chars`, we stream lines lazily using
+    `file.lines()` and print the transformed strings to standard output.
+
+  ```rs
+  fn run(args: Args) -> Result<()> {
+      let delim_bytes = args.delimiter.as_bytes();
+      if delim_bytes.len() != 1 {
+          bail!(r#"--delim "{}" must be a single byte"#, args.delimiter);
+      }
+      let delimiter: u8 = *delim_bytes.first().unwrap();
+
+      let extract =
+          if let Some(fields) =
+              args.extract.fields.map(parse_pos).transpose()?
+          {
+              Extract::Fields(fields)
+          } else if let Some(bytes) =
+              args.extract.bytes.map(parse_pos).transpose()?
+          {
+              Extract::Bytes(bytes)
+          } else if let Some(chars) =
+              args.extract.chars.map(parse_pos).transpose()?
+          {
+              Extract::Chars(chars)
+          } else {
+              unreachable!("Must have --fields, --bytes, or --chars");
+          };
+
+      for filename in &args.files {
+          match open(filename) {
+              Err(err) => eprintln!("{filename}: {err}"),
+              Ok(file) => match &extract {
+                  Extract::Fields(field_pos) => {
+                      let mut reader = ReaderBuilder::new()
+                          .delimiter(delimiter)
+                          .has_headers(false)
+                          .from_reader(file);
+
+                      let mut writer = WriterBuilder::new()
+                          .delimiter(delimiter)
+                          .from_writer(io::stdout());
+
+                      for record in reader.records() {
+                          writer.write_record(
+                              extract_fields(&record?, field_pos)
+                          )?;
+                      }
+                  }
+                  Extract::Bytes(byte_pos) => {
+                      for line in file.lines() {
+                          println!("{}", extract_bytes(&line?, byte_pos));
+                      }
+                  }
+                  Extract::Chars(char_pos) => {
+                      for line in file.lines() {
+                          println!("{}", extract_chars(&line?, char_pos));
+                      }
+                  }
+              },
+          }
+      }
+
+      Ok(())
+  }
+  ```
+
+- I know I've been listing the entire source files for these, but this one broke
+  300 lines, and really it's all split up across the notes for this chapter
+  except the tests, which were calling functions and verifying simple
+  assertions. The full source code is in the repo if you feel like you need to
+  see it all in one place.
+
+## Chapter 9 - Jack the Grepper

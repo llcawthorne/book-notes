@@ -19,6 +19,9 @@ fn main() {
     // You can optionally experiment here.
 }
 
+// So basically if we start out from a borrow, we stay borrowed. Unless there's
+// a clone which happens when we need mutation. And if we start out owned, we
+// stay owned. Plus we end up owned as well when there is a mutation.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -38,8 +41,7 @@ mod tests {
         let vec = vec![0, 1, 2];
         let mut input = Cow::from(&vec);
         abs_all(&mut input);
-        // TODO: Replace `todo!()` with `Cow::Owned(_)` or `Cow::Borrowed(_)`.
-        assert!(matches!(input, todo!()));
+        assert!(matches!(input, Cow::Borrowed(_)));
     }
 
     #[test]
@@ -51,8 +53,7 @@ mod tests {
         let vec = vec![0, 1, 2];
         let mut input = Cow::from(vec);
         abs_all(&mut input);
-        // TODO: Replace `todo!()` with `Cow::Owned(_)` or `Cow::Borrowed(_)`.
-        assert!(matches!(input, todo!()));
+        assert!(matches!(input, Cow::Owned(_)));
     }
 
     #[test]
@@ -63,7 +64,6 @@ mod tests {
         let vec = vec![-1, 0, 1];
         let mut input = Cow::from(vec);
         abs_all(&mut input);
-        // TODO: Replace `todo!()` with `Cow::Owned(_)` or `Cow::Borrowed(_)`.
-        assert!(matches!(input, todo!()));
+        assert!(matches!(input, Cow::Owned(_)));
     }
 }

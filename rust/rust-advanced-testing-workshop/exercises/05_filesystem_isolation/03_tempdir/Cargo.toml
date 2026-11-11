@@ -1,0 +1,12 @@
+[package]
+name = "tempfile_tempdir"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cargo-manifest = { workspace = true }
+toml = { workspace = true }
+
+[dev-dependencies]
+googletest = { workspace = true }
+tempfile = { workspace = true }

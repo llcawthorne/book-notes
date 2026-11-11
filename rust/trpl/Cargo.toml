@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "ch*_*",
+    "ch17_async_await/*",
+    "ch20_macros/*",
+]
+exclude = [
+    "code",
+    "ch17_async_await",
+    "ch20_macros",
+]
+resolver = "3"

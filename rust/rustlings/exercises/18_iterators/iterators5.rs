@@ -34,11 +34,7 @@ fn count_iterator(map: &HashMap<String, Progress>, value: Progress) -> usize {
 fn count_collection_for(collection: &[HashMap<String, Progress>], value: Progress) -> usize {
     let mut count = 0;
     for map in collection {
-        for val in map.values() {
-            if *val == value {
-                count += 1;
-            }
-        }
+        count += count_for(map, value);
     }
     count
 }

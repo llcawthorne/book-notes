@@ -34,7 +34,39 @@ impl Default for Person {
 // 5. Parse the second element from the split operation into a `u8` as the age.
 // 6. If parsing the age fails, return the default of `Person`.
 impl From<&str> for Person {
-    fn from(s: &str) -> Self {}
+    fn from(s: &str) -> Self {
+        /* Easier solution straight from iterator:
+        let (Some(name), Some(age), None) = (split.next(), split.next(), split.next()) else {
+            return Self::default();
+        }; */
+        let parts: Vec<_> = s.split(',').collect();
+
+        // This was my first draft:
+        if parts.len() != 2 {
+            return Person::default();
+        }
+
+        let name = parts[0];
+        let age = parts[1];
+
+        // We could have just done this to save a few lines:
+        let &[name, age] = parts.as_slice() else {
+            return Person::default();
+        };
+
+        if name.is_empty() {
+            return Person::default();
+        }
+
+        let Ok(age) = age.parse() else {
+            return Person::default();
+        };
+
+        Person {
+            name: name.into(),
+            age,
+        }
+    }
 }
 
 fn main() {

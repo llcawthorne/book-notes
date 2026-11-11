@@ -25,6 +25,26 @@ enum ParsePersonError {
     ParseInt(ParseIntError),
 }
 
+impl From<ParseIntError> for ParsePersonError {
+    fn from(err: ParseIntError) -> Self {
+        Self::ParseInt(err)
+    }
+}
+
+/* With thiserror crate, the above simplifies down to:
+#[derive(thiserror::Error, Debug)]
+enum ParsePersonError {
+    #[error("Incorrect number of fields")]
+    BadLen,
+
+    #[error("Empty name field")]
+    NoName,
+
+    #[error("Invalid age")]
+    ParseInt(#[from] ParseIntError), // automatically generates impl From<ParseIntError>
+}
+*/
+
 // TODO: Complete this `FromStr` implementation to be able to parse a `Person`
 // out of a string in the form of "Mark,20".
 // Note that you'll need to parse the age component into a `u8` with something
@@ -41,7 +61,27 @@ enum ParsePersonError {
 impl FromStr for Person {
     type Err = ParsePersonError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {}
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.split(',').collect();
+
+        let &[name, age] = parts.as_slice() else {
+            return Err(ParsePersonError::BadLen);
+        };
+
+        if name.is_empty() {
+            return Err(ParsePersonError::NoName);
+        }
+
+        let age = age.parse()?;
+        /* Instead of implementing From, we could've also just done:
+        let age = age.parse().map_err(ParsePersonError::ParseInt)?;
+        */
+
+        Ok(Person {
+            name: name.into(),
+            age,
+        })
+    }
 }
 
 fn main() {

@@ -1,0 +1,11 @@
+[book]
+authors = ["Luca Palmieri (Mainmatter)"]
+language = "en"
+src = "src"
+title = "Advanced Rust testing"
+
+[output.html]
+git-repository-url = "https://github.com/mainmatter/rust-advanced-testing-workshop"
+
+[preprocessor.exercise-linker]
+exercise_root_url = "https://github.com/mainmatter/rust-advanced-testing-workshop/tree/main/exercises"
