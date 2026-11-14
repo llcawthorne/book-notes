@@ -15,15 +15,14 @@
 
 ## Chapter 1 - Introduction
 
-- We switched off AI code completion. Otherwise when doing this project it
-  won't give you time to answer. Go to
-  **Settings | Editor | General | Code Completion | Inline** and clear the
-  **Enable inline completion using language models** checkbox. Feel free to
-  turn that back on later.
-- I'm not going to write notes for all the trivial syntax details. I can
-  just go to <https://learnxinyminutes.com/rust/> if I forget how to write a
-  function or type a comment. I also took full notes on language features in
-  my book notes for *The Rust Programming Language*.
+- We switched off AI code completion. Otherwise when doing this project it won't
+  give you time to answer. Go to **Settings | Editor | General | Code Completion
+  | Inline** and clear the **Enable inline completion using language models**
+  checkbox. Feel free to turn that back on later.
+- I'm not going to write notes for all the trivial syntax details. I can just go
+  to <https://learnxinyminutes.com/rust/> if I forget how to write a function or
+  type a comment. I also took full notes on language features in my book notes
+  for _The Rust Programming Language_.
 
 ## Chapter 2 - A Basic Calculator
 
@@ -31,7 +30,7 @@
 - If the condition of an `if` statement is not a boolean, you get a compiler
   error. There are no truthy or falsy values.
 - They suggest setting `overflow-checks = true` in release mode. You can do this
-  in your *Cargo.toml*:
+  in your _Cargo.toml_:
 
   ```toml
   [profile.release]
@@ -40,9 +39,9 @@
 
 - If the target type can be inferred, you can cast with `as _` instead of
   specifying the type: `let c: u64 = a as _;`.
-- `as` conversions are infallible. When going from a larger to a smaller type, the
-  upper bits are truncated. It is better to use it when going from smaller to
-  larger.
+- `as` conversions are infallible. When going from a larger to a smaller type,
+  the upper bits are truncated. It is better to use it when going from smaller
+  to larger.
 
 ## Chapter 3 - Ticket v1
 
@@ -97,15 +96,15 @@
   ```
 
 - Methods that take `self` are called like `ticket.is_open()`. Methods without
-  `self` are called **associated functions** (referred to as *static methods* in
+  `self` are called **associated functions** (referred to as _static methods_ in
   other languages) and called like
   `let ticket2 = Ticket::new("My ticket".into(), "The best ticket".into(), "Open".into());`.
 
 ### Modules & Visibility
 
 - Module rules can seem complicated, but you can handle 90% of situations by
-  remembering that everything is private by default unless it is marked `pub`
-  or accessed by a descendant (child/grandchild module).
+  remembering that everything is private by default unless it is marked `pub` or
+  accessed by a descendant (child/grandchild module).
 - Common visibility modifiers:
   - `pub` makes a module, struct, method, etc., public, i.e. accessible from
     outside the module where it's defined, potentially from other crates.
@@ -151,16 +150,16 @@
   ownership of it.
 - You can have multiple **references** to a value, but they must all be
   immutable. You cannot have both mutable and immutable references at the same
-  time. You also cannot have more than one mutable reference. And if you have
-  a mutable reference, the owner cannot read or mutate the value. If you have
-  immutable references to a value, the owner cannot mutate the value either.
-  So an immutable reference acts like a "read-only" lock, and a mutable one is
-  like a "read-write" lock. You can only create a mutable reference to a
-  mutable variable.
+  time. You also cannot have more than one mutable reference. And if you have a
+  mutable reference, the owner cannot read or mutate the value. If you have
+  immutable references to a value, the owner cannot mutate the value either. So
+  an immutable reference acts like a "read-only" lock, and a mutable one is like
+  a "read-write" lock. You can only create a mutable reference to a mutable
+  variable.
 - The compiler checks these rules at compile time, so you get compile errors
   instead of runtime errors.
-- You can use the **reference** keyword `&` to create an immutable reference
-  and the **mutable reference** keyword `&mut` to create a mutable reference.
+- You can use the **reference** keyword `&` to create an immutable reference and
+  the **mutable reference** keyword `&mut` to create a mutable reference.
   Example:
 
   ```rs
@@ -234,18 +233,17 @@
 
 - Note that working with immutable objects might be expensive in other
   languages, but these two operations often compile down to the same machine
-  code in Rust. Rust tends to prefer `&mut self` since using the immutable
-  form requires you to own the struct to call the setter. So you could not
-  call `ticket.set_title("Title");` if `ticket` was inside a `Vec<Ticket>`
-  or stored behind a reference or smart pointer.
+  code in Rust. Rust tends to prefer `&mut self` since using the immutable form
+  requires you to own the struct to call the setter. So you could not call
+  `ticket.set_title("Title");` if `ticket` was inside a `Vec<Ticket>` or stored
+  behind a reference or smart pointer.
 - According to the official
   [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/naming.html),
   there is a naming convention to distinguish between these two patterns:
   - `set_*(&mut self, ...)` is used for in-place mutation.
   - `with_*(mut self, ...) -> Self` is used for consuming / fluent methods.
 
-  Many production crates provide both to give consumers the best of both
-  worlds:
+  Many production crates provide both to give consumers the best of both worlds:
 
   ```rs
   impl Ticket {
@@ -275,23 +273,23 @@
 ### Memory Layout & Alignment
 
 - You can use `std::mem::size_of::<T>()` to see how much space a type takes on
-  the stack: `assert_eq!(std::mem::size_of::<u8>(), 1);`. Note that `size_of` only
-  measures the shallow, in-line footprint of a type at compile time, never any
-  dynamically allocated heap memory it points to. There is no general-purpose
-  API to determine size on the heap, but you can use a memory profiler to
-  inspect heap usage.
+  the stack: `assert_eq!(std::mem::size_of::<u8>(), 1);`. Note that `size_of`
+  only measures the shallow, in-line footprint of a type at compile time, never
+  any dynamically allocated heap memory it points to. There is no
+  general-purpose API to determine size on the heap, but you can use a memory
+  profiler to inspect heap usage.
 - Note that the size of a type can be surprising due to memory alignment and
   padding. A tuple of two `bool` is really only two bytes, but, for example,
-  `bool` is 1 byte and `u32` is 4 bytes, but a tuple of
-  `(bool, u32)` is 8 bytes, not 5! This is because Rust automatically adds 3
-  bytes of padding after the `bool` so that the `u32` starts on an address
-  aligned to a multiple of its 4-byte size.
-- A `Vec<T>` is a tuple of a pointer to a heap-allocated array, the capacity
-  of that array, and the length of the array. So `Vec<T>` itself is usually 24
-  bytes (3 * 8 bytes on a 64-bit system). This is true regardless of the size
+  `bool` is 1 byte and `u32` is 4 bytes, but a tuple of `(bool, u32)` is 8
+  bytes, not 5! This is because Rust automatically adds 3 bytes of padding after
+  the `bool` so that the `u32` starts on an address aligned to a multiple of its
+  4-byte size.
+- A `Vec<T>` is a tuple of a pointer to a heap-allocated array, the capacity of
+  that array, and the length of the array. So `Vec<T>` itself is usually 24
+  bytes (3 \* 8 bytes on a 64-bit system). This is true regardless of the size
   of `T`! So `Vec<u8>` and `Vec<u64>` are both 24 bytes. This is because the
-  `Vec<T>` struct only stores the pointer, capacity, and length. The actual
-  data is stored on the heap.
+  `Vec<T>` struct only stores the pointer, capacity, and length. The actual data
+  is stored on the heap.
   - `std::mem::size_of::<u8>()` is 1 byte.
   - `std::mem::size_of::<u64>()` is 8 bytes.
   - `std::mem::size_of::<Vec<u8>>()` is 24 bytes.
@@ -304,8 +302,8 @@
     pointers point to the heap!
   - Note that these values assume a 64-bit system. On a 32-bit system, they
     would be half the size.
-- Why is `String` 24 bytes? While most `String` data lives on the heap, a
-  small, constant-size portion lives on the stack. This buffer handle stores:
+- Why is `String` 24 bytes? While most `String` data lives on the heap, a small,
+  constant-size portion lives on the stack. This buffer handle stores:
   1. The address of the heap data (`*mut u8`, 8 bytes)
   2. The length of the string in bytes (`usize`, 8 bytes)
   3. The capacity of the allocated memory (`usize`, 8 bytes)
@@ -322,17 +320,15 @@
   1. **Lexical scope**: a variable is in scope until the end of the block in
      which it was declared.
   2. **Ownership scope**: a variable's scope ends early if ownership is
-     transferred to someone else (a move).
-  When a variable reaches the end of its lexical scope without being moved, Rust
-  invokes its **destructor** and drops the value. If ownership was transferred,
-  the original variable is no longer responsible for it, ensuring the
-  destructor is called at most once. You can also manually invoke the
-  destructor early with `std::mem::drop`.
+     transferred to someone else (a move). When a variable reaches the end of
+     its lexical scope without being moved, Rust invokes its **destructor** and
+     drops the value. If ownership was transferred, the original variable is no
+     longer responsible for it, ensuring the destructor is called at most once.
+     You can also manually invoke the destructor early with `std::mem::drop`.
 
 ### Outro - Order Struct
 
-> [!NOTE]
-> The course exercise tests required returning `&i32` to drill borrowing
+> [!NOTE] The course exercise tests required returning `&i32` to drill borrowing
 > syntax before introducing the `Copy` trait in Chapter 4. In idiomatic Rust,
 > small `Copy` types are always returned by value (`i32`), so we use `i32`
 > below.
@@ -419,8 +415,8 @@ impl Order {
 ### Defining Traits
 
 - Our `Ticket` struct can appear in assertions like
-  `assert_eq!(ticket.title(), "A new title");` because `String` implements
-  the `PartialEq` trait. But we couldn't create two tickets and do
+  `assert_eq!(ticket.title(), "A new title");` because `String` implements the
+  `PartialEq` trait. But we couldn't create two tickets and do
   `assert_eq!(ticket1, ticket2)` or `ticket1 == ticket2`. For the latter, the
   error would be
   ``error[E0369]: binary operation `==` cannot be applied to type `Ticket` ``
@@ -472,32 +468,32 @@ impl Order {
 
 - When defining a trait, you can optionally provide a default method body that
   implementers can use if they choose to not define their own. When using the
-  default, you leave the `impl` block empty like `impl IsEven for i32 {}`.
-  If a trait requires a mix of required and default methods, you implement all
-  the required methods and don't mention the default ones. Rust will use the
-  default implementation for any methods you don't explicitly implement.
-  Many provided default methods are additional methods that call the required
-  methods to provide some result based upon it.
-- Overriding the default definition of a method when implementing a trait is
-  the only real "override" in Rust, since there is no inheritance. There is
-  seldom a reason to override a default unless knowledge of your type allows
-  you to provide a more performant implementation than the generic default
-  method or when overriding a "no-op" default in a hook or event-handler.
+  default, you leave the `impl` block empty like `impl IsEven for i32 {}`. If a
+  trait requires a mix of required and default methods, you implement all the
+  required methods and don't mention the default ones. Rust will use the default
+  implementation for any methods you don't explicitly implement. Many provided
+  default methods are additional methods that call the required methods to
+  provide some result based upon it.
+- Overriding the default definition of a method when implementing a trait is the
+  only real "override" in Rust, since there is no inheritance. There is seldom a
+  reason to override a default unless knowledge of your type allows you to
+  provide a more performant implementation than the generic default method or
+  when overriding a "no-op" default in a hook or event-handler.
 
 ### Extension Traits & The Orphan Rule
 
 - When a type is defined in another module, you cannot define new methods on it.
-  The primary purpose of an *extension trait* is to add methods to types defined
+  The primary purpose of an _extension trait_ is to add methods to types defined
   elsewhere, like above where we implement `IsEven` for `i32` and `u32`. You
   cannot implement the same trait twice in a crate for the same type. Also, at
   least one of the following must be true:
   - The trait is defined in the current crate
   - The implementor is defined in the current crate
 - The previous two points make up Rust's **orphan rule**. Put simply, you can
-  define a new trait for a foreign type or you can define a foreign trait
-  for a new type or you can even define a new trait for a new type, but you
-  cannot define a foreign trait for a foreign type. At least one of the trait
-  or the type must be defined in the current crate.
+  define a new trait for a foreign type or you can define a foreign trait for a
+  new type or you can even define a new trait for a new type, but you cannot
+  define a foreign trait for a foreign type. At least one of the trait or the
+  type must be defined in the current crate.
 
 ### Operator Overloading
 
@@ -528,7 +524,7 @@ impl Order {
   calls:
   - Addition (+): `std::ops::Add`
   - Subtraction (-): `std::ops::Sub`
-  - Multiplication (*): `std::ops::Mul`
+  - Multiplication (\*): `std::ops::Mul`
   - Division (/): `std::ops::Div`
   - Remainder (%): `std::ops::Rem`
   - Bitwise AND (&): `std::ops::BitAnd`
@@ -539,9 +535,9 @@ impl Order {
   - Equality (==, !=): `std::cmp::PartialEq`
   - Ordering (<, >, <=, >=): `std::cmp::PartialOrd`
 - There is also a `std::cmp::Eq` and `std::cmp::Ord` that can be used as trait
-  bounds, although the Partial traits are what the operators care about. This
-  is primarily because of floats. All the primitives except floats implement
-  `Eq` and `Ord`, but floats don't because `NaN != NaN` and `NaN <= 1.0` and
+  bounds, although the Partial traits are what the operators care about. This is
+  primarily because of floats. All the primitives except floats implement `Eq`
+  and `Ord`, but floats don't because `NaN != NaN` and `NaN <= 1.0` and
   `1.0 <= NaN` are both `false`. This is why floats can't be keys in a
   `HashMap<K, V>` or `BTreeMap<K, V>`, be part of a `BTreeSet<T>`, or be sorted
   in a `Vec<T>` which have trait bounds on `Eq` or `Ord`. If you want to sort a
@@ -550,8 +546,8 @@ impl Order {
   `NaN` is involved, but the operators (</>/<=/>) are defined by the provided
   `lt`/`le`/`ge`/`gt` methods which return `false` when the result of
   `partial_cmp` would have been `None`, and the unwrapped `bool` otherwise.
-- Going back to our running example of a ticket system, what if we wanted to
-  be able to compare two `Ticket` instances with `==`?
+- Going back to our running example of a ticket system, what if we wanted to be
+  able to compare two `Ticket` instances with `==`?
 
   ```rs
   impl PartialEq for Ticket {
@@ -564,8 +560,8 @@ impl Order {
   ```
 
 - If we add a field, we have to change the definition, and that's easy to
-  forget. We could make up for this by destructuring our struct at the start
-  of the `eq` method. Then if we add a field we will get a compiler error for
+  forget. We could make up for this by destructuring our struct at the start of
+  the `eq` method. Then if we add a field we will get a compiler error for
   incomplete destructuring.
 
   ```rs
@@ -603,9 +599,9 @@ impl Order {
   - It automatically includes any new fields without manual updates
 - Another commonly derived trait is `Debug`. It allows you to output the value
   in a way that is useful for debugging. It is often used for testing, along
-  with `PartialEq`, since both `assert_eq` and `assert_ne` use `Debug` to
-  format the output when the assertion fails and `PartialEq` to enable
-  the comparison. You can also call `println!("{:?}", ticket);` (and
+  with `PartialEq`, since both `assert_eq` and `assert_ne` use `Debug` to format
+  the output when the assertion fails and `PartialEq` to enable the comparison.
+  You can also call `println!("{:?}", ticket);` (and
   `println!("{:#?}", ticket);` for pretty-printed output) to print the value in
   a debug format.
 
@@ -680,31 +676,31 @@ impl Order {
   has the type `&str`; it is a reference to a string slice. If you defined your
   string like `let mut s = String::new(); s.push_str("Hello");`, then `s` has
   the type `String`. Using `String` is more expensive than using `&str` because
-  it involves allocating memory on the heap. For the `String` variable, we
-  store a pointer to the heap, a length (`usize`), and a capacity (`usize`) for
-  a total of 24 bytes on the stack. If we refer to `&s`, it is a usize pointer
-  to the 24 bytes on the stack, which itself contains a pointer to the heap.
+  it involves allocating memory on the heap. For the `String` variable, we store
+  a pointer to the heap, a length (`usize`), and a capacity (`usize`) for a
+  total of 24 bytes on the stack. If we refer to `&s`, it is a usize pointer to
+  the 24 bytes on the stack, which itself contains a pointer to the heap.
   Whether we use `&s` (a `&String`) or `slice` (a `&str`), the underlying bytes
   remain on the heap without copying. A `&str` is a view into a string, a
   reference to a sequence of UTF-8 bytes stored elsewhere. Given our `String`
-  `s`, we could define `let slice: &str = &s[1..];`. This creates a string
-  slice of the string `s` starting from the second byte (index 1) to the end of
-  the string. It does not create a new string, it just creates a new view into
-  the existing string. In memory, `s` is still a pointer to the bytes on the
-  heap, a length, and a capacity (24 bytes on the stack), and `slice` is a
-  pointer to the same bytes on the heap, but with a length of 4 (16 bytes on the
-  stack, with no concept of capacity). `slice` doesn't own the data; it just
-  points to it. So `slice` is a reference to the `String`'s heap-allocated
-  data. `slice` doesn't need to know capacity, because it isn't the owner and
-  isn't modifying the data; it just points to it and tracks `length`.
+  `s`, we could define `let slice: &str = &s[1..];`. This creates a string slice
+  of the string `s` starting from the second byte (index 1) to the end of the
+  string. It does not create a new string, it just creates a new view into the
+  existing string. In memory, `s` is still a pointer to the bytes on the heap, a
+  length, and a capacity (24 bytes on the stack), and `slice` is a pointer to
+  the same bytes on the heap, but with a length of 4 (16 bytes on the stack,
+  with no concept of capacity). `slice` doesn't own the data; it just points to
+  it. So `slice` is a reference to the `String`'s heap-allocated data. `slice`
+  doesn't need to know capacity, because it isn't the owner and isn't modifying
+  the data; it just points to it and tracks `length`.
 - As a rule of thumb, use `&str` rather than `&String` whenever you need a
   reference to textual data. `&str` is more flexible and generally considered
-  more idiomatic in Rust code. If a method returns a `&String`, you're
-  promising that there is heap-allocated UTF-8 text somewhere that matches
-  exactly the one you're returning a reference to. If a method returns a `&str`,
-  instead, you have a lot more freedom: you're just saying that somewhere
-  there's a bunch of text data and that a subset of it matches what you need,
-  therefore you're returning a reference to it.
+  more idiomatic in Rust code. If a method returns a `&String`, you're promising
+  that there is heap-allocated UTF-8 text somewhere that matches exactly the one
+  you're returning a reference to. If a method returns a `&str`, instead, you
+  have a lot more freedom: you're just saying that somewhere there's a bunch of
+  text data and that a subset of it matches what you need, therefore you're
+  returning a reference to it.
 - Summary comparison of string types:
 
   | Type     | Role  | Stack                  | Storage   | Ownership    |
@@ -715,7 +711,7 @@ impl Order {
 
 - **Why this matters in function signatures**:
   - **Accept `&str` instead of `&String`**: If a function takes `&String`, the
-    caller *must* allocate or own a heap `String`. If it takes `&str`, callers
+    caller _must_ allocate or own a heap `String`. If it takes `&str`, callers
     can pass string literals (`"hello"`), owned `String`s (`&my_string`), or
     slices (`&my_string[0..2]`) with **zero heap allocations**.
   - **Returning `&str`**: Promising that you're returning a view into data that
@@ -789,12 +785,12 @@ impl Order {
   }
   ```
 
-- In the above, `Target` is an **associated type**. It acts as a placeholder
-  for a concrete type that must be specified when the trait is implemented.
-  By implementing `Deref<Target = U>` for a type `T`, you're telling the
-  compiler that `&T` and `&U` are somewhat interchangeable. Specifically:
-  - References to `T` are implicitly converted into references to `U`
-    (i.e. `&T` becomes `&U`).
+- In the above, `Target` is an **associated type**. It acts as a placeholder for
+  a concrete type that must be specified when the trait is implemented. By
+  implementing `Deref<Target = U>` for a type `T`, you're telling the compiler
+  that `&T` and `&U` are somewhat interchangeable. Specifically:
+  - References to `T` are implicitly converted into references to `U` (i.e. `&T`
+    becomes `&U`).
   - You can call all methods defined on `U` that take `&self` directly on `&T`.
     Many methods used on `String` (like `.len()`, `.trim()`, `.contains()`) are
     actually defined on `str`, which matters when looking up documentation.
@@ -820,18 +816,18 @@ impl Order {
 ### Sized, DSTs & Marker Traits
 
 - `str` is a **dynamically-sized type**, or **DST**. This means that at compile
-  time, the compiler doesn't know the exact size of the value. A reference to
-  a DST, like `&str`, is a **fat pointer**. It contains both a pointer to the
-  data and the length of the data. Trying to call `std::mem::size_of::<str>()`
-  or query the size of any other DST is a compile-time error.
+  time, the compiler doesn't know the exact size of the value. A reference to a
+  DST, like `&str`, is a **fat pointer**. It contains both a pointer to the data
+  and the length of the data. Trying to call `std::mem::size_of::<str>()` or
+  query the size of any other DST is a compile-time error.
 - Rust has a `Sized` trait, which is a **marker trait** with no methods. It is
   implemented by all types whose size is known at compile time. A marker trait
   can be used by the compiler to enable behaviors or optimizations. `Sized` is
-  also an **auto trait**; the compiler implements it automatically for you
-  based on the type's definition. All the types we have looked at so far are
-  `Sized`. Although we don't know the size of the data `&str` is pointing to,
-  `&str` itself is `Sized`. It is two `usize` values (16 bytes on 64-bit) on the
-  stack: a pointer and a length.
+  also an **auto trait**; the compiler implements it automatically for you based
+  on the type's definition. All the types we have looked at so far are `Sized`.
+  Although we don't know the size of the data `&str` is pointing to, `&str`
+  itself is `Sized`. It is two `usize` values (16 bytes on 64-bit) on the stack:
+  a pointer and a length.
 
 ### Conversions: From & Into
 
@@ -849,9 +845,9 @@ impl Order {
   }
   ```
 
-- **Infallible** means that the conversion will always succeed and the
-  `from()` and `into()` methods do not return a `Result` or `Option`. So they
-  can't communicate any failure cases to the caller.
+- **Infallible** means that the conversion will always succeed and the `from()`
+  and `into()` methods do not return a `Result` or `Option`. So they can't
+  communicate any failure cases to the caller.
 - The `From<T>: Sized` syntax here implies that `From` is a subtrait of `Sized`,
   or equivalently, `Sized` is a supertrait of `From`. Any type that implements
   `From` must also implement `Sized`. Additionally, any generic type parameter
@@ -863,8 +859,8 @@ impl Order {
   `let s = String::from("Hello");`. However, we have also been using
   `"Hello".into()`.
 - `From` and `Into` are **dual traits**. `From<T>` for `U` implies `Into<U>` for
-  `T`, as `Into` is just `From` implemented in reverse. In the standard
-  library, this is achieved via a **blanket implementation**:
+  `T`, as `Into` is just `From` implemented in reverse. In the standard library,
+  this is achieved via a **blanket implementation**:
 
   ```rs
   impl<T, U> Into<U> for T
@@ -880,8 +876,8 @@ impl Order {
 - **The Golden Rule of Conversions**: **Always implement `From`, never implement
   `Into`**. Implementing `From` automatically gives you `Into` for free via the
   blanket implementation above. The reverse is not true.
-- Normally the target type we are converting to is inferred from the
-  surrounding function/method signature or a type annotation.
+- Normally the target type we are converting to is inferred from the surrounding
+  function/method signature or a type annotation.
 - Here is an example of implementing `From` (and `Into`) for our own type:
 
   ```rs
@@ -996,8 +992,8 @@ impl Order {
   types of the operands.
 - Use an associated type when the type must be uniquely determined for a given
   trait implementation.
-- Use a generic parameter when you want to allow multiple implementations of
-  the trait for the same type, with different input types.
+- Use a generic parameter when you want to allow multiple implementations of the
+  trait for the same type, with different input types.
 - **Generic Trait vs. Generic Method ("Who chooses `T`?")**:
   - **Generic Trait (`trait Trait<T>`)**: The **implementer** chooses `T`. You
     can write distinct `impl` blocks for specific types (e.g., `Add<u32>`,
@@ -1005,9 +1001,9 @@ impl Order {
     illegal to call the method with a type it is not implemented for.
   - **Generic Method (`trait Trait { fn method<T>(...); }`)**: The **caller**
     chooses `T`. The implementer must provide a single method body that can
-    handle *any* type `T` the caller provides (usually constrained by trait
+    handle _any_ type `T` the caller provides (usually constrained by trait
     bounds).
-  - *Rule of thumb*: If a type needs to support multiple specific types with
+  - _Rule of thumb_: If a type needs to support multiple specific types with
     different implementations, make the **trait** generic. If a single
     implementation works for any type satisfying a bound, make the **method**
     generic.
@@ -1031,15 +1027,15 @@ impl Order {
   }
   ```
 
-- Note: In well-designed Rust APIs, functions that only need to read data
-  should take a reference `&T` instead of consuming `T` and forcing the caller
-  to `.clone()`. Clone is for when true, independent ownership is actually
+- Note: In well-designed Rust APIs, functions that only need to read data should
+  take a reference `&T` instead of consuming `T` and forcing the caller to
+  `.clone()`. Clone is for when true, independent ownership is actually
   necessary.
 
 ### Copy
 
-- `Copy` is another trait in Rust's standard library. It is another marker
-  trait like `Sized`.
+- `Copy` is another trait in Rust's standard library. It is another marker trait
+  like `Sized`.
 
   ```rs
   pub trait Copy: Clone { }
@@ -1064,10 +1060,10 @@ impl Order {
 
 ### Drop
 
-- The `Drop` trait is a mechanism for you to define additional cleanup logic
-  for your types, beyond what the compiler does for you automatically.
-  Whatever you provide in the `drop` method will be executed when the value
-  goes out of scope.
+- The `Drop` trait is a mechanism for you to define additional cleanup logic for
+  your types, beyond what the compiler does for you automatically. Whatever you
+  provide in the `drop` method will be executed when the value goes out of
+  scope.
 
   ```rs
   pub trait Drop {
@@ -1083,11 +1079,11 @@ impl Order {
 - Don't make a function generic if it is always invoked with a single type. It
   introduces indirection in your codebase, making it harder to understand and
   maintain.
-- Don't create a trait if you only have one implementation. It's a sign that
-  the trait is not needed.
-- Implement standard traits for your types (Debug, PartialEq, etc.) whenever
-  it makes sense. It will make your types more idiomatic and easier to work
-  with, unlocking a lot of functionality provided by the standard library and
+- Don't create a trait if you only have one implementation. It's a sign that the
+  trait is not needed.
+- Implement standard traits for your types (Debug, PartialEq, etc.) whenever it
+  makes sense. It will make your types more idiomatic and easier to work with,
+  unlocking a lot of functionality provided by the standard library and
   ecosystem crates.
 - Implement traits from third-party crates if you need the functionality they
   unlock within their ecosystem.
@@ -1303,10 +1299,10 @@ impl Order {
 - As a general rule in Rust: if an enum has no payload (or all of its variant
   payloads are also `Copy`), derive `Copy` and `Clone` without hesitation.
 - You can derive `PartialOrd` and `Ord` on an `enum` and the ordering will be
-  defined by the order of the variants. The first is 0, the next is 1, etc.
-  It's also possible to manually assign discriminants, and order will go by
-  those, for example, `ToDo = 10, Low = 1`. If the variants have payloads, it
-  goes by discriminant first, and then payload if both are the same variant.
+  defined by the order of the variants. The first is 0, the next is 1, etc. It's
+  also possible to manually assign discriminants, and order will go by those,
+  for example, `ToDo = 10, Low = 1`. If the variants have payloads, it goes by
+  discriminant first, and then payload if both are the same variant.
 - While `PartialEq` and `PartialOrd` are enough to use the operators, the rule
   of thumb is if your type can implement `Eq` and `Ord`, you should derive them.
   `Eq` requires `PartialEq`, and `Ord` requires `PartialOrd`, `PartialEq`, and
@@ -1437,9 +1433,9 @@ impl Order {
 
 ### Tuples
 
-- We haven't actually covered tuples yet! A tuple is another primitive Rust
-  type that groups together a fixed number of values with (potentially)
-  different types.
+- We haven't actually covered tuples yet! A tuple is another primitive Rust type
+  that groups together a fixed number of values with (potentially) different
+  types.
 
   ```rs
   // Two values, same type
@@ -1493,10 +1489,10 @@ impl Order {
   ```
 
 - Recoverable errors in Rust are represented by values. They are just an
-  instance of a type being passed around and manipulated. Fallibility in Rust
-  is encoded in the function's signature. It is clear from the return type
-  whether a function can fail or not. The big advantage of `Result` is that it
-  makes fallibility explicit.
+  instance of a type being passed around and manipulated. Fallibility in Rust is
+  encoded in the function's signature. It is clear from the return type whether
+  a function can fail or not. The big advantage of `Result` is that it makes
+  fallibility explicit.
 
   ```rs
   // Just by looking at the signature, you know that this function
@@ -1509,12 +1505,12 @@ impl Order {
 
 - Many other languages handle failure with exceptions. Exceptions introduce a
   separate control flow path that can be hard to reason about and has poor
-  locality. The exception might be handled far from where it is thrown. Also
-  you cannot tell by looking at a function that it might throw an exception
-  unless you are very familiar with its implementation or read the function's
-  documentation. Keep in mind that panics still exist in Rust and are much
-  like exceptions in other languages, but they are meant for **unrecoverable
-  errors** and should be used sparingly.
+  locality. The exception might be handled far from where it is thrown. Also you
+  cannot tell by looking at a function that it might throw an exception unless
+  you are very familiar with its implementation or read the function's
+  documentation. Keep in mind that panics still exist in Rust and are much like
+  exceptions in other languages, but they are meant for **unrecoverable errors**
+  and should be used sparingly.
 - Here is a first pass at a `Ticket::new` function that returns a `Result`:
 
   ```rs
@@ -1812,26 +1808,26 @@ impl Order {
   metadata, such as its name and version.
 - Inside a package, you have one or more crates, also known as **targets**. The
   two most common crate types are **binary crates** (which contain a `main`
-  function in a *src/main.rs* or alternatively a *src/bin/name.rs* for some
-  name) and **library crates** (which contain a *src/lib.rs*). You can override
-  default filenames by explicitly declaring targets in *Cargo.toml*. A package
+  function in a _src/main.rs_ or alternatively a _src/bin/name.rs_ for some
+  name) and **library crates** (which contain a _src/lib.rs_). You can override
+  default filenames by explicitly declaring targets in _Cargo.toml_. A package
   can contain multiple crates, but only one library crate.
 
 ### Dependencies
 
-- You can add dependencies to your *Cargo.toml*.
+- You can add dependencies to your _Cargo.toml_.
 
   ```toml
   [dependencies]
   thiserror = "1"
   ```
 
-- Your *Cargo.lock* file contains resolved versions of your dependencies and
-  should be checked into source control. Running `cargo update` will cause
-  the compiler to re-resolve the dependencies and update *Cargo.lock*. Otherwise
-  you will always build with the same versions as specified in the lock file.
+- Your _Cargo.lock_ file contains resolved versions of your dependencies and
+  should be checked into source control. Running `cargo update` will cause the
+  compiler to re-resolve the dependencies and update _Cargo.lock_. Otherwise you
+  will always build with the same versions as specified in the lock file.
 - You can also specify dependencies with a local path. The path is relative to
-  the *Cargo.toml* file that is declaring the dependency.
+  the _Cargo.toml_ file that is declaring the dependency.
 
   ```toml
   [dependencies]
@@ -1867,9 +1863,9 @@ impl Order {
   - `#[error("{0}")]`: this is the syntax to define a `Display` implementation
     for each variant of the custom error type. `{0}` is replaced by the zero-th
     field of the variant (`String`, in this case) when the error is displayed.
-- After adding `thiserror` to our dependencies, we can rewrite the last
-  example. We will use more specific values in our enum so each error has one
-  message rather than carrying a `String`.
+- After adding `thiserror` to our dependencies, we can rewrite the last example.
+  We will use more specific values in our enum so each error has one message
+  rather than carrying a `String`.
 
   ```rs
   #[derive(Debug, thiserror::Error)]
@@ -1905,10 +1901,10 @@ impl Order {
   }
   ```
 
-- Both `TryFrom` and `TryInto` have an associated `Error` type. This allows
-  each implementation to specify its own error type, ideally the most
-  appropriate for the conversion being attempted. `Self::Error` is a way to
-  refer to the Error associated type defined in the trait itself.
+- Both `TryFrom` and `TryInto` have an associated `Error` type. This allows each
+  implementation to specify its own error type, ideally the most appropriate for
+  the conversion being attempted. `Self::Error` is a way to refer to the Error
+  associated type defined in the trait itself.
 - Just like `From`, if you implement `TryFrom`, you get `TryInto` for free.
 
   ```rs
@@ -1956,8 +1952,8 @@ impl Order {
     owned `String` (because converting case can alter byte lengths in UTF-8).
     String literals like "todo" and "done" are `&str`. Calling `.as_str()`
     borrows that temporary String as an `&str` so the compiler can match it
-    against "todo", "inprogress", and "done". `match` expressions do not
-    perform deref coercion. Deref coercion happens to function/method arguments,
+    against "todo", "inprogress", and "done". `match` expressions do not perform
+    deref coercion. Deref coercion happens to function/method arguments,
     explicit variable assignments, and function return expressions. `as_str()`
     is the idiomatic way to borrow a `String` as a `&str` slice.
 
@@ -1990,9 +1986,8 @@ impl Order {
 
 - `&(dyn Error + 'static)` is a reference to a trait object that implements the
   `Error` trait and is valid for the entire program execution. `dyn Error`
-  refers to any type that implements `Error`. `'static` is a lifetime
-  annotation that means the trait object is valid for the entire program
-  execution.
+  refers to any type that implements `Error`. `'static` is a lifetime annotation
+  that means the trait object is valid for the entire program execution.
 - `thiserror` provides three ways to automatically implement `source` for your
   error types.
   - A field named `source` will automatically be used as the source of an error.
@@ -2025,9 +2020,9 @@ impl Order {
     }
     ```
 
-  - A field annotated with the `#[from]` attribute will automatically be used
-    as the source of the error and `thiserror` will automatically generate a
-    `From` implementation to convert the annotated type into your error type.
+  - A field annotated with the `#[from]` attribute will automatically be used as
+    the source of the error and `thiserror` will automatically generate a `From`
+    implementation to convert the annotated type into your error type.
 
     ```rs
     use thiserror::Error;
@@ -2085,8 +2080,8 @@ impl Order {
 - You can use the `?` operator to shorten your error handling code
   significantly.
 - In particular, the `?` operator will automatically convert the error type of
-  the fallible operation into the error type of the function, if a conversion
-  is possible (i.e. if there is a suitable `From` implementation).
+  the fallible operation into the error type of the function, if a conversion is
+  possible (i.e. if there is a suitable `From` implementation).
 
   ```rs
   // src/lib.rs
@@ -2218,9 +2213,9 @@ impl Order {
 ### Outro - Validated Ticket
 
 - In our final take on `Ticket`, we plan to introduce a new type for each of the
-  fields in `Ticket`. Every time someone accesses a `TicketField`, they will
-  get back a value that is guaranteed to be valid. For example, a `TicketTitle`
-  will always be a non-empty `String` less than 50 bytes long.
+  fields in `Ticket`. Every time someone accesses a `TicketField`, they will get
+  back a value that is guaranteed to be valid. For example, a `TicketTitle` will
+  always be a non-empty `String` less than 50 bytes long.
 
   ```rs
   // src/lib.rs
@@ -2528,10 +2523,10 @@ impl Order {
   replace it (`ticket.title = TicketTitle::try_from(...)?;`).
 - **Parse, Don't Validate**: This embodies Alexis King's famous principle:
   [Parse, don't validate](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/).
-  Instead of validating raw strings with `if` checks across the application,
-  you parse the data once at the system boundary into a dedicated type. Any
-  function taking `TicketTitle` is guaranteed a valid, non-empty title by the
-  type system.
+  Instead of validating raw strings with `if` checks across the application, you
+  parse the data once at the system boundary into a dedicated type. Any function
+  taking `TicketTitle` is guaranteed a valid, non-empty title by the type
+  system.
 - **Public Fields**: Because each field guarantees its own validity, `Ticket`
   can safely expose its fields as `pub` without risking broken invariants.
 
@@ -2546,9 +2541,8 @@ impl Order {
   let numbers: [u32; 3] = [1, 2, 3];
   ```
 
-- The type `[u32; 3]` reads as "an array of `u32`s with a length of 3".
-  If all array elements are the same, you can use a shorter syntax to
-  initialize it:
+- The type `[u32; 3]` reads as "an array of `u32`s with a length of 3". If all
+  array elements are the same, you can use a shorter syntax to initialize it:
 
   ```rs
   // [ <value> ; <number of elements> ]
@@ -2610,19 +2604,19 @@ impl Order {
 
 ### Vectors
 
-- Arrays' strength is also their weakness: their size must be known upfront,
-  at compile-time. We clearly don't know how many tickets we need to hold ahead
-  of time, so they are a poor fit for our ticketing system. But `Vec` is a
-  growable array type provided by the standard library. You can create an
-  empty vector with `Vec::new()` or `vec![]` then `push` elements onto it. If
-  you know some values at creation, you can initialize it with the `vec!`
-  macro: `let v = vec![1, 2, 3];`. The syntax for accessing elements is the
-  same as arrays. `Vec` is allocated on the heap and has `O(1)` complexity.
+- Arrays' strength is also their weakness: their size must be known upfront, at
+  compile-time. We clearly don't know how many tickets we need to hold ahead of
+  time, so they are a poor fit for our ticketing system. But `Vec` is a growable
+  array type provided by the standard library. You can create an empty vector
+  with `Vec::new()` or `vec![]` then `push` elements onto it. If you know some
+  values at creation, you can initialize it with the `vec!` macro:
+  `let v = vec![1, 2, 3];`. The syntax for accessing elements is the same as
+  arrays. `Vec` is allocated on the heap and has `O(1)` complexity.
 - A `Vec` keeps track of three things:
   - A **pointer** to the heap region you reserved.
   - The **length** of the vector; how many elements there are.
-  - The **capacity** of the vector; the number of elements that can fit in
-    space reserved on the heap.
+  - The **capacity** of the vector; the number of elements that can fit in space
+    reserved on the heap.
 - A `String` is just a `Vec<u8>` with some extra methods.
 
   ```rs
@@ -2639,8 +2633,8 @@ impl Order {
 ### Resizing
 
 - When a `Vec` exhausts its capacity, it will ask the allocator for a new
-  (larger) chunk of heap memory, copy the elements over, and deallocate the
-  old memory. This operation can be expensive, as it involves a new memory
+  (larger) chunk of heap memory, copy the elements over, and deallocate the old
+  memory. This operation can be expensive, as it involves a new memory
   allocation and copying all existing elements.
 - If you have a rough idea of how many elements you are going to store in the
   `Vec`, you can pre-allocate memory with `Vec::with_capacity()`.
@@ -2693,18 +2687,17 @@ impl Order {
   }
   ```
 
-- A call to `next` returns an `Option` containing the next value in the
-  sequence if there is one, or `None` if the iterator is exhausted.
-  Be careful: there is no guarantee that an iterator is exhausted when it
-  returns `None`. That's only guaranteed if the iterator implements the (more
-  restrictive) `FusedIterator` trait. The standard collections all implement
-  this. `iter.fuse()` can be used to fuse an iterator that doesn't implement
-  `FusedIterator`.
+- A call to `next` returns an `Option` containing the next value in the sequence
+  if there is one, or `None` if the iterator is exhausted. Be careful: there is
+  no guarantee that an iterator is exhausted when it returns `None`. That's only
+  guaranteed if the iterator implements the (more restrictive) `FusedIterator`
+  trait. The standard collections all implement this. `iter.fuse()` can be used
+  to fuse an iterator that doesn't implement `FusedIterator`.
 - The `IntoIterator` trait defines an `into_iter` method that consumes the
-  original value and returns an iterator over its elements. A type can only
-  have one implementation of `IntoIterator`. Every type that implements
-  `Iterator` implements `IntoIterator` by returning itself. The `for` loop
-  only requires that a type implements `IntoIterator`.
+  original value and returns an iterator over its elements. A type can only have
+  one implementation of `IntoIterator`. Every type that implements `Iterator`
+  implements `IntoIterator` by returning itself. The `for` loop only requires
+  that a type implements `IntoIterator`.
 
   ```rs
   trait IntoIterator {
@@ -2753,15 +2746,15 @@ impl Order {
 
 - `IntoIterator` **consumes** `self` to create an iterator. This has its
   benefits: you get owned values from the iterator. For example: if you call
-  `.into_iter()` on a `Vec<Ticket>` you'll get an iterator that returns
-  `Ticket` values. That's also its downside: you can no longer use the original
+  `.into_iter()` on a `Vec<Ticket>` you'll get an iterator that returns `Ticket`
+  values. That's also its downside: you can no longer use the original
   collection after calling `.into_iter()` on it. Quite often you want to iterate
   over a collection without consuming it, looking at **references** to the
   values instead. Most collections expose a method called `.iter()` which
-  returns an iterator over references to the collection's elements. This
-  pattern can be simplified by implementing *IntoIterator* for a reference to
-  the collection. The standard library does this, so if we do `for n in &v` we
-  get back references to `n`. It's idiomatic to provide both options:
+  returns an iterator over references to the collection's elements. This pattern
+  can be simplified by implementing _IntoIterator_ for a reference to the
+  collection. The standard library does this, so if we do `for n in &v` we get
+  back references to `n`. It's idiomatic to provide both options:
   - An implementation of `IntoIterator` for a reference to the collection.
   - An `.iter()` method that returns an iterator over references to the
     collection's elements.
@@ -2793,10 +2786,10 @@ impl Order {
 ### Lifetimes
 
 - Lifetimes are labels used by the Rust compiler to keep track of how long a
-  reference is valid. The lifetime of a reference is constrained by the scope
-  of the value it refers to. Naming how long a specific reference is valid
-  becomes important when you have multiple references and you need to clarify
-  how they relate to each other.
+  reference is valid. The lifetime of a reference is constrained by the scope of
+  the value it refers to. Naming how long a specific reference is valid becomes
+  important when you have multiple references and you need to clarify how they
+  relate to each other.
 
   ```rs
   impl<T> Vec<T> {
@@ -2841,20 +2834,21 @@ impl Order {
   }
   ```
 
-- **Why `self` is already a reference**: In `impl<'a> IntoIterator for
-  &'a TicketStore`, the type implementing the trait is `&'a TicketStore`.
-  The trait signature is `fn into_iter(self) -> Self::IntoIter`. Because
-  `Self` is `&'a TicketStore`, `self` is already a reference! You do not need
-  `&self.tickets`—calling `self.tickets.iter()` automatically borrows the
-  vector's elements as slice references for lifetime `'a`.
+- **Why `self` is already a reference**: In
+  `impl<'a> IntoIterator for &'a TicketStore`, the type implementing the trait
+  is `&'a TicketStore`. The trait signature is
+  `fn into_iter(self) -> Self::IntoIter`. Because `Self` is `&'a TicketStore`,
+  `self` is already a reference! You do not need `&self.tickets`—calling
+  `self.tickets.iter()` automatically borrows the vector's elements as slice
+  references for lifetime `'a`.
 - **The Three `IntoIterator` Patterns**: Idiomatic collections implement
   `IntoIterator` in three distinct variations:
 
-| Impl for           | self Type      | Item Type     | for Loop Usage   |
-| :----------------- | :------------- | :------------ | :--------------- |
-| `TicketStore`      | owned `Self`   | `Ticket`      | `for t in store` |
-| `&'a TicketStore`  | `&'a Self`     | `&'a Ticket`  | `for t in &store`|
-| `&'a mut Store`    | `&'a mut Self` | `&'a mut T`   | `for t in &mut s`|
+| Impl for          | self Type      | Item Type    | for Loop Usage    |
+| :---------------- | :------------- | :----------- | :---------------- |
+| `TicketStore`     | owned `Self`   | `Ticket`     | `for t in store`  |
+| `&'a TicketStore` | `&'a Self`     | `&'a Ticket` | `for t in &store` |
+| `&'a mut Store`   | `&'a mut Self` | `&'a mut T`  | `for t in &mut s` |
 
 ### Combinators
 
@@ -2882,13 +2876,12 @@ impl Order {
 - `filter` and `map` take **closures** as arguments. Closures are **anonymous
   functions**, i.e. functions not defined with the `fn` syntax. They are defined
   like `|args| body` where body is in braces `{}` if it is more than one line.
-  They can also include a return type if it cannot be inferred.
-  A closure can also be
-  assigned to a variable like `let add_one = |x| x + 1;`
+  They can also include a return type if it cannot be inferred. A closure can
+  also be assigned to a variable like `let add_one = |x| x + 1;`
 - When you are done transforming the elements in the way that you want, you can
   either iterate over the elements with a `for` or use `collect` to consume the
-  iterator and create a new collection from the elements. For example, you
-  could `collect` the even squares into a `Vec<u32>`:
+  iterator and create a new collection from the elements. For example, you could
+  `collect` the even squares into a `Vec<u32>`:
 
   ```rs
   let numbers = vec![1, 2, 3, 4, 5];
@@ -2927,9 +2920,9 @@ impl Order {
 ### impl Trait
 
 - The previous method always allocates memory on the heap to return the vector
-  of `&Ticket` references. That may be unnecessary depending on what the
-  caller wants to do with the vector of references. An alternative approach
-  is to return an **iterator**. But imagine we wanted to do this:
+  of `&Ticket` references. That may be unnecessary depending on what the caller
+  wants to do with the vector of references. An alternative approach is to
+  return an **iterator**. But imagine we wanted to do this:
 
   ```rs
   impl TicketStore {
@@ -2948,11 +2941,11 @@ impl Order {
 
 - `I` is `std::slice::Iter<'_, Ticket>` and `P` is a closure type representing
   the predicate used to filter elements. The problem is that `P` is a unique,
-  anonymous type for each closure. We cannot name it in the return type.
-  Rust's solution for this is `impl Trait`. It allows you to return a type
-  without specifying its name. You just declare what traits the type implements,
-  and the compiler figures out the exact type. Since we know we want to return
-  an `Iterator` reference, we could define `to_dos`:
+  anonymous type for each closure. We cannot name it in the return type. Rust's
+  solution for this is `impl Trait`. It allows you to return a type without
+  specifying its name. You just declare what traits the type implements, and the
+  compiler figures out the exact type. Since we know we want to return an
+  `Iterator` reference, we could define `to_dos`:
 
   ```rs
   impl TicketStore {
@@ -2965,8 +2958,8 @@ impl Order {
 - The return type of a function using `impl Trait` is fixed at compile time.
   There will only be a single implementation for it. This is different from
   generics where the caller can specify any type and the function must take it.
-  A function with a generic type is **polymorphic** and the compiler generates
-  a different implementation for each type. `impl Trait` is called an **opaque
+  A function with a generic type is **polymorphic** and the compiler generates a
+  different implementation for each type. `impl Trait` is called an **opaque
   return type** since the caller doesn't know the exact type of the return
   value, only that it implements the specified trait. But the compiler knows the
   exact type and no polymorphism is involved. Using an `impl Trait` in the
@@ -2984,8 +2977,8 @@ impl Order {
 
 - You can also use the `impl Trait` syntax in the argument position. When used
   in the argument position, `impl Trait` is equivalent to a generic parameter
-  with a trait bound. As a rule of thumb, prefer generics to `impl Trait` in
-  the argument position. Generics allow the caller to specify a type with the
+  with a trait bound. As a rule of thumb, prefer generics to `impl Trait` in the
+  argument position. Generics allow the caller to specify a type with the
   turbofish syntax ( `::<>` ), whereas `impl Trait` does not.
 
   ```rs
@@ -3016,9 +3009,9 @@ impl Order {
 
 ### Slices
 
-- `[T]` is a slice of a contiguous sequence of elements of type `T`. It is
-  most commonly used in borrowed form `&[T]`. There are various ways to create
-  a slice reference from a `Vec`:
+- `[T]` is a slice of a contiguous sequence of elements of type `T`. It is most
+  commonly used in borrowed form `&[T]`. There are various ways to create a
+  slice reference from a `Vec`:
 
   ```rs
   let numbers = vec![1, 2, 3];
@@ -3073,12 +3066,12 @@ impl Order {
 
 ### Two states
 
-- We consider adding an `id: TicketId` to our `Ticket` struct. The first
-  problem with this is we don't know the `id` beforehand, so cannot initialize
-  it on creation. We could make it an `Option<TicketId>` but then we have to
-  deal with unwrapping an option when we know the id exists. So instead we
-  decide to model the ticket with two states. `TicketDraft` with no `id`, and
-  `Ticket` with all information.
+- We consider adding an `id: TicketId` to our `Ticket` struct. The first problem
+  with this is we don't know the `id` beforehand, so cannot initialize it on
+  creation. We could make it an `Option<TicketId>` but then we have to deal with
+  unwrapping an option when we know the id exists. So instead we decide to model
+  the ticket with two states. `TicketDraft` with no `id`, and `Ticket` with all
+  information.
 
   ```rs
   pub struct TicketDraft {
@@ -3094,9 +3087,9 @@ impl Order {
   }
   ```
 
-- A `TicketDraft` is a `Ticket` that hasn't been created yet and has no `id`
-  and no `status`. Since each field embeds its constraints within its type, we
-  don't have to duplicate logic across the two types.
+- A `TicketDraft` is a `Ticket` that hasn't been created yet and has no `id` and
+  no `status`. Since each field embeds its constraints within its type, we don't
+  have to duplicate logic across the two types.
 
   ```rs
   use ticket_fields::{TicketDescription, TicketTitle};
@@ -3175,8 +3168,8 @@ impl Order {
 
 - `Index` has:
   - One generic parameter, `Idx`, to represent the index type
-  - One associated type, `Output`, to represent the type we retrieved using
-    the index
+  - One associated type, `Output`, to represent the type we retrieved using the
+    index
 - Note that `index` doesn't return an `Option<T>`. The assumption is that it
   will panic if you try to access an element that is not there.
 
@@ -3233,10 +3226,10 @@ impl Order {
 
 ### HashMap
 
-- Our implementation of `Index`/`IndexMut` is not ideal: we need to iterate
-  over the entire `Vec` to retrieve a ticket by `id`; the algorithmic complexity
-  is `O(n)`, where `n` is the number of tickets in the store. We can do better
-  by using a different data structure for storing tickets: a `HashMap<K, V>`.
+- Our implementation of `Index`/`IndexMut` is not ideal: we need to iterate over
+  the entire `Vec` to retrieve a ticket by `id`; the algorithmic complexity is
+  `O(n)`, where `n` is the number of tickets in the store. We can do better by
+  using a different data structure for storing tickets: a `HashMap<K, V>`.
 
   ```rs
   use std::collections::HashMap;
@@ -3288,8 +3281,8 @@ impl Order {
   ```
 
 - You can derive `Eq` automatically when you derive `PartialEq`.
-- There is a contract between `Eq` and `Hash`. When two objects are equal,
-  they must have the same hash value. This is crucial for `HashMap` to work.
+- There is a contract between `Eq` and `Hash`. When two objects are equal, they
+  must have the same hash value. This is crucial for `HashMap` to work.
 
   ```rs
   // `HashMap` implementation of `TicketStore`
@@ -3419,9 +3412,9 @@ impl Order {
   ```
 
 - Where `partial_cmp` returns an `Option<Ordering>`, `cmp` returns an
-  `Ordering`. Both `Ord` and `PartialOrd` can be derived for your types.
-  If implementing them yourself, be sure `Ord` and `PartialOrd` are consistent
-  with `Eq` and `PartialEq` as well as with each other.
+  `Ordering`. Both `Ord` and `PartialOrd` can be derived for your types. If
+  implementing them yourself, be sure `Ord` and `PartialOrd` are consistent with
+  `Eq` and `PartialEq` as well as with each other.
 
   ```rs
   // `BTreeMap` implementation of `TicketStore`
@@ -3578,19 +3571,18 @@ impl Order {
 
 - A **thread** is an execution context managed by the underlying operating
   system. Each thread has its own stack and instruction pointer.
-- A single **process** can manage multiple threads. These threads share the
-  same memory space, which means they can access the same data.
+- A single **process** can manage multiple threads. These threads share the same
+  memory space, which means they can access the same data.
 - Threads are a logical construct. In the end, you can only run one set of
-  instructions at a time on a CPU core, the physical execution unit. Since
-  there can be many more threads than there are CPU cores, the operating
-  system's scheduler is in charge of deciding which thread to run at any given
-  time, partitioning CPU time among them to maximize throughput and
-  responsiveness.
+  instructions at a time on a CPU core, the physical execution unit. Since there
+  can be many more threads than there are CPU cores, the operating system's
+  scheduler is in charge of deciding which thread to run at any given time,
+  partitioning CPU time among them to maximize throughput and responsiveness.
 - When a Rust program starts, it runs on a single thread, the **main thread**.
 - The `std::thread` library allows you to create and manage threads.
   - `thread::spawn` creates new threads and executes code on them.
-  - `thread::JoinHandle::join` is called on a thread's `JoinHandle`
-    (returned from spawn) to wait for the thread to finish.
+  - `thread::JoinHandle::join` is called on a thread's `JoinHandle` (returned
+    from spawn) to wait for the thread to finish.
 - By default all threads end when main ends. `join` introduces a form of
   **synchronization** between the two threads. You're guaranteed to see the
   results of the thread before the program exits.
@@ -3616,23 +3608,23 @@ impl Order {
 - Since a spawned thread can outlive the thread that spawned it (its parent
   thread) and run until the program exits, it must not borrow any values that
   can be dropped before the program exits.
-- All values in Rust have a lifetime, not just a reference. `spawn` requires
-  a thread and all references it uses be `'static`. You can interpret `'static`
-  as saying:
+- All values in Rust have a lifetime, not just a reference. `spawn` requires a
+  thread and all references it uses be `'static`. You can interpret `'static` as
+  saying:
   - Give me an owned value (it won't disappear before the thread is done).
   - Give me a reference that is valid for the entire duration of the program.
 - Transferring ownership with the `move` keyword is the easiest way to satisfy
   this if you own the data.
-- One of the most common `'static` values is a reference to **static data**,
-  in a region known as the **read-only data segment**, such as string literals:
+- One of the most common `'static` values is a reference to **static data**, in
+  a region known as the **read-only data segment**, such as string literals:
 
   ```rs
   let s: &'static str = "Hello world!";
   ```
 
-- When passed a `'static` reference, we can use it and references to it
-  without `move`. In the tests, these passed `ARRAY` variable is declared
-  with the `static` keyword after doing `use task_static_lifetime::*`.
+- When passed a `'static` reference, we can use it and references to it without
+  `move`. In the tests, these passed `ARRAY` variable is declared with the
+  `static` keyword after doing `use task_static_lifetime::*`.
 
   ```rs
   use std::thread;
@@ -3665,8 +3657,8 @@ impl Order {
   - The amount of memory you need to leak is bounded/known upfront, or
   - Your process is short-lived and you're confident you won't exhaust all the
     available memory before it exits.
-- There are different `leak` implementations available for different types,
-  like `Vec::leak`.
+- There are different `leak` implementations available for different types, like
+  `Vec::leak`.
 
   ```rs
   use std::thread;
@@ -3771,8 +3763,8 @@ impl Order {
     the type of the messages that can travel on our channel. It could be a
     `u64`, a `struct`, an `enum`, etc.
   - `send` returns an error if the receiver has been dropped.
-  - `recv` returns an error if all senders have been dropped and the channel
-    is empty.
+  - `recv` returns an error if all senders have been dropped and the channel is
+    empty.
   - In other words, `send` and `recv` error when the channel is effectively
     closed.
 - This example was a relatively simple demonstration of sending on a channel,
@@ -3899,9 +3891,9 @@ impl Order {
 
 ### Interior Mutability
 
-- `Sender<T>` is not only immutable but is cloneable, despite obviously
-  changing the contents of the channel. Whenever a type allows you to mutate
-  data through a shared reference, you're dealing with **interior mutability**.
+- `Sender<T>` is not only immutable but is cloneable, despite obviously changing
+  the contents of the channel. Whenever a type allows you to mutate data through
+  a shared reference, you're dealing with **interior mutability**.
 - You can tell the compiler "No, this shared reference is actually mutable" by
   wrapping the data in an `UnsafeCell`. Every time you see a type that allows
   interior mutability, you can be certain that UnsafeCell is involved, either
@@ -3911,20 +3903,20 @@ impl Order {
   the rules about borrowing and aliasing. When you use `unsafe`, you are telling
   the compiler "I know what I am doing, I won't violate your invariants, trust
   me."
-- Every time you call an unsafe function, there will be documentation
-  explaining its safety preconditions: under what circumstances it's safe to
-  execute its `unsafe` block.
+- Every time you call an unsafe function, there will be documentation explaining
+  its safety preconditions: under what circumstances it's safe to execute its
+  `unsafe` block.
 - `Rc<T>` is a reference-counted pointer. It wraps around a value and keeps
   track of how many references to the value exist. When the last reference is
   dropped, the value is deallocated. The value wrapped in an `Rc` is immutable:
-  you can only get shared references to it. `Rc` uses `UnsafeCell` internally
-  to allow shared references to increment and decrement the reference count.
+  you can only get shared references to it. `Rc` uses `UnsafeCell` internally to
+  allow shared references to increment and decrement the reference count.
 - `RefCell<T>` is one of the most common examples of interior mutability in
   Rust. It allows you to mutate the value wrapped in a `RefCell` even if you
   only have an immutable reference to the `RefCell` itself. This is done via
-  runtime borrow checking. The `RefCell` keeps track of the number (and type)
-  of references to the value it contains at runtime. If you try to borrow the
-  value mutably while it's already borrowed immutably, the program will panic,
+  runtime borrow checking. The `RefCell` keeps track of the number (and type) of
+  references to the value it contains at runtime. If you try to borrow the value
+  mutably while it's already borrowed immutably, the program will panic,
   ensuring that Rust's borrowing rules are always enforced.
 
   ```rs
@@ -3979,11 +3971,11 @@ impl Order {
 
 ### Ack pattern
 
-- We need a way for the server to send a response back to the client.
-  There are various ways to do this, but the simplest option is to include a
-  `Sender` channel in the message that the client sends to the server. After
-  processing the message, the server can use this channel to send a response
-  back to the client.
+- We need a way for the server to send a response back to the client. There are
+  various ways to do this, but the simplest option is to include a `Sender`
+  channel in the message that the client sends to the server. After processing
+  the message, the server can use this channel to send a response back to the
+  client.
 - This is a fairly common pattern in Rust applications built on top of
   message-passing primitives.
 
@@ -4228,8 +4220,8 @@ impl Order {
   - `send`: if there is space in the channel, it will enqueue the message and
     return `Ok(())`. If the channel is full, it will block and wait until there
     is space available.
-  - `try_send`: if there is space in the channel, it will enqueue the message and
-    return `Ok(())`. If the channel is full, it will return
+  - `try_send`: if there is space in the channel, it will enqueue the message
+    and return `Ok(())`. If the channel is full, it will return
     `Err(TrySendError::Full(value))`, where `value` is the message that couldn't
     be sent.
 - Bounded channels provide a form of **backpressure**, and prevent end users
@@ -4348,8 +4340,8 @@ impl Order {
 
 - In the single-threaded version, we just returned a `mut` reference for
   updating. But `SyncSender<&mut Ticket>` isn't `'static` because `&mut Ticket`
-  doesn't satisfy `'static` lifetime, so it cannot be captured by the closure
-  we pass to `std::thread::spawn`. We can get a mutable reference on the server
+  doesn't satisfy `'static` lifetime, so it cannot be captured by the closure we
+  pass to `std::thread::spawn`. We can get a mutable reference on the server
   though and do the update for the client. We'll have the client send a
   `TicketPatch`.
 
@@ -4363,8 +4355,8 @@ impl Order {
   ```
 
 - The `id` is mandatory to identify the `Ticket`, but the other fields are
-  optional. If the field is `None`, the `Ticket` field should not be changed.
-  A `Some` holds the new value for the corresponding field.
+  optional. If the field is `None`, the `Ticket` field should not be changed. A
+  `Some` holds the new value for the corresponding field.
 
   ```rs
   impl TicketStoreClient {
@@ -4410,16 +4402,17 @@ impl Order {
               }
               // --snip--
   }
+  ```
 
 ### Mutex, Send, and Arc
 
 - Our last version of this code had a problem with race conditions on updates.
-  If A and B both send an update, they will be applied in the order received
-  and the last updates will "win". One way to fix this is **optimistic
-  concurrency control** where you assign the `Ticket` a version number which is
-  updated on applying an update, and you only apply updates that have a
-  matching version number. Another solution is a lock. Rust's standard library
-  provides two different locking primitives: `Mutex<T>` and `RwLock<T>`.
+  If A and B both send an update, they will be applied in the order received and
+  the last updates will "win". One way to fix this is **optimistic concurrency
+  control** where you assign the `Ticket` a version number which is updated on
+  applying an update, and you only apply updates that have a matching version
+  number. Another solution is a lock. Rust's standard library provides two
+  different locking primitives: `Mutex<T>` and `RwLock<T>`.
 - `Mutex<T>` allows one thread to access the data, whether its for reading or
   writing. The `Mutex` wraps the data it locks and you get a reference with
   `lock` or `try_lock`. `lock` will wait until the data is available where
@@ -4457,3 +4450,767 @@ impl Order {
       tickets: BTreeMap<TicketId, Mutex<Ticket>>,
   }
   ```
+
+- One drawback is that `TicketStore` is now aware of the multi-threaded nature
+  of the system. Also for this scheme to work, the client should hold the lock
+  for the ticket they are working with. We can't send `Mutex<Ticket>` across a
+  channel, because `Mutex` is not `Clone` and we can't move it out of
+  `TicketStore` and transfer ownership. We cannot use send the `MutexGuard` due
+  to thread safety. `MutexGuard` does not implement `Send`.
+- `Send` is a marker trait that indicates that a type can be safely transferred
+  from one thread to another. `Send` is another auto-trait. You can implement it
+  manually, but it requires `unsafe`. Channels are `Send` only if their generic
+  type `T` is `Send`. `MutexGuard` is not `Send` because the underlying
+  operating system primitives that `Mutex` uses to implement the lock require
+  (on some platforms) that the lock must be released by the same thread that
+  acquired it. If we were to send a `MutexGuard` to another thread, the lock
+  would be released by a different thread, which would lead to undefined
+  behavior.
+- Our challenges:
+  - We can't send a `MutexGuard` over a channel. So we can't lock on the
+    server-side and then modify the ticket on the client-side.
+  - Sending `Mutex<Ticket>` itself _is_ allowed by `Send` (because `Mutex<T>` is
+    `Send` when `T` is `Send`), **but** ownership gets in the way: we can't move
+    the `Mutex` out of `TicketStore` without losing it from the store, and
+    `Mutex` isn't `Clone`.
+- Looking at this differently, to lock a `Mutex` we don't need an owned value. A
+  shared reference is enough since `Mutex` uses interior mutability. So it would
+  be enough to send a shared reference to the client, but the reference would
+  have to be `'static`. So we need an "owned shared reference".
+- `Arc` stands for **atomic reference counting**. `Arc` wraps around a value and
+  keeps track of how many references to the value exist. When the last reference
+  is dropped, the value is deallocated. The value wrapped in an `Arc` is
+  immutable: you can only get shared references to it.
+
+  ```rs
+  use std::sync::Arc;
+
+  let data: Arc<u32> = Arc::new(0);
+  let data_clone = Arc::clone(&data);
+
+  // `Arc<T>` implements `Deref<T>`, so can convert
+  // a `&Arc<T>` to a `&T` using deref coercion
+  let data_ref: &u32 = &data;
+  ```
+
+- The difference between `Rc` and `Arc` is that `Arc` is thread-safe and `Send`,
+  where `Rc` is not.
+- `Arc<Mutex<T>>`. If we pair `Arc` with `Mutex`, we finally get a type that:
+  - Can be sent between threads, because:
+    - `Arc` is `Send` if `T` is `Send`, and
+    - `Mutex` is `Send` if `T` is `Send`.
+    - `T` is `Ticket`, which is `Send`.
+  - Can be cloned, because `Arc` is `Clone` no matter what `T` is. Cloning an
+    `Arc` increments the reference count, the data is not copied.
+  - Can be used to modify the data it wraps, because `Arc` lets you get a shared
+    reference to `Mutex<T>` which can in turn be used to acquire a lock.
+
+  ```rs
+  // lib/store.rs
+  use crate::data::{Status, Ticket, TicketDraft};
+  use std::collections::BTreeMap;
+  use std::sync::{Arc, Mutex};
+
+  #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+  pub struct TicketId(u64);
+
+  #[derive(Clone)]
+  pub struct TicketStore {
+    tickets: BTreeMap<TicketId, Arc<Mutex<Ticket>>>,
+    counter: u64,
+  }
+
+  impl TicketStore {
+      pub fn new() -> Self {
+          Self {
+              tickets: BTreeMap::new(),
+              counter: 0,
+          }
+      }
+
+      pub fn add_ticket(&mut self, ticket: TicketDraft) -> TicketId {
+          let id = TicketId(self.counter);
+          self.counter += 1;
+          let ticket = Ticket {
+              id,
+              title: ticket.title,
+              description: ticket.description,
+              status: Status::ToDo,
+          };
+          self.tickets.insert(id, Arc::new(Mutex::new(ticket)));
+          id
+      }
+
+      // The `get` method should return a handle to the ticket
+      // which allows the caller to either read or modify the ticket.
+      pub fn get(&self, id: TicketId) -> Option<Arc<Mutex<Ticket>>> {
+          self.tickets.get(&id).cloned()
+      }
+  }
+
+  // tests/tests.rs
+  use task_mutex_send_arc::data::{Status, TicketDraft};
+  use task_mutex_send_arc::launch;
+  use ticket_fields::test_helpers::{ticket_description, ticket_title};
+
+  #[test]
+  fn works() {
+      let client = launch(5);
+      let draft = TicketDraft {
+          title: ticket_title(),
+          description: ticket_description(),
+      };
+      let ticket_id = client.insert(draft.clone()).unwrap();
+
+      let ticket = client.get(ticket_id).unwrap().unwrap();
+      {
+          let mut ticket = ticket.lock().unwrap();
+          assert_eq!(ticket_id, ticket.id);
+          assert_eq!(ticket.status, Status::ToDo);
+          assert_eq!(ticket.title, draft.title);
+          assert_eq!(ticket.description, draft.description);
+
+          ticket.status = Status::InProgress;
+      }
+
+      let ticket = client.get(ticket_id).unwrap().unwrap();
+      {
+          let ticket = ticket.lock().unwrap();
+          assert_eq!(ticket_id, ticket.id);
+          assert_eq!(ticket.status, Status::InProgress);
+      }
+  }
+  ```
+
+- Here is the exact type at each step from the above example:
+
+  ```rs
+  let ticket = client.get(ticket_id).unwrap().unwrap();
+  ```
+
+  1. **`client.get(ticket_id)`** returns:
+     `Result<Option<Arc<Mutex<Ticket>>>, OverloadedError>` _(from the
+     bounded-channel `TicketStoreClient` you wrote in the previous chapter)_
+  2. **1st `.unwrap()`** unwraps the **`Result`**, asserting the bounded channel
+     wasn't full (`OverloadedError`), leaving: `Option<Arc<Mutex<Ticket>>>`
+  3. **2nd `.unwrap()`** unwraps the **`Option`**, asserting `TicketStore`
+     actually found a ticket for `ticket_id`, leaving: `Arc<Mutex<Ticket>>`
+
+- Then a few lines later:
+
+  ```rs
+  let mut ticket = ticket.lock().unwrap();
+  ```
+
+  1. **`ticket.lock()`** (through `Arc`'s `Deref` to `&Mutex<Ticket>`) returns
+     `Result<MutexGuard<'_, Ticket>, PoisonError<...>>`, and **`.unwrap()`**
+     asserts no thread panicked while holding that lock, giving you the
+     `MutexGuard<'_, Ticket>`.
+
+- `self.tickets.get(&id)` returns `Option<&Arc<Mutex<Ticket>>>`—an `Option`
+  holding a **reference**.
+  - **`.clone()`** calls `Clone` on the **`Option` itself**. Since a shared
+    reference `&T` is `Copy`, cloning `Option<&T>` just gives you another
+    `Option<&T>` (`Option<&Arc<Mutex<Ticket>>>`)—still a reference.
+  - **`.cloned()`** reaches _inside_ the `Option` and clones the **inner `T`**,
+    turning `Option<&T>` into `Option<T>` (`Option<Arc<Mutex<Ticket>>>`).
+  - It's shorthand for:
+
+    ```rs
+    self.tickets.get(&id).map(|arc| arc.clone())
+    ```
+
+  - _(Same idea on iterators: `iter.cloned()` turns an iterator of `&T` into an
+    iterator of owned `T`.)_
+
+- It only peels off **one level of `&` reference**—it isn't "shallow vs. deep":
+  - `Option<&T>` has an `&` inside it.
+    - `.clone()` clones the **`Option<&T>`** itself (copying the `&T` pointer →
+      still `Option<&T>`).
+    - `.cloned()` steps **one level in**, calls `T::clone()` on the pointed-to
+      `T`, and gives you `Option<T>`.
+  - Two quick sanity checks that show how it's just "one `&` deeper":
+    - Here, `T` is `Arc<Mutex<Ticket>>`, so `T::clone()` is still just a cheap
+      `Arc` ref-count bump—it doesn't deep-copy `Ticket`.
+    - If you somehow had `Option<&&T>`, `.cloned()` would only strip one `&`,
+      leaving `Option<&T>`.
+
+### RwLock
+
+- Our new `TicketStore` works, but its read performance is not great: there can
+  only be one client at a time reading a specific ticket, because `Mutex<T>`
+  doesn't distinguish between readers and writers. We can solve the issue by
+  using a different locking primitive: `RwLock<T>`. `RwLock<T>` stands for
+  read-write lock. It allows multiple readers to access the data simultaneously,
+  but only one writer at a time. `RwLock<T>` has two methods to acquire a lock:
+  `read` and `write`. `read` returns a guard that allows you to read the data,
+  while `write` returns a guard that allows you to modify it.
+
+  ```rs
+  use std::sync::RwLock;
+
+  // An integer protected by a read-write lock
+  let lock = RwLock::new(0);
+
+  // Acquire a read lock on the RwLock
+  let guard1 = lock.read().unwrap();
+
+  // Acquire a **second** read lock
+  // while the first one is still active
+  let guard2 = lock.read().unwrap();
+  ```
+
+- On the surface, `RwLock<T>` seems like a no-brainer: it provides a superset of
+  the functionality of `Mutex<T>`. Why would you ever use `Mutex<T>` if you can
+  use `RwLock<T>` instead?
+  - Locking a `RwLock<T>` is more expensive than locking a `Mutex<T>`. This is
+    because `RwLock<T>` has to keep track of the number of active readers and
+    writers, while `Mutex<T>` only has to keep track of whether the lock is held
+    or not. This performance overhead is not an issue if there are more readers
+    than writers, but if the workload is write-heavy `Mutex<T>` might be a
+    better choice.
+  - `RwLock<T>` can cause writer starvation. If there are always readers waiting
+    to acquire the lock, writers might never get a chance to run.
+  - `RwLock<T>` doesn't provide any guarantees about the order in which readers
+    and writers are granted access to the lock. It depends on the policy
+    implemented by the underlying OS, which might not be fair to writers.
+- We can expect our workload to be read-heavy (since most clients will be
+  reading tickets, not modifying them), so `RwLock<T>` is a good choice.
+- The exercise for this one was simply replacing `Mutex` with `RwLock` in the
+  previous example. The most notable difference was that the test now uses
+  `read` and `write` to get access to the resource.
+- Another change I didn't really notice until this example is now we are
+  accessing our `BTreeMap` exclusively with `get`. We never need to `get_mut`,
+  since we are using interior mutability from a `Mutex` or `RwLock`.
+  `TicketStore` doesn't need to know or care whether the caller intends to read
+  or modify the ticket.
+
+### Without channels
+
+- We currently use channels to share `TicketStore` across threads and
+  synchronize access to the store. Without channels, we could share access to
+  `TicketStore` with `Arc`. And if we remove the channels, we need to introduce
+  another lock to synchronize access to the `TicketStore` itself (when actually
+  inserting or removing a ticket from the store). If we use a `Mutex`, then it
+  makes no sense to use an additional `RwLock` for each ticket: the `Mutex` will
+  already serialize access to the entire store. If we use a `RwLock`, instead,
+  we can read tickets in parallel. We just need to pause all reads while
+  inserting or removing a ticket.
+- The change for this exercise was a one-liner in the tests. We instantiate the
+  `TicketStore` with an `Arc` and `RwWrite` lock, then the client uses clones
+  directly via the `read` and `write` methods. We didn't have to modify
+  store.rs, and most of the changes to lib.rs were removing the client type, the
+  launch function, and the command enum. Our final concurrent solution:
+
+  ```rs
+  // tests/tests.rs
+  use std::sync::{Arc, RwLock};
+  use std::thread::spawn;
+
+  use task_without_channels::data::TicketDraft;
+  use task_without_channels::store::TicketStore;
+  use ticket_fields::test_helpers::{ticket_description, ticket_title};
+
+  #[test]
+  fn works() {
+      let store = Arc::new(RwLock::new(TicketStore::new()));
+
+      let store1 = store.clone();
+      let client1 = spawn(move || {
+          let draft = TicketDraft {
+              title: ticket_title(),
+              description: ticket_description(),
+          };
+          store1.write().unwrap().add_ticket(draft)
+      });
+
+      let store2 = store.clone();
+      let client2 = spawn(move || {
+          let draft = TicketDraft {
+              title: ticket_title(),
+              description: ticket_description(),
+          };
+          store2.write().unwrap().add_ticket(draft)
+      });
+
+      let ticket_id1 = client1.join().unwrap();
+  }
+
+  // src/lib.rs
+  pub mod data;
+  pub mod store;
+
+  // src/store.rs
+  use std::collections::BTreeMap;
+  use std::sync::{Arc, RwLock};
+  use crate::data::{Status, Ticket, TicketDraft};
+
+  #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+  pub struct TicketId(u64);
+
+  #[derive(Clone)]
+  pub struct TicketStore {
+      tickets: BTreeMap<TicketId, Arc<RwLock<Ticket>>>,
+      counter: u64,
+  }
+
+  impl TicketStore {
+      pub fn new() -> Self {
+          Self {
+              tickets: BTreeMap::new(),
+              counter: 0,
+          }
+      }
+
+      pub fn add_ticket(&mut self, ticket: TicketDraft) -> TicketId {
+          let id = TicketId(self.counter);
+          self.counter += 1;
+          let ticket = Ticket {
+              id,
+              title: ticket.title,
+              description: ticket.description,
+              status: Status::ToDo,
+          };
+          let ticket = Arc::new(RwLock::new(ticket));
+          self.tickets.insert(id, ticket);
+          id
+      }
+
+      pub fn get(&self, id: TicketId) -> Option<Arc<RwLock<Ticket>>> {
+          self.tickets.get(&id).cloned()
+      }
+  }
+
+  // src/data.rs
+  use crate::store::TicketId;
+  use ticket_fields::{TicketDescription, TicketTitle};
+
+  #[derive(Clone, Debug, PartialEq)]
+  pub struct Ticket {
+      pub id: TicketId,
+      pub title: TicketTitle,
+      pub description: TicketDescription,
+      pub status: Status,
+  }
+
+  #[derive(Clone, Debug, PartialEq, Eq)]
+  pub struct TicketDraft {
+      pub title: TicketTitle,
+      pub description: TicketDescription,
+  }
+
+  #[derive(Clone, Debug, Copy, PartialEq, Eq)]
+  pub enum Status {
+      ToDo,
+      InProgress,
+      Done,
+  }
+  ```
+
+- The code looks very similar to the one from the previous exercise. The main
+  difference is that we don't have a client type anymore. Instead, we just pass
+  around the `Arc` to the store. This implementation has much of the
+  functionality we've built out previously with no code in lib.rs at all (it
+  just re-exports and declares `data` and `store` modules).
+- In Go or Elixir, the channel implementation would have been the final
+  implementation, but in Rust where we have good data-race free locking
+  mechanisms, it's unnecessary. Channels are still built into the standard
+  library, but in practice, Rust codebases tend to use `Arc<Mutex<T>>` /
+  `Arc<RwLock<T>>` (or concurrent maps like `DashMap`) for shared state, and
+  reserve channels/actors for work queues, backpressure, or decoupling
+  independent tasks.
+
+### Sync trait
+
+- `Sync` is an auto trait, just like `Send`. It is automatically implemented by
+  all types that can be safely shared between threads. In other words: `T` is
+  `Sync` if `&T` is `Send`. `T: Sync` doesn't imply `T: Send` (ex: `MutexGuard`,
+  which isn't `Send` due to the same thread needing to manage the lock) and
+  `T: Send` doesn't imply `T: Sync` (ex: `RefCell<T>`, which isn't `Sync` due to
+  non-atomic counters).
+
+## Chapter 8 - Futures
+
+### Asynchronous Functions
+
+- You define an asynchronous function with the `async` keyword. Asynchronous
+  functions in Rust are lazy, so if you call them directly, they do nothing. The
+  `await` keyword is the most common way to ask an asynchronous function to do
+  some work. You have to choose an asynchronous executor with Rust, and we will
+  use `tokio`, which is optimized for general purpose use.
+- In `tokio` you label your `main` with `#[tokio::main]` and mark it `async`,
+  unless you need sync-first startup (parsing CLI args, loading config, etc).
+  There is also a `#[tokio::test]` function for asynchronous tests. These are
+  both convenient and not magic. Here is the expanation of `#[tokio::main]`:
+
+  ```rs
+  #[tokio::main]
+  async fn main() {
+      // Your async code goes here
+  }
+  // which expands to:
+  fn main() {
+      let rt = tokio::runtime::Runtime::new().unwrap();
+      rt.block_on(
+          // Your async function goes here
+          // [...]
+      );
+  }
+
+  // And here is how you declare an async test
+  #[tokio::test]
+  async fn my_test() {
+      // Your async test code goes here
+  }
+  ```
+
+- The exercise was a simple asynchronous `echo` function.
+
+  ```rs
+  // src/lib.rs
+  use tokio::net::TcpListener;
+
+  pub async fn echo(listener: TcpListener) -> Result<(), anyhow::Error> {
+      loop {
+          let (mut socket, _) = listener.accept().await?;
+          let (mut reader, mut writer) = socket.split();
+          tokio::io::copy(&mut reader, &mut writer).await?;
+      }
+  }
+
+  // tests/tests.rs
+  #[cfg(test)]
+  mod tests {
+      use task_async_functions::*;
+      use tokio::io::{AsyncReadExt, AsyncWriteExt};
+      use tokio::net::TcpListener;
+
+      #[tokio::test]
+      async fn test_echo() {
+          let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+          let addr = listener.local_addr().unwrap();
+          tokio::spawn(echo(listener));
+
+          let requests = vec!["hello", "world", "foo", "bar"];
+
+          for request in requests {
+              let mut socket = tokio::net::TcpStream::connect(addr).await.unwrap();
+              let (mut reader, mut writer) = socket.split();
+
+              // Send the request
+              writer.write_all(request.as_bytes()).await.unwrap();
+              // Close the write side of the socket
+              writer.shutdown().await.unwrap();
+
+              // Read the response
+              let mut buf = Vec::with_capacity(request.len());
+              reader.read_to_end(&mut buf).await.unwrap();
+              assert_eq!(&buf, request.as_bytes());
+          }
+      }
+  }
+  ```
+
+### Spawning tasks
+
+- `tokio::spawn` allows you to hand a task off to the executor without waiting
+  for it to complete like you would with `await`. Here is a version of the last
+  exercise that handles multiple requests simultaneously.
+
+  ```rs
+  use tokio::net::TcpListener;
+
+  pub async fn echo(listener: TcpListener) -> Result<(), anyhow::Error> {
+      loop {
+          let (mut socket, _) = listener.accept().await?;
+          // Spawn a background task to handle the connection
+          // thus allowing the main task to immediately start
+          // accepting new connections
+          tokio::spawn(async move {
+              let (mut reader, mut writer) = socket.split();
+              tokio::io::copy(&mut reader, &mut writer).await?;
+          });
+      }
+  }
+  ```
+
+- In the last example, we use an **asynchronous block**. This is a quick way to
+  define a section of code as asynchronous without declaring a separate async
+  function.
+- `tokio::spawn` returns a `JoinHandle`. You can use the `JoinHandle` to await a
+  background task, much like we used `join` for spawned threads.
+- If a task spawned by `tokio::spawn` panics, it will be caught by the executor.
+  The `JoinHandle` returns a `Result` with the error type `JoinError`. You can
+  call `JoinError::is_panic` to check if the task panicked.
+
+  ```rs
+  pub async fn run() {
+      let handle = tokio::spawn(work());
+      if let Err(e) = handle.await {
+          if let Ok(reason) = e.try_into_panic() {
+              // Resume unwinding the panic, propagating it to the current task
+              panic::resume_unwind(reason);
+          }
+      }
+  }
+
+  pub async fn work() {
+      // [...]
+  }
+  ```
+
+- The main difference between `tokio::spawn` and `thread::spawn` is that the
+  `thread` method hands off control to the operating system while `tokio` gives
+  it to the executor that runs in user space.
+
+  ```rs
+  use tokio::net::TcpListener;
+
+  pub async fn echoes(first: TcpListener, second: TcpListener) -> Result<(), anyhow::Error> {
+      let handle1 = tokio::spawn(echo(first));
+      let handle2 = tokio::spawn(echo(second));
+      let (outcome1, outcome2) = tokio::join!(handle1, handle2);
+      outcome1??;
+      outcome2??;
+      Ok(())
+  }
+
+  async fn echo(listener: TcpListener) -> Result<(), anyhow::Error> {
+      loop {
+          let (mut socket, _) = listener.accept().await?;
+          tokio::spawn(async move {
+              let (mut reader, mut writer) = socket.split();
+              tokio::io::copy(&mut reader, &mut writer).await.unwrap();
+          });
+      }
+  }
+  ```
+
+### Runtime
+
+- `tokio` has both `Builder::new_multi_thread` and `Builder::new_current_thread`
+  to build runtimes. `#[tokio::main]` is multithreaded by default and
+  `#[tokio::test]` is single threaded. Single threaded runs one task at a time
+  but interleaves tasks. Multithreaded has an OS thread for each CPU core. Also,
+  `tokio` performs **work-stealing** to keep threads busy. `tokio::spawn` works
+  with either, but it's signature has to be prepared for the "worst case";
+  multithreaded.
+
+  ```rs
+  pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
+  where
+      F: Future + Send + 'static,
+      F::Output: Send + 'static,
+  { /* */ }
+  ```
+
+- In the following, `T` isn't `Clone`, so we can't just clone `reply` for each
+  task. We can't borrow `&reply` into `tokio::spawn` because it requires
+  `F: Future + Send + 'static`, and a reference to `reply` is tied to
+  `fixed_reply`'s stack frame so isn't `'static`, and we can't use `Rc<T>`
+  because `tokio::spawn` requires `F: Send`. However, `Arc<T>` solves all three
+  problems. It gives each spawned task an owned, `'static`, thread-safe handle
+  to the same `reply` without requiring `T: Clone`.
+
+  ```rs
+  use std::fmt::Display;
+  use std::sync::Arc;
+  use tokio::io::AsyncWriteExt;
+  use tokio::net::TcpListener;
+
+  pub async fn fixed_reply<T>(first: TcpListener, second: TcpListener, reply: T)
+  where
+      // `T` cannot be cloned. How do you share it between the two server tasks?
+      T: Display + Send + Sync + 'static,
+  {
+      let reply = Arc::new(reply);
+      let handle1 = tokio::spawn(_fixed_reply(first, Arc::clone(&reply)));
+      let handle2 = tokio::spawn(_fixed_reply(second, reply));
+
+      tokio::join!(handle1, handle2,);
+  }
+
+  async fn _fixed_reply<T>(listener: TcpListener, reply: Arc<T>)
+  where
+      T: Display + Send + Sync + 'static,
+  {
+      loop {
+          let (mut socket, _) = listener.accept().await.unwrap();
+          let (_reader, mut writer) = socket.split();
+          writer
+              .write_all(format!("{}", reply).as_bytes())
+              .await
+              .unwrap();
+      }
+  }
+  ```
+
+### Futures
+
+- You can think of a `Future` like a state-machine with two states: pending and
+  ready.
+
+  ```rs
+  trait Future {
+      type Output;
+
+      // Ignore `Pin` and `Context` for now
+      fn poll(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+      ) -> Poll<Self::Output>;
+  }
+  ```
+
+  - When you call `poll`, you're asking the `Future` to do some work. `poll`
+    tries to make some progress then returns `Poll::Pending` or
+    `Poll::Ready(value)`. The `Future` has completed once it returns
+    `Poll::Ready` and it should not be polled again. You don't call `poll`
+    manually; that is the job of your asynchronous runtime.
+
+  ```rs
+  // a standard asynchronous function
+  use std::rc::Rc;
+  use tokio::task::yield_now;
+
+  async fn example() {
+      let non_send = Rc::new(1);
+      yield_now().await;
+      println!("{}", non_send);
+  }
+
+  // The compiler would transform it into an enum that looks somewhat like this:
+  pub enum ExampleFuture {
+      NotStarted,
+      YieldNow(Rc<i32>),
+      Terminated,
+  }
+  ```
+
+- As you've just seen with example, every .await point creates a new
+  intermediate state in the lifecycle of a future. Await points are also called
+  **yield points**.
+- Note that the `example` function above won't compile if called by
+  `tokio::spawn`. It holds a value in an `Rc<i32>` which must be stored at the
+  yield point, but `Rc` is not `Send` so cannot be safely sent across threads.
+  Any value that is held across an await point by an asynchronous function must
+  be `Send`, because the runtime may move the function to another thread and has
+  to move that stored state with it.
+
+### Blocking the runtime
+
+- Unlike threads, Rust tasks may not be preempted. Control goes back to the
+  executor only when a task yields. **Blocking the runtime** is when a task
+  never yields, so the runtime is never able to run another task. As a rule of
+  thumb, try to spend less than 100 microseconds between yield points. This is
+  not always obvious and can lead to deadlocks and starvation. You should avoid
+  synchronous IO and expensive computation in asynchronous code. With `tokio`,
+  you can move a synchronous operation to the **blocking pool** threads reserved
+  for this purpose using `tokio::task::spawn_blocking`. Using the pool is
+  cheaper than spawning your own thread.
+
+  ```rs
+  use tokio::task;
+
+  fn expensive_computation() -> u64 {
+      // [...]
+  }
+
+  async fn run() {
+      let handle = task::spawn_blocking(expensive_computation);
+      // Do other stuff in the meantime
+      let result = handle.await.unwrap();
+  }
+  ```
+
+- The exercise continued our running example of an echo server.
+
+  ```rs
+  use std::io::{Read, Write};
+  use tokio::net::TcpListener;
+  use tokio::task::spawn_blocking;
+
+  pub async fn echo(listener: TcpListener) -> Result<(), anyhow::Error> {
+      loop {
+          let (socket, _) = listener.accept().await?;
+          let mut socket = socket.into_std()?;
+          spawn_blocking(move || -> Result<(), anyhow::Error> {
+              socket.set_nonblocking(false)?;
+              let mut buffer = Vec::new();
+              socket.read_to_end(&mut buffer)?;
+              socket.write_all(&buffer)?;
+              Ok(())
+          });
+      }
+  }
+  ```
+
+### Async-aware primitives
+
+- When working in an asynchronous context, prefer `tokio`'s async primitives
+  that mirror types found in the standard library. Use `tokio::sync::Mutex`
+  instead of `std::sync::Mutex` to prevent deadlocks. The `std` version isn't
+  async aware and can hold a lock through a yield point. Another task would not
+  yield back to the task if it needed to acquire the lock. `tokio`'s version
+  yields while waiting for the lock so control would go back to the original
+  thread which could finish and release the lock. Multithreaded doesn't solve
+  this; it just makes it take more participants to deadlock. `Mutex` was an
+  example, but this applies to `RwLock`, semaphores, channels, etc. Prefer
+  async-aware versions when working in an asynchronous context. It is sometimes
+  worth it for performance to use standard `Mutex` and `RwLock` if you aren't
+  holding the lock across an `await`. `tokio` also has `tokio::net`,
+  `tokio::fs`, and `tokio::process`, in addition to `tokio::time::sleep` for
+  other async aware code.
+- The exercise for this was simple. Just change `std` to `tokio` in a `use`
+  statement and add in a few invocations of `await`.
+
+### Cancellation
+
+- Cancellation often happens in the wild when working with timeouts. When a
+  timeout expires, the `Future` will be cancelled.
+
+  ```rs
+  use tokio::time::timeout;
+  use tokio::sync::oneshot;
+  use std::time::Duration;
+
+  async fn http_call() {
+      // [...]
+  }
+
+  async fn run() {
+      // Wrap the future with a `Timeout` set to expire in 10 milliseconds.
+      let duration = Duration::from_millis(10);
+      if let Err(_) = timeout(duration, http_call()).await {
+          println!("Didn't receive a value within 10 ms");
+      }
+  }
+  ```
+
+- To gracefully cancel an operation, you can implement the `Drop` trait to
+  cleanup resources. You might spawn a new task, send a message on a channel, or
+  spawn a background thread to complete cleanup. If cleanup is synchronous and
+  fast you can handle it yourself in the `Drop` method. There is no asynchronous
+  `Drop`.
+- The `JoinHandle` returned by `tokio::spawn` has an `abort` method you can use
+  to cancel a task.
+- Further reading
+  - Be extremely careful when using tokio's `select!` macro to "race" two
+    different futures. Retrying the same task in a loop is dangerous unless you
+    can ensure cancellation safety. Check out
+    [select!'s documentation](https://tokio.rs/tokio/tutorial/select) for more
+    details.
+  - If you need to interleave two asynchronous streams of data (e.g. a socket
+    and a channel), prefer using `StreamExt::merge` instead. A
+    `CancellationToken` may be preferable to `JoinHandle::abort` in some cases.
+
+### Outro
+
+- A few recommendations:
+  - Pick a runtime and stick to it. It's not worth it to try to write runtime
+    agnostic code.
+  - There is no stable `Stream`/`AsyncIterator` interface yet, but you can use
+    `tokio_stream`.
+  - Be careful with buffering. It leads to subtle bugs.
+  - There is no equivalent to scoped threads for asynchronous tasks.
+  - Despite the warning, asynchronous Rust is being used at massive scale.
