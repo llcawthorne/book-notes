@@ -68,6 +68,7 @@ little past halfway.
 
 ## Rust
 
+- [100 Exercises to Learn Rust](./rust/100-exercises/book-notes.md)
 - [Command-Line Rust](./rust/command-line-rust/book-notes.md)
 - [Rustlings](./rust/rustlings/book-notes.md)
 - [The Rust Programming Language](./rust/trpl/book-notes.md)

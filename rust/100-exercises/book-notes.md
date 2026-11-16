@@ -4242,7 +4242,10 @@ impl Order {
   }
 
   impl TicketStoreClient {
-      pub fn insert(&self, draft: TicketDraft) -> Result<TicketId, OverloadedError> {
+      pub fn insert(
+          &self,
+          draft: TicketDraft,
+      ) -> Result<TicketId, OverloadedError> {
           let (response_sender, response_receiver) = std::sync::mpsc::sync_channel(1);
           self.sender
               .try_send(Command::Insert {
@@ -4253,7 +4256,10 @@ impl Order {
           Ok(response_receiver.recv().unwrap())
       }
 
-      pub fn get(&self, id: TicketId) -> Result<Option<Ticket>, OverloadedError> {
+      pub fn get(
+          &self,
+          id: TicketId,
+      ) -> Result<Option<Ticket>, OverloadedError> {
           let (response_sender, response_receiver) = std::sync::mpsc::sync_channel(1);
           self.sender
               .try_send(Command::Get {
@@ -4361,7 +4367,10 @@ impl Order {
   ```rs
   impl TicketStoreClient {
   // --snip--
-      pub fn update(&self, ticket_patch: TicketPatch) -> Result<(), OverloadedError> {
+      pub fn update(
+          &self,
+          ticket_patch: TicketPatch,
+      ) -> Result<(), OverloadedError> {
           let (response_sender, response_receiver) = sync_channel(1);
           self.sender
               .try_send(Command::Update {
@@ -4966,7 +4975,10 @@ impl Order {
   ```rs
   use tokio::net::TcpListener;
 
-  pub async fn echoes(first: TcpListener, second: TcpListener) -> Result<(), anyhow::Error> {
+  pub async fn echoes(
+      first: TcpListener,
+      second: TcpListener,
+  ) -> Result<(), anyhow::Error> {
       let handle1 = tokio::spawn(echo(first));
       let handle2 = tokio::spawn(echo(second));
       let (outcome1, outcome2) = tokio::join!(handle1, handle2);
