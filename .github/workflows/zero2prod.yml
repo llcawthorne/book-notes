@@ -90,4 +90,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@cargo-audit
-      - run: cargo audit
+      # RUSTSEC-2026-0258 (h2 0.3 via actix-web 4) and RUSTSEC-2026-0381 (webpki-roots 0.26 via sqlx 0.8)
+      # have no non-breaking upstream fix yet.
+      - run: cargo audit --ignore RUSTSEC-2026-0258 --ignore RUSTSEC-2026-0381
