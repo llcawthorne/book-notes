@@ -2,7 +2,7 @@
 
 <https://omarchy.org/manual/>
 
-## Coming from Mac or windows
+## Coming from Mac or Windows
 
 - Super is the center of everything. Super+K shows keybindings. Super+Space is
   "main" menu. Super+Alt+Space is Apps.
@@ -29,7 +29,7 @@
 - Super+Grave is the quake terminal. And Super+Shift+Grave sends a window to
   join the quake terminal. Send it away with Super+Shift+Number.
 
-## The Top Arrow
+## The Top Bar
 
 - You can right click audio to mute, or scroll on the workspaces to go to
   next/prev workspace. You can right click agents to launch an agent.
@@ -39,3 +39,6 @@
   Super+Ctrl+Alt+D/E toggles Calendar and World Clock. After you get up in the
   Panel, arrows move between elements in the panel, enter activates, tab steps
   to the neighboring panel, and esc closes.
+- Tailscale lets you Taildrop to a machine by hovering over it and hitting s. c
+  copies a machine's IP, n its name, and d its full DNS name. There are also UI
+  elements to do this in the panel, if you are vulgar enough to click.

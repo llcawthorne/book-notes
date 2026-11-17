@@ -58,7 +58,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: taiki-e/install-action@sqlx-cli
+      - run: cargo install sqlx-cli --no-default-features --features postgres --locked
       - run: sqlx database create && sqlx migrate run
       - uses: Swatinem/rust-cache@v2
         with:
@@ -98,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: taiki-e/install-action@sqlx-cli
+      - run: cargo install sqlx-cli --no-default-features --features postgres --locked
       - run: sqlx database create && sqlx migrate run
       - uses: Swatinem/rust-cache@v2
         with:
@@ -125,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: taiki-e/install-action@sqlx-cli
+      - run: cargo install sqlx-cli --no-default-features --features postgres --locked
       - run: sqlx database create && sqlx migrate run
       - uses: Swatinem/rust-cache@v2
         with:
