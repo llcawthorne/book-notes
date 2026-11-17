@@ -760,3 +760,156 @@
       subscriptions.rs
     startup.rs
   ```
+
+- To manage configuration with `config` we must represent our application
+  settings as a Rust type that implements `serde`'s `Deserialize` trait'
+
+- To manage configuration with `config` we must represent our application
+  settings as a Rust type that implements `serde`'s `Deserialize` trait.
+
+  ```rs
+  //! src/configuration.rs
+  #[derive(serde::Deserialize)]
+  pub struct Settings {
+      pub database: DatabaseSettings,
+      pub application_port: u16,
+  }
+
+  #[derive(serde::Deserialize)]
+  pub struct DatabaseSettings {
+      pub username: String,
+      pub password: String,
+      pub port: u16,
+      pub host: String,
+      pub database_name: String,
+  }
+
+  pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+      // Initialize our configuration reader
+      let settings = config::Config::builder()
+          // Add configuration values from a file name `configuration.yaml`.
+          .add_source(config::File::new(
+              "configuration.yaml",
+              config::FileFormat::Yaml,
+          ))
+          .build()?;
+      // Try to convert the configuration values it read into our Setting type
+      settings.try_deserialize::<Settings>()
+  }
+
+  impl DatabaseSettings {
+      pub fn connection_string(&self) -> String {
+          format!(
+              "postgres://{}:{}@{}:{}/{}",
+              self.username, self.password, self.host, self.port, self.database_name
+          )
+      }
+  }
+  ```
+
+- It is very easy to use our configuration.
+
+  ```rs
+  //! main.rs
+  use std::net::TcpListener;
+  use zero2prod::configuration::get_configuration;
+  use zero2prod::startup::run;
+
+  #[tokio::main]
+  async fn main() -> Result<(), std::io::Error> {
+      let configuration = get_configuration().expect("Failed to read configuration.");
+      let address = format!("127.0.0.1:{}", configuration.application_port);
+      let listener = TcpListener::bind(address)?;
+      run(listener)?.await
+  }
+  ```
+
+- But after that change our `main` will crash until we write a
+  `configuration.yaml`.
+
+  ```yaml
+  # configuration.yaml
+  application_port: 8000
+  database:
+    host: "127.0.0.1"
+    port: 5432
+    username: "postgres"
+    password: "password"
+    database_name: "newsletter"
+  ```
+
+- And now let's connect to the database from `tests/health_check.rs`.
+
+  ```rs
+  //! tests/health_check.rs
+  use sqlx::{PgConnection, Connection};
+  use zero2prod::configuration::get_configuration;
+  // [...]
+
+  #[tokio::test]
+  async fn subscribe_returns_a_200_for_valid_form_data() {
+      // Arrange
+      let app_address = spawn_app();
+      let configuration = get_configuration().expect("Failed to read configuration");
+      let connection_string = configuration.database.connection_string();
+      // The `Connection` trait must be in scope for us to invoke
+      // `PgConnection::connect` - it is not an inherent method of the struct!
+      let connection = PgConnection::connect(&connection_string)
+          .await
+          .expect("Failed to connect to Postgres.");
+      let client = reqwest::Client::new();
+
+      // Act
+      let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+      let response = client
+          .post(format!("{}/subscriptions", app_address))
+          .header("Content-Type", "application/x-www-form-urlencoded")
+          .body(body)
+          .send()
+          .await
+          .expect("Failed to execute request.");
+
+      // Assert
+      assert_eq!(200, response.status().as_u16());
+  }
+  ```
+
+- And our test still passes. We are using our configuration and connecting to
+  the database, even if we aren't verifying anything is there yet.
+
+  ```rs
+  //! tests/health_check.rs
+  // [...]
+  #[tokio::test]
+  async fn subscribe_returns_a_200_for_valid_form_data() {
+    // [...]
+    // The connection has to be marked as mutable!
+    let mut connection = ...
+    // [...]
+
+    // Assert
+    assert_eq!(200, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
+  ```
+
+- The `query!` macro returns an anonymous record type: a struct definition is
+  generated at compile-time after having verified that the query is valid, with
+  a member for each column on the result (ie. `saved.email` for the `email`
+  column). Unfortunately, our test won't run now since we need to set the
+  `DATABASE_URL`. If we set it manually, we would need to set it everytime we
+  begin working on the project after a reboot. Instead we can put the following
+  in an `.env` file in the project root.
+
+  ```sh
+  DATABASE_URL="postgres://postgres:password@localhost:5432/newsletter"
+  ```
+
+- And now our test fails for the reason it should fail! We aren't storing
+  anything in the database.

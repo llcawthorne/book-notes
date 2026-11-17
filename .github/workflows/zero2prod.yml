@@ -19,6 +19,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  DATABASE_URL: postgres://postgres:password@127.0.0.1:5432/newsletter
 
 defaults:
   run:
@@ -38,11 +39,27 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: newsletter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+      - uses: taiki-e/install-action@sqlx-cli
+      - run: sqlx database create && sqlx migrate run
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust/zero-to-prod/zero2prod
@@ -64,9 +81,25 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: newsletter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@sqlx-cli
+      - run: sqlx database create && sqlx migrate run
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust/zero-to-prod/zero2prod
@@ -75,9 +108,25 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: newsletter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@sqlx-cli
+      - run: sqlx database create && sqlx migrate run
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust/zero-to-prod/zero2prod
@@ -92,4 +141,6 @@ jobs:
       - uses: taiki-e/install-action@cargo-audit
       # RUSTSEC-2026-0258 (h2 0.3 via actix-web 4) and RUSTSEC-2026-0381 (webpki-roots 0.26 via sqlx 0.8)
       # have no non-breaking upstream fix yet.
-      - run: cargo audit --ignore RUSTSEC-2026-0258 --ignore RUSTSEC-2026-0381
+      # RUSTSEC-2026-0459 (libsqlite3-sys via sqlx-sqlite) and RUSTSEC-2023-0071 (rsa via sqlx-mysql)
+      # are uncompiled optional dependencies in Cargo.lock (only sqlx's postgres feature is enabled).
+      - run: cargo audit --ignore RUSTSEC-2026-0258 --ignore RUSTSEC-2026-0381 --ignore RUSTSEC-2026-0459 --ignore RUSTSEC-2023-0071
