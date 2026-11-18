@@ -913,3 +913,264 @@
 
 - And now our test fails for the reason it should fail! We aren't storing
   anything in the database.
+- In `actix-web`, you can attach state to the appliication using the `app_data`
+  method on `App`. But if we tried to pass a `PgConnection` this way, the
+  compiler would teach us `PgConnection` doesn't implement `Clone`. Each `App`
+  passed to `HttpServer` would need its own `PgConnection`, and `actix-web`
+  needs a copy of `App` for each core in your machine. But if we pass it to
+  `web::Data`, it is wrapped in an `Arc` so each instance of the application
+  gets a pointer to the connection. `Arc<T>` is always cloneable. We're also
+  going to initialize a `PgPool` instead of a `PgConnection` for concurrent
+  queries.
+- There was an interesting aside where we tried to do with with a
+  `PgConnection`, but as we saw in our test, you need a `mut PgConnection` and
+  not just a `PgConnection` to execute a query. An `Arc<T>` only returns a
+  read-only reference. What about interior mutability. Well, because we need a
+  `mut` reference, it would have to be a `Mutex` instead of a `RwLock`, so even
+  our read queries would face lock contention. `PgPool` solves this for us by
+  keeping a pool of mutable connections handle to run different queries on
+  without us manually having to worry about locking the mutable resource.
+
+  ```rs
+  //! src/startup.rs
+  use crate::routes::{health_check, subscribe};
+  use actix_web::dev::Server;
+  use actix_web::{App, HttpServer, web};
+  use sqlx::PgPool;
+  use std::net::TcpListener;
+
+  pub fn run(
+      listener: TcpListener,
+      connection_pool: PgPool
+  ) -> Result<Server, std::io::Error> {
+      // Wrap the connection in a smart pointer
+      let db_pool = web::Data::new(connection_pool);
+      // Capture `connection` from the surrounding environment
+      let server = HttpServer::new(move || {
+          App::new()
+              .route("/health_check", web::get().to(health_check))
+              .route("/subscriptions", web::post().to(subscribe))
+              .app_data(db_pool.clone())
+      })
+      .listen(listener)?
+      .run();
+      Ok(server)
+  }
+
+  //! src/main.rs
+  use sqlx::PgPool;
+  use std::net::TcpListener;
+  use zero2prod::configuration::get_configuration;
+  use zero2prod::startup::run;
+
+  #[tokio::main]
+  async fn main() -> Result<(), std::io::Error> {
+      let configuration = get_configuration().expect("Failed to read configuration.");
+      let connection_pool = PgPool::connect(
+              &configuration.database.connection_string()
+          )
+          .await
+          .expect("Failed to connect to Postgres.");
+      let address = format!("127.0.0.1:{}", configuration.application_port);
+      let listener = TcpListener::bind(address)?;
+      run(listener, connection_pool)?.await
+  }
+  ```
+
+- `web::Data` is an extractor, so we can get our `PgConnection` by declaring an
+  argument in our request handler. This is a form of dependency injection. Also,
+  add `uuid` and `chrono` to _Cargo.toml_.
+
+  ```rs
+  //! src/routes/subscriptions.rs
+  use actix_web::HttpResponse;
+  use actix_web::web;
+  use chrono::Utc;
+  use sqlx::PgPool;
+  use uuid::Uuid;
+
+  #[derive(serde::Deserialize)]
+  // Fields are deserialized for validation; persistence is added in a later chapter.
+  pub struct FormData {
+      email: String,
+      name: String,
+  }
+
+  pub async fn subscribe(
+      form: web::Form<FormData>,
+      pool: web::Data<PgPool>)
+  -> HttpResponse {
+      match sqlx::query!(
+          r#"
+          INSERT INTO subscriptions (id, email, name, subscribed_at)
+          VALUES ($1, $2, $3, $4)
+          "#,
+          Uuid::new_v4(),
+          form.email,
+          form.name,
+          Utc::now(),
+      )
+      .execute(pool.get_ref())
+      .await;
+      {
+          Ok(_) => HttpResponse::Ok().finish(),
+          Err(e) => {
+              println!("Failed to execute query: {}", e);
+              HttpResponse::InternalServerError().finish()
+          }
+      }
+  }
+  ```
+
+- And this gets `cargo test` passing, but we still have `cargo test` problems.
+  We're refactoring `spawn_app` to return a struct `TestApp` that holds both the
+  address of our test application instance and a handle to the connection pool,
+  simplifying the arrange step in our test cases. It's worth noting that
+  `spawn_app` is now asynchronous. We still aren't calling `await` on the
+  server, but we need to `await` setup of the `PgPool`.
+
+  ```rs
+  //! tests/health_check.rs
+  async fn spawn_app() -> TestApp {
+      let listener = TcpListener::bind("127.0.0.1:0")
+          .expect("Failed to bind random port");
+      let port = listener.local_addr().unwrap().port();
+      let address = format!("http://127.0.0.1:{}", port);
+      let configuration = get_configuration()
+          .expect("Failed to read configuration.");
+      let connection_pool = PgPool::connect(
+              &configuration.database.connection_string()
+          )
+          .await
+          .expect("Failed to connect to Postgres.");
+
+      let server = run(listener, connection_pool.clone())
+          .expect("Failed to bind address");
+      // Launch the server as a background task
+      drop(tokio::spawn(server));
+      TestApp {
+          address,
+          db_pool: connection_pool,
+      }
+  }
+
+  // And here is one of the updated tests
+  #[tokio::test]
+  async fn subscribe_returns_a_200_for_valid_form_data() {
+      // Arrange
+      let app = spawn_app().await;
+      let client = reqwest::Client::new();
+
+      // Act
+      let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+      let response = client
+          .post(format!("{}/subscriptions", app_address))
+          .header("Content-Type", "application/x-www-form-urlencoded")
+          .body(body)
+          .send()
+          .await
+          .expect("Failed to execute request.");
+
+      // Assert
+      assert_eq!(200, response.status().as_u16());
+
+      let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+          .fetch_one(&app.db_pool)
+          .await
+          .expect("Failed to fetch saved subscription.");
+
+      assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+      assert_eq!(saved.name, "le guin");
+  }
+  ```
+
+- When we go through an update all of our tests to spawn the app and use the
+  `&app.address` to connect, our test suite is green again. Even our new test
+  that checks the database is green! Hopefully we use this respite to refactor
+  our tests out of a single file.
+- First, we have a larger problem to deal with. Our test suite is green, but
+  only once. When we run it again, we get
+  `duplicate key value violates unique constraint "subscriptions_email_key"`.
+  Our tests aren't isolated. There are two techniques available:
+  - wrap the whole test in a SQL transaction and rollback at the end of it;
+  - spin up a brand-new logical database for each integration test.
+- The first option is faster but hard to use outside unit tests. The second
+  option is very easy to implement. We can create a new database and run
+  migrations for each test when we call `spawn_app`.
+
+  ```rs
+  // First we need a way to connect to our Postgres instance without a logical
+  // database specified so we can initialize a new one.
+  //! src/configuration.rs
+  impl DatabaseSettings {
+      pub fn connection_string(&self) -> String {
+          format!(
+              "postgres://{}:{}@{}:{}/{}",
+              self.username, self.password, self.host, self.port, self.database_name
+          )
+      }
+
+      pub fn connection_string_without_db(&self) -> String {
+          format!(
+              "postgres://{}:{}@{}:{}",
+              self.username, self.password, self.host, self.t
+          )
+      }
+  }
+
+  //! tests/health_check.rs
+  use sqlx::{Connection, Executor, PgConnection, PgPool};
+  use zero2prod::configuration::{DatabaseSettings, get_configuration};
+
+  // Launch our application in the background
+  // Also don't propagate errors in tests; just crash
+  async fn spawn_app() -> TestApp {
+      let listener = TcpListener::bind("127.0.0.1:0")
+          .expect("Failed to bind random port");
+      let port = listener.local_addr().unwrap().port();
+      let address = format!("http://127.0.0.1:{}", port);
+      let mut configuration = get_configuration()
+          .expect("Failed to read configuration.");
+      configuration.database.database_name = Uuid::new_v4().to_string();
+
+      let connection_pool = configure_database(&configuration.database).await;
+
+      let server = run(listener, connection_pool.clone())
+          .expect("Failed to bind address");
+      // Launch the server as a background task
+      drop(tokio::spawn(server));
+      TestApp {
+          address,
+          db_pool: connection_pool,
+      }
+  }
+
+  pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+      let mut connection = PgConnection::connect(&config.connection_string_without_db())
+          .await
+          .expect("Failed to connect to Postgres.");
+      connection
+          .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+          .await
+          .expect("Failed to create datbase.");
+
+      let connection_pool = PgPool::connect(&config.connection_string())
+          .await
+          .expect("Failed to connect to Postgres.");
+      sqlx::migrate!("./migrations")
+          .run(&connection_pool)
+          .await
+          .expect("Failed to migrate the database.");
+
+      connection_pool
+  }
+  ```
+
+- We don't clean up our test databases, since we're using an ephemeral Docker
+  image solely for testing. If we create hundreds of these and performance
+  starts to suffer, we will just restart the instance clean.
+
+## Chapter 4 - Telemetry
+
+- We have a working feature. Put it in Prod! But wait. We are vulnerable to
+  **unknown unknowns** because we are not collecting any **telemetry data**.
