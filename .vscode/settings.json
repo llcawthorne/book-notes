@@ -2,6 +2,6 @@
   "rust-analyzer.linkedProjects": [
     "./rust/rustlings/Cargo.toml",
     "./rust/trpl/Cargo.toml"
-  ]
+  ],
+  "python.terminal.useEnvFile": true
 }
-
